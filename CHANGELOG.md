@@ -6,6 +6,8 @@
 - Author recurring terms on draft WooCommerce simple products and disabled variations. Expose native quote readback through Store MCP.
 - Pilot subscriptions on the classic WooCommerce checkout with matching Razorpay Test Mode plans. Show the native first charge and separate renewal schedule, require fresh consent after a change, and resume approval from the customer's existing Woo order.
 - Turning Kiwe Store off closes purchases of one-time products and subscriptions in WooCommerce.
+- Respect the website setup chosen in Start on new managed sites. Services and portfolio installations omit WooCommerce. Membership setups enable native recurring product authoring.
+- Let shoppers view their own paid memberships and stop automatic renewals in My Account. Allow eligible paid members to read selected native private pages.
 - Use the bundled SVG sanitizer namespace from Bricks when importing compiled designs.
 
 ## 8.0.0-rc.499 (2026-11-25, candidate)

@@ -2,7 +2,7 @@
   "schema": 1,
   "version": "8.0.0-rc.499",
   "algorithm": "sha256",
-  "file_count": 1053,
+  "file_count": 1055,
   "files": {
     "assets/css/admin.css": {
       "bytes": 19334,
@@ -1193,8 +1193,8 @@
       "sha256": "76250a47ab8e67327afa55bc4aaee0141e16c30b3b38f6c4bd5d143817d08283"
     },
     "includes/Apps/Installer_Service.php": {
-      "bytes": 12250,
-      "sha256": "c1ca343c38251012feaee3b9c2db9f16f840e3f941f482b166f61e28e29cb0f6"
+      "bytes": 12434,
+      "sha256": "ad69a7ce2990e9e6f44b318b303876f5e6392f0403c430af8b9ee80c02907499"
     },
     "includes/Apps/Library_Service.php": {
       "bytes": 8081,
@@ -1225,8 +1225,8 @@
       "sha256": "dee715e6b99e14938d13cc380a119864aa054d0a2e85e74751e57158d2cc3471"
     },
     "includes/Apps/Package_Layout.php": {
-      "bytes": 29556,
-      "sha256": "d496a6f6234018f2b193abe6a38c8c468d3bafa24b7bd7d3a2b98ded4acba81b"
+      "bytes": 29664,
+      "sha256": "f411bc281545f382815d2c50ae595d6fce4f09be9cb86173e7c075a0c54180bc"
     },
     "includes/Apps/Package_Verifier.php": {
       "bytes": 6864,
@@ -1265,8 +1265,8 @@
       "sha256": "828fc749683f4091db26af189e85865373daedfff95b49b3b31dcb6cc72e5be2"
     },
     "includes/Apps/Store_App_Service.php": {
-      "bytes": 8523,
-      "sha256": "06443f5384bffe0c392a4c0f3865cb6bddfca34fe43e089aaeab00a558ba6941"
+      "bytes": 11682,
+      "sha256": "4f2ed67e0b4638a79e18c93d7e75ef144e3dc02adb320b8a16f02bf100f0c5af"
     },
     "includes/Apps/Store_Checkout_Gate.php": {
       "bytes": 4510,
@@ -1581,12 +1581,20 @@
       "sha256": "ec632e2ebf1d4ffeeb9b0f51640b4edf7b7f74cc09a95894c09a6e398f5eed5f"
     },
     "includes/Commerce/MCP_Store_Provider.php": {
-      "bytes": 14679,
-      "sha256": "4fad6d630fb374d84d583de0f8955dd70be2b72b91eb26d6c8ac46803508269f"
+      "bytes": 18074,
+      "sha256": "9d186a7fa9d1e2eac790c57ab6df70af6f38693455506aabaf3584d22abc55fd"
+    },
+    "includes/Commerce/Membership_Account_Service.php": {
+      "bytes": 5925,
+      "sha256": "9e3a91b660f5972d46cdba2b00982c6202f9395efd6634b0315f6e0a39d593cf"
+    },
+    "includes/Commerce/Membership_Content_Service.php": {
+      "bytes": 5420,
+      "sha256": "ad52b3d85762b0006e168f932e5b86be091aad81e12beb0ce5cbb67554adbe8f"
     },
     "includes/Commerce/Membership_Directory.php": {
-      "bytes": 6126,
-      "sha256": "d62c38b2afb12a1fb415b35c9c79bc7caeaf234ff2dee4778377bf92ffc31cd2"
+      "bytes": 7215,
+      "sha256": "fad4c5124898a3b937381319efdd860f842070b98d5d369640da34350f9ddd8b"
     },
     "includes/Commerce/Paid_Customer_Query.php": {
       "bytes": 2213,
@@ -1609,8 +1617,8 @@
       "sha256": "7ef451feb488dcdcea8dfcd894451b899d41b05b20d9d1b4188787559899f7ae"
     },
     "includes/Commerce/Razorpay_Subscription_Provider.php": {
-      "bytes": 5156,
-      "sha256": "d95c662c0d567c5eb045d1e01d8db6b4a71c9317963865fb6125801f342613f6"
+      "bytes": 5424,
+      "sha256": "236b899770dd5c0e896cb320d023e93706ee5cea2965a0890c2a2307605be60c"
     },
     "includes/Commerce/Store_Analytics_Service.php": {
       "bytes": 33308,
@@ -1629,8 +1637,8 @@
       "sha256": "4013968e4340c51a48ece22cabde23e4cb45bfb3c131749061a4023e9e007d85"
     },
     "includes/Commerce/Subscription_Billing_Service.php": {
-      "bytes": 22788,
-      "sha256": "4aa9f0c4f3050cd2b9fbbfcc5b496c1609b7cebbbb52bcbd40253c1490fcece7"
+      "bytes": 24697,
+      "sha256": "2c5489106bc59ccf2d27fc0794b16ed4992fa13540e8c6eb60335aa521bb9b27"
     },
     "includes/Commerce/Subscription_Checkout_Gateway.php": {
       "bytes": 795,
@@ -2525,8 +2533,8 @@
       "sha256": "9ecc5376212050889e3bc803ddee6e4d7567f00994ad879a1ada2d5668d04298"
     },
     "includes/Utilities/Content_Visibility.php": {
-      "bytes": 2439,
-      "sha256": "e50432cf688d585b0a619c66dd5e90df9655a2b531a8d008c062c64864500207"
+      "bytes": 3071,
+      "sha256": "28849c656971511039fa94156586d776cb94b338384b2adc71c23e838921fd8c"
     },
     "includes/Utilities/Credential_Records.php": {
       "bytes": 3594,

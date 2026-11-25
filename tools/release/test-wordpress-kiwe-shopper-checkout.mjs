@@ -28,9 +28,11 @@ try {
   async function client(user) {
     const context = await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true});
     if (user) await context.addCookies([fixture.users[user]]);
-    await context.route('**/*', route => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
+    await context.route('**/*', route => new URL(route.request().url()).origin === origin
+      && !['font','image','media'].includes(route.request().resourceType()) ? route.continue() : route.abort());
     const page = await context.newPage();
     page.setDefaultTimeout(15000);
+    page.setDefaultNavigationTimeout(35000);
     return page;
   }
   async function add(page, vary = '', ordinary = false) {
@@ -67,6 +69,34 @@ try {
   }
   async function withConsent(page) {
     return {kiwe_subscription_quote:await page.locator(quote).inputValue(), kiwe_subscription_consent:'yes'};
+  }
+
+  async function memberAccount(shopper, first, other) {
+    await shopper.goto(first.url, {waitUntil:'domcontentloaded'});
+    const cancel = shopper.getByRole('button', {name:'Stop renewals', exact:true});
+    assert.ok(await cancel.isVisible());
+    await shopper.getByLabel('Stop automatic renewals and keep access for the period already paid.').check();
+    const [cancelResponse] = await Promise.all([
+      shopper.waitForResponse(response => response.request().method() === 'POST' && response.url() === first.url, {timeout:35000}),
+      cancel.click(),
+    ]);
+    const posted = new URLSearchParams(cancelResponse.request().postData() || '');
+    assert.equal(posted.get('kiwe_membership_action'), 'kiwe_stop_membership_renewals');
+    // A service worker can follow the native 303 before the browser observes the response.
+    assert.ok([200, 303].includes(cancelResponse.status()), 'The native account form accepts the confirmed action.');
+    await shopper.getByText('Membership cancelled', {exact:true}).first().waitFor();
+    assert.equal(await cancel.count(), 0);
+    assert.equal(await native('cancellations'), 1);
+    await shopper.goto(fixture.account, {waitUntil:'domcontentloaded'});
+    assert.ok(await shopper.getByRole('heading', {name:'Recent memberships'}).isVisible());
+    const privatePage = await shopper.goto(fixture.memberPage, {waitUntil:'domcontentloaded'});
+    assert.equal(privatePage.status(), 200);
+    assert.match((await privatePage.allHeaders())['cache-control'], /private.*no-store/);
+    assert.ok(await shopper.getByText('This is the paid member test message.').isVisible());
+    const deniedPage = await other.goto(fixture.memberPage, {waitUntil:'domcontentloaded'});
+    assert.equal(deniedPage.status(), 404);
+    assert.equal(await other.getByText('This is the paid member test message.').count(), 0);
+    pass('The customer can cancel through the native account form and still read the private member page. An unrelated shopper receives 404.');
   }
 
   const guest = await client();
@@ -217,6 +247,8 @@ try {
   await shopper.reload({waitUntil:'domcontentloaded'});
   assert.equal(await shopper.getByText('Continue subscription approval').count(), 0);
   pass('A signed authorization-only result leaves the order on hold. A verified captured invoice settles that same order and replay is safe.');
+
+  await memberAccount(shopper, first, other);
 
   const beforeClose = await client();
   await add(beforeClose, '', true);

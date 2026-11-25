@@ -21,7 +21,7 @@ final class MCP_Store_Provider {
   $input=self::object(['area'=>self::choice(MCP_Store_Authoring::AREAS),'id'=>self::integer(),'parentId'=>self::integer(),'relatedId'=>self::integer(),'page'=>['type'=>'integer','minimum'=>1,'maximum'=>1000],'search'=>self::text(100),'country'=>self::text(2),'locationKind'=>self::choice(['city','postcode'])],['area']);
   $read=self::object(['area'=>self::text(100),'page'=>self::integer(1),'hasMore'=>['type'=>'boolean'],'dataJson'=>self::text(24000),'guidance'=>self::text(1500)],['area','page','hasMore','dataJson','guidance']);
   $ops=['store.authoring.read'=>['scope'=>'store.authoring.read','label'=>'Read applicable native product and Store setup records','effect'=>'read','approval'=>'none','accessVersion'=>1,'inputSchema'=>$input,'outputSchema'=>$read,'permission'=>$allowed,'discoverPermission'=>$allowed,'execute'=>static fn($a)=>$service->read($a)]];
-  $gatewayFields=array_fill_keys(['storeEnabled','gatewayInstalled','gatewayActive','gatewayEnabled','checkoutExperienceEnabled','standardMethodChoices','kiweSubscriptionQuotes','kiweSubscriptionPilot'],['type'=>'boolean']);
+  $gatewayFields=array_fill_keys(['storeEnabled','gatewayInstalled','gatewayActive','gatewayEnabled','checkoutExperienceEnabled','standardMethodChoices','kiweSubscriptionQuotes','kiweSubscriptionPilot','kiweSubscriptionCheckoutPilot'],['type'=>'boolean']);
   $gatewayFields['mode']=self::choice(['unconfigured','test','live']);
   $gatewayAllowed=static fn()=>class_exists(Razorpay_App_Service::class)&&Razorpay_App_Service::allowed();
   $ops['store.razorpay.status']=[
@@ -49,7 +49,7 @@ final class MCP_Store_Provider {
    'permission'=>$membersAllowed,'discoverPermission'=>$membersAllowed,
    'execute'=>static fn($a)=>['resultJson'=>Native::json((new \DSA\Access\Team_Workspace_Service())->membership_listing($a['page']??1,$a['search']??''))],
   ];
-  $ops+=self::subscription_pilot_operations();
+  $ops+=self::subscription_pilot_operations() + self::membership_operations();
   $definitions=[
    'store.product.create'=>['create',[],[]],
    'store.product.save'=>['save',['id'],[]],
@@ -120,6 +120,50 @@ final class MCP_Store_Provider {
    },
   ];
   return ['store.subscription.status'=>$status,'store.subscription.change'=>$change];
+ }
+
+ private static function membership_operations(): array {
+  $available=static fn()=>class_exists(Membership_Account_Service::class)&&Membership_Account_Service::available();
+  $result=self::object(['resultJson'=>self::text(6000)],['resultJson']);
+  $selfRead=[
+   'scope'=>'store.membership.self.read','label'=>'Read your own paid memberships','effect'=>'read','approval'=>'none','accessVersion'=>1,
+   'inputSchema'=>self::object(['page'=>self::integer(1)+['maximum'=>1000]]),'outputSchema'=>$result,
+   'permission'=>$available,'discoverPermission'=>$available,
+   'execute'=>static fn($a)=>['resultJson'=>Native::json(Membership_Account_Service::listing($a['page']??1))],
+  ];
+  $cancel=static fn($a)=>Membership_Account_Service::cancellation(wc_get_order($a['orderId']));
+  $cancelAllowed=static function($a)use($available):bool {
+   $order=$available()?wc_get_order($a['orderId']):false;
+   return $order&&Membership_Account_Service::can_cancel($order);
+  };
+  $selfCancel=[
+   'scope'=>'store.membership.self.write','label'=>'Stop automatic renewals on your own membership','effect'=>'write','approval'=>'required','accessVersion'=>1,
+   'inputSchema'=>self::object(['orderId'=>self::integer(1)],['orderId']),'outputSchema'=>$result,
+   'permission'=>$cancelAllowed,'discoverPermission'=>static fn()=>$available()&&Subscription_Billing_Service::available(),
+   'prepare'=>static function($a)use($cancel):array {
+    $before=$cancel($a);
+    return Native::plan('Stop automatic renewals while retaining the verified paid access period',$before['expected'],
+     ['orderId'=>$before['orderId'],'paidThrough'=>$before['paidThrough']],['renewals'=>'stopped'],true);
+   },
+   'current'=>static fn($a)=>$cancel($a)['expected'],
+   'execute'=>static fn($a,$expected)=>['resultJson'=>Native::json(Subscription_Billing_Service::cancel_own_subscription($a['orderId'],$expected))],
+  ];
+  $pageAllowed=static fn($a)=>class_exists(Membership_Content_Service::class)&&Membership_Content_Service::can_manage_page($a['pageId']);
+  $pageDiscover=static fn()=>current_user_can('manage_woocommerce')&&current_user_can('publish_pages')
+   && \DSA\Apps\Store_App_Service::supports_memberships()&&! \DSA\Access\Team_Workspace_Service::suspended(get_current_user_id());
+  $page=[
+   'scope'=>'store.membership.pages.write','label'=>'Set paid member access on a native private page','effect'=>'write','approval'=>'required','accessVersion'=>1,
+   'inputSchema'=>self::object(['pageId'=>self::integer(1),'memberOnly'=>['type'=>'boolean']],['pageId','memberOnly']),'outputSchema'=>$result,
+   'permission'=>$pageAllowed,'discoverPermission'=>$pageDiscover,
+   'prepare'=>static function($a):array {
+    $before=Membership_Content_Service::settings($a['pageId']);
+    return Native::plan('Review membership access on this private WordPress page',$before['expected'],
+     ['pageId'=>$a['pageId'],'memberOnly'=>$before['memberOnly']],['memberOnly'=>$a['memberOnly']],true);
+   },
+   'current'=>static fn($a)=>Membership_Content_Service::settings($a['pageId'])['expected'],
+   'execute'=>static fn($a,$expected)=>['resultJson'=>Native::json(Membership_Content_Service::change($a['pageId'],$a['memberOnly'],$expected))],
+  ];
+  return ['store.membership.self'=>$selfRead,'store.membership.cancel'=>$selfCancel,'store.membership.page.access'=>$page];
  }
 
  private static function group(array $a): array{

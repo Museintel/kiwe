@@ -8,9 +8,12 @@ final class Installer_Service {
  public const OPTION='kiwe_apps_install_jobs_v1';
  private function save(array $jobs): void { update_option(self::OPTION,$jobs,false);if(get_option(self::OPTION,[])!==$jobs)throw new \RuntimeException('App progress could not be saved. Refresh and review.'); }
  public function jobs(): array { $v=get_option(self::OPTION,[]);return is_array($v)?$v:[]; }
- private function authority(): void { if(!Native_State::allowed())throw new \RuntimeException('Your website administrator needs native permission to install and activate plugins.'); }
+ private function authority(?string $id=null): void {
+  if(!Native_State::allowed())throw new \RuntimeException('Your website administrator needs native permission to install and activate plugins.');
+  if('store'===$id&&'services'===Store_App_Service::managed_setup())throw new \RuntimeException('The services and portfolio setup is managed in Kiwe Start.');
+ }
  public function review(string $id,bool $automatic): array {
-  $this->authority();if($automatic!==Native_State::automatic($id)&&!current_user_can('update_plugins'))throw new \RuntimeException('Your website administrator manages automatic plugin updates.');$catalogue=new Catalogue_Service();$catalogue->refresh();$release=$catalogue->release($id);$native=Native_State::snapshot();$plan=Install_Plan::create($id,$release,$native,$automatic);
+  $this->authority($id);if($automatic!==Native_State::automatic($id)&&!current_user_can('update_plugins'))throw new \RuntimeException('Your website administrator manages automatic plugin updates.');$catalogue=new Catalogue_Service();$catalogue->refresh();$release=$catalogue->release($id);$native=Native_State::snapshot();$plan=Install_Plan::create($id,$release,$native,$automatic);
   Package_Verifier::capacity(WP_PLUGIN_DIR,$id==='store'&&empty($native['woo']['installed'])?268435456:Package_Verifier::MAX_UNPACKED);
   return['plan'=>Install_Plan::review($plan),'expected'=>hash('sha256',Signed_Packet::canonical([$release,Install_Plan::fingerprint($native),$automatic]))];
  }
@@ -51,7 +54,7 @@ final class Installer_Service {
   return$native;
  }
  public function advance(string $id,string $job_id,int $cursor): array {
-  $this->authority();if(!in_array($id,Runtime_Contract::IDS,true))throw new \RuntimeException('Choose a supported App.');
+  $this->authority($id);if(!in_array($id,Runtime_Contract::IDS,true))throw new \RuntimeException('Choose a supported App.');
   if(!Release_Coordinator::acquire())throw new \RuntimeException('Another website update is finishing. Retry shortly.');
   $jobs=$this->jobs();$job=$jobs[$id]??null;
   try{

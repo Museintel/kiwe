@@ -6,6 +6,19 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 
 /** Native content visibility for public exports and viewer-specific saved lists. */
 final class Content_Visibility {
+	public const MEMBERSHIP_META = '_kiwe_requires_membership_v1';
+
+	public static function membership_page( \WP_Post $page ): bool {
+		return 'page' === $page->post_type && '1' === get_post_meta( $page->ID, self::MEMBERSHIP_META, true );
+	}
+
+	public static function keep_membership_pages_private( array $data, array $input ): array {
+		if ( 'page' !== $data['post_type'] || ! in_array( $data['post_status'], [ 'publish', 'future' ], true ) ) return $data;
+		$page = ! empty( $input['ID'] ) ? get_post( (int) $input['ID'] ) : null;
+		if ( $page && self::membership_page( $page ) ) $data['post_status'] = 'private';
+		return $data;
+	}
+
 	/** Public evidence never inherits an administrator's permissions or a password cookie. */
 	public static function is_public( $post ): bool {
 		$post = get_post( $post );

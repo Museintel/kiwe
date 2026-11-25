@@ -53,6 +53,8 @@ final class Package_Layout {
   'includes/Commerce/Linked_Products_Service.php',
   'includes/Commerce/MCP_Store_Authoring.php',
   'includes/Commerce/MCP_Store_Provider.php',
+  'includes/Commerce/Membership_Account_Service.php',
+  'includes/Commerce/Membership_Content_Service.php',
   'includes/Commerce/Membership_Directory.php',
   'includes/Commerce/Paid_Customer_Query.php',
   'includes/Commerce/Product_Context_Service.php',

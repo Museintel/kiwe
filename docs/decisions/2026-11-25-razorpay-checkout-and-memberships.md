@@ -75,7 +75,19 @@ On MCP, **store.subscription.status** reads an eligible order's state. **store.s
 
 Daily → Users shows Active member in green and Membership cancelled or expired in red. Cancelled renewals can retain access through the purchased period. A full refund removes the affected period. Membership records do not change WordPress roles. The customer can review their own paid dates on the order. Staff need account-directory access and permission for the specific user and Woo order. The same checks gate frontend DSA and backend inbox reads, including previously stored notices. Membership notices use the private inboxes. External delivery awaits a qualified merchant policy.
 
-The billing ledger is qualified with documented provider responses, signed callbacks and real WooCommerce orders in both HPOS and legacy storage. Member-only content controls and self-service are the next implementation batch. Hosted customer authorization, provider-originated captures and production rollout are pending. Keep the current Kiwe Launch billing authority in place until hosted parity also covers referral settlement and Start access.
+The billing ledger is qualified with documented provider responses, signed callbacks and real WooCommerce orders in both HPOS and legacy storage. Hosted customer authorization, provider-originated captures and production rollout are pending. Keep the current Kiwe Launch billing authority in place until hosted parity also covers referral settlement and Start access.
+
+### Member account and private pages
+
+Members review their own orders in WooCommerce My Account. **Stop renewals** requires a current buyer session, confirmation and order-specific review. Kiwe reads the existing Razorpay agreement before it requests immediate cancellation of future renewals. Any verified paid access continues through its recorded end date. A lost reply is reconciled against that agreement on retry. Hosted qualification will exercise cancellation in Razorpay Test Mode. [Razorpay cancellation API](https://razorpay.com/docs/api/payments/subscriptions/cancel-subscription).
+
+An editor who can publish the page and manage WooCommerce can enable **Membership access** in the native editor of an eligible private WordPress page. Its HTML is readable by eligible paid members and staff with native page access. The grant is derived from verified WooCommerce receipts and respects an account suspension or loss of the paid period. WordPress keeps the page private until the restriction is removed. Direct media file URLs have their regular WordPress visibility. Home, blog index, cart, checkout, store and account pages remain available for their original purposes.
+
+MCP exposes `store.membership.self`, `store.membership.cancel` and `store.membership.page.access` to existing eligible Kiwe MCP accounts with the matching scopes. Ordinary shoppers use My Account. Cancellation and page changes require a current native review. Membership and billing information remains in the existing Woo records. The browser flow and MCP use the same role and native object checks.
+
+## Managed website setup
+
+Start saves the site type before opening a new managed Client hosting request. Services and portfolio sites boot without WooCommerce, Kiwe Store, Razorpay for WooCommerce or Shiprocket. Ecommerce, membership and combined sites use WooCommerce and the signed Store App. Membership and combined sites enable recurring product authoring. Payments still require the provider connection and approved setup. The installer verifies the native mode once and refuses to change a provisioned stack. Existing sites and prior provisioning jobs retain their existing setup paths. WordPress Design Context reads capabilities made available by the installed stack.
 
 ## Shopper checkout pilot
 
@@ -89,7 +101,7 @@ The Kiwe Store switch is the checkout policy for both one-time products and subs
 
 Run `tools/release/test-wordpress-kiwe-shopper-checkout.mjs` against the isolated loopback checkout lab. Load its paired PHP fixture before WordPress in the local PHP server router. Supply `KIWE_CHECKOUT_LAB`, `KIWE_PHP`, `KIWE_INI`, `KIWE_PLAYWRIGHT` and `KIWE_CHROME` for the local runtime. The runner uses real Woo checkout requests and a simulated Razorpay transport. It covers the account and stale-quote guards, normal guest COD, mixed carts, repeated attempts and buyer-only continuation. Hosted mandate approval and receipt verification use the actual provider in the Plum Giraffe batch.
 
-On 26 November, the 390 px Chrome run passed 15 checks with the Bricks theme and classic WooCommerce checkout. It verified the ₹8,738 upfront and ₹700 renewal amounts, owner-only retries, stock release after confirmed expiry, and the Store Off/On cycle for ordinary and recurring items. The native ledger passed 31 checks under each of WooCommerce's HPOS and legacy storage modes. Native variation operations passed 71 checks against the exact candidate package, including permission and cleanup checks.
+On 26 November, the 390 px Chrome run passed 16 checks with the Bricks theme and classic WooCommerce checkout. It verified the ₹8,738 upfront and ₹700 renewal amounts, owner-only retries, stock release after confirmed expiry and the Store Off/On cycle. The account form stopped renewal and the private page remained readable through the paid period. An unrelated shopper received 404. The expanded native membership suite passed 47 checks in each of WooCommerce's HPOS and legacy storage modes. All four setup modes passed native WordPress qualification, including a services boot without WooCommerce files. Native variation operations passed 71 checks in the previous checkout candidate.
 
 ## Delivery and qualification
 
@@ -97,7 +109,7 @@ On 26 November, the 390 px Chrome run passed 15 checks with the Bricks theme and
 | --- | --- |
 | 1 | Shared source candidate verified locally. Adds Razorpay readiness in Kiwe Apps and permission-scoped MCP, classic checkout details editing and a measured baseline. |
 | 2 | Address summary, native coupon and payment choices pass in WordPress locally. Qualify the captured-payment and refund paths, provider availability, merchant settings and checkout performance before release. |
-| 3 | Local native recurring terms, reviewed enrollment, shopper consent and retry recovery, renewal/refund orders, and role-aware Members and notices. Finish member self-service, Start capability selection, WordPress Design Context projection, and hosted authorization/capture qualification. |
+| 3 | Local native recurring terms, reviewed enrollment, shopper consent and retry recovery, renewal/refund orders, role-aware Members and notices, and member self-service and private page access. Start selects the WordPress stack before provisioning. Qualify provider authorization and capture on the hosted lab. |
 | 4 | The first-party homepage, header and footer render in the isolated WordPress pilot. Rehearse migration with marketing routes, contact and partner forms, assets, redirects and recovery. Keep Launch's current billing authority available until the new path passes the same payment, renewal, Start handoff and referral checks. |
 | 5 | Qualify the signed Core and Store releases on Plum Giraffe, then roll out the matching version across eligible Kiwe sites. Verify Razorpay and saved-cart behavior on the owner-reviewed Dharwad Pedha and National Chikki checkouts, including mobile, low bandwidth and recovery. |
 

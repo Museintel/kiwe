@@ -53,6 +53,30 @@ final class Membership_Directory {
 		return $best ? array_intersect_key( $best, [ 'status'=>true, 'active'=>true, 'paidThrough'=>true ] ) : [];
 	}
 
+	public static function has_paid_access( int $user_id ): bool {
+		if ( $user_id < 1 || ! Store_App_Service::enabled() || Store_Recovery_Gate_Service::is_paused()
+			|| ! get_user_meta( $user_id, Subscription_Renewal_Orders::JOINED, true ) ) return false;
+		$now = time();
+		$checked = [];
+		$page = 1;
+		do {
+			$receipts = wc_get_orders( [
+				'customer_id'=>$user_id, 'payment_method'=>Subscription_Renewal_Orders::GATEWAY,
+				'status'=>array_map( static fn ( $status ) => 'wc-' . $status, wc_get_is_paid_statuses() ),
+				'date_paid'=>'>' . ( $now - 400 * DAY_IN_SECONDS ), 'limit'=>20, 'page'=>$page++,
+			] );
+			foreach ( $receipts as $receipt ) {
+				$id = $receipt->get_parent_id();
+				$order = $id ? wc_get_order( $id ) : $receipt;
+				if ( ! $order || isset( $checked[ $order->get_id() ] ) ) continue;
+				$checked[ $order->get_id() ] = true;
+				if ( Subscription_Renewal_Orders::owned_by( $user_id, $order )
+					&& ! empty( Subscription_Renewal_Orders::paid_period( $order, $now )['active'] ) ) return true;
+			}
+		} while ( count( $receipts ) === 20 );
+		return false;
+	}
+
 	public static function record_payment( \WC_Order $original, \WC_Order $receipt, array $charge ): void {
 		$customer_id = $original->get_customer_id();
 		if ( ! $customer_id ) return;

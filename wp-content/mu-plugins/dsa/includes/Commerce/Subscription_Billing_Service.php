@@ -14,12 +14,15 @@ final class Subscription_Billing_Service {
 	public const EXPIRY_HOOK = 'dsa_expire_subscription_checkout';
 
 	public static function available(): bool {
-		return Store_App_Service::enabled() && ! Store_Recovery_Gate_Service::is_paused() && Razorpay_Subscription_Provider::available();
+		return Store_App_Service::enabled() && Store_App_Service::supports_memberships()
+			&& ! Store_Recovery_Gate_Service::is_paused() && Razorpay_Subscription_Provider::available();
 	}
 
 	public function register(): void {
 		add_action( 'woocommerce_order_details_after_order_table', [ new Subscription_Renewal_Orders(), 'render_membership' ] );
 		( new Membership_Directory() )->register();
+		( new Membership_Content_Service() )->register();
+		( new Membership_Account_Service() )->register();
 		add_action( self::EXPIRY_HOOK, [ $this, 'expire_checkout' ] );
 		if ( ! self::available() ) return;
 		add_action( 'rest_api_init', function (): void {
@@ -126,6 +129,31 @@ final class Subscription_Billing_Service {
 		$order = self::managed_order( $id );
 		$agreement = $order->get_meta( Subscription_Renewal_Orders::AGREEMENT );
 		return self::public_state( $order, is_array( $agreement ) ? $agreement : [] );
+	}
+
+	public static function cancel_own_subscription( int $id, string $expected ): array {
+		return self::synchronized( 'order', $id, static function () use ( $id, $expected ): array {
+			$order = wc_get_order( $id );
+			if ( ! $order || ! Membership_Account_Service::owns( $order ) || ! self::available() ) {
+				throw new \DomainException( __( 'This membership is unavailable for your account.', 'dsa' ) );
+			}
+			$agreement = $order->get_meta( Subscription_Renewal_Orders::AGREEMENT );
+			if ( 'cancelled' === $agreement['providerStatus'] ) return Membership_Account_Service::status( $order );
+			$review = Membership_Account_Service::cancellation( $order );
+			if ( ! hash_equals( $review['expected'], $expected ) ) {
+				throw new \DomainException( __( 'This membership changed. Review it before stopping renewals.', 'dsa' ) );
+			}
+			$subscription = Razorpay_Subscription_Provider::subscription( $agreement['subscriptionId'] );
+			$agreement = self::bind( $order, $agreement, $subscription );
+			if ( ! in_array( $agreement['providerStatus'], [ 'cancelled', 'completed', 'expired' ], true ) ) {
+				$agreement = self::bind( $order, $agreement, Razorpay_Subscription_Provider::cancel( $agreement['subscriptionId'] ) );
+				if ( 'cancelled' !== $agreement['providerStatus'] ) {
+					throw new \RuntimeException( __( 'Razorpay is still confirming this cancellation. Check your membership again.', 'dsa' ) );
+				}
+			}
+			if ( 'cancelled' === $agreement['providerStatus'] ) Membership_Directory::notify( $order, 'cancelled', 'confirmed' );
+			return Membership_Account_Service::status( $order );
+		} );
 	}
 
 	public static function recover( int $order_id, string $subscription_id, string $expected ): array {
@@ -266,8 +294,11 @@ final class Subscription_Billing_Service {
 				wp_schedule_single_event( max( time() + MINUTE_IN_SECONDS, $agreement['approvalExpiresAt'] + MINUTE_IN_SECONDS ), self::EXPIRY_HOOK, [ $order->get_id() ] );
 			}
 		}
-		// Cancellation is terminal for this provider ID, even if older events arrive later.
-		if ( 'cancelled' === ( $subscription['status'] ?? '' ) ) $agreement['providerStatus'] = 'cancelled';
+		// A terminal state does not regress when an older payment notification arrives later.
+		$terminal = [ 'cancelled', 'completed', 'expired' ];
+		if ( ! in_array( $agreement['providerStatus'], $terminal, true ) && in_array( $subscription['status'] ?? '', $terminal, true ) ) {
+			$agreement['providerStatus'] = $subscription['status'];
+		}
 		if ( $before !== $agreement ) {
 			$order->update_meta_data( Subscription_Renewal_Orders::AGREEMENT, $agreement );
 			$order->save_meta_data();

@@ -5,6 +5,7 @@ declare(strict_types=1);
 // Uses real WooCommerce orders and an offline provider. Require this script before WordPress
 // in the isolated PHP server router, then run test-wordpress-kiwe-shopper-checkout.mjs.
 use DSA\Access\Team_Workspace_Service as Team;
+use DSA\Commerce\Membership_Content_Service as MemberContent;
 use DSA\Commerce\Subscription_Billing_Service as Billing;
 use DSA\Commerce\Subscription_Checkout_Service as Checkout;
 use DSA\Commerce\Subscription_Product_Service as Products;
@@ -71,6 +72,15 @@ function fixture_provider(mixed $pre, array $args, string $url): mixed {
         }
         return fixture_response($subscription);
     }
+    if (str_ends_with($path, '/cancel') && ($args['method'] ?? '') === 'POST') {
+        $key = substr($path, 0, -strlen('/cancel'));
+        if (isset($state['entities'][$key]) && json_decode($args['body'], true) === ['cancel_at_cycle_end'=>false]) {
+            $state['entities'][$key]['status'] = 'cancelled';
+            ++$state['cancellations'];
+            fixture_save($state);
+            return fixture_response($state['entities'][$key]);
+        }
+    }
     return new WP_Error('fixture_offline', 'Unexpected Razorpay fixture request.');
 }
 
@@ -119,6 +129,7 @@ function fixture_payment(array $state, array $request, string $mode): array {
         'status'=>$mode === 'captured' ? 'paid' : 'issued', 'amount'=>$request['upfront'], 'amount_paid'=>$request['upfront'],
         'currency'=>'INR', 'paid_at'=>$agreement['createdAt'], 'billing_start'=>null, 'billing_end'=>null,
     ];
+    if ('captured' === $mode) $state['entities']['subscriptions/' . $request['id']]['status'] = 'active';
     fixture_save($state);
     $body = wp_json_encode(['account_id'=>KIWE_RAZORPAY_SUBSCRIPTIONS_ACCOUNT, 'event'=>'payment.captured',
         'payload'=>['payment'=>['entity'=>['id'=>$payment]]]]);
@@ -206,13 +217,22 @@ if ($phase === 'seed') {
         'post_type'=>'page', 'post_content'=>'[woocommerce_checkout]', 'post_status'=>'publish']);
     fixture_check($checkout, 'Could not create the isolated classic checkout page.');
     update_option('woocommerce_checkout_page_id', $checkout);
+    $owner = get_user_by('login', 'checkout-owner');
+    fixture_check($owner, 'The native membership page needs a lab owner.');
+    wp_set_current_user($owner->ID);
+    $member_page = wp_insert_post(['post_title'=>'Paid members page proof', 'post_name'=>'member-proof-' . $tag,
+        'post_type'=>'page', 'post_content'=>'This is the paid member test message.', 'post_status'=>'private', 'post_author'=>$owner->ID]);
+    fixture_check($member_page, 'Could not create the isolated private page.');
+    MemberContent::change($member_page, true, MemberContent::settings($member_page)['expected']);
     $state = ['tag'=>$tag, 'users'=>$users, 'products'=>[$member_variant_id, $variant_id, $variable_id, $simple_id, $product_id],
         'coupon'=>$coupon_id, 'requests'=>[], 'entities'=>[], 'guestEmail'=>'guest.' . $tag . '@example.invalid',
-        'checkout'=>$checkout, 'previousCheckout'=>$previous_checkout, 'simple'=>$simple_id];
+        'checkout'=>$checkout, 'previousCheckout'=>$previous_checkout, 'simple'=>$simple_id, 'memberPage'=>$member_page,
+        'cancellations'=>0];
     fixture_save($state);
     echo wp_json_encode(['origin'=>home_url('/'), 'checkout'=>wc_get_checkout_url(), 'products'=>compact('product_id', 'simple_id', 'variable_id', 'variant_id','member_variant_id'),
         'coupon'=>$coupon->get_code(), 'users'=>$cookies, 'nonces'=>$nonces, 'guestEmail'=>$state['guestEmail'],
-        'orderPay'=>$order->get_checkout_payment_url(), 'ordinaryOrderPay'=>$one_time->get_checkout_payment_url()]);
+        'orderPay'=>$order->get_checkout_payment_url(), 'ordinaryOrderPay'=>$one_time->get_checkout_payment_url(),
+        'memberPage'=>get_permalink($member_page), 'account'=>wc_get_page_permalink('myaccount')]);
 } elseif ($phase === 'wrong-plan' || $phase === 'correct-plan') {
     fixture_check($state, 'The checkout is missing its run state.');
     $state['wrongPlan'] = $phase === 'wrong-plan';
@@ -224,6 +244,8 @@ if ($phase === 'seed') {
     echo '{}';
 } elseif ($phase === 'stock') {
     echo wp_json_encode(wc_get_product($state['simple'])->get_stock_quantity());
+} elseif ($phase === 'cancellations') {
+    echo wp_json_encode($state['cancellations']);
 } elseif ($phase === 'inspect') {
     $attempts = [];
     foreach ($state['requests'] as $request) {
@@ -271,6 +293,7 @@ if ($phase === 'seed') {
     if ($state) {
         update_option('woocommerce_checkout_page_id', $state['previousCheckout']);
         wp_delete_post($state['checkout'], true);
+        wp_delete_post($state['memberPage'], true);
         foreach (wc_get_orders(['billing_email'=>$state['guestEmail'], 'limit'=>-1]) as $order) $order->delete(true);
         foreach ($state['products'] as $id) wc_get_product($id)?->delete(true);
         (new WC_Coupon($state['coupon']))->delete(true);

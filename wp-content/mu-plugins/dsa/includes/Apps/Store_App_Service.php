@@ -6,15 +6,55 @@ use DSA\Utilities\Origin_Checker;
 
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-/** One local Store choice; native Woo data and every existing store setting remain authoritative. */
+/** Native Store availability, including the stack applied by managed setup in Start. */
 final class Store_App_Service {
  public const OPTION = 'kiwe_store_app_enabled_v1';
  public const ACTION = 'kiwe_store_app';
  public const CAPABILITY = 'kiwe_manage_context';
+ private const MANAGED_MODES = [ 'services', 'ecommerce', 'membership', 'both' ];
  public static function available(): bool { if(!function_exists('WC'))return false;$provider=Runtime_Registry::provider('store');return $provider===null || (defined('WC_VERSION') && version_compare(WC_VERSION,$provider['requiresWoo'],'>=')); }
+ private static function managed_mode( mixed $value ): ?string {
+  if ( !is_string( $value ) || !str_starts_with( $value, 'start:' ) ) return null;
+  $mode = substr( $value, 6 );
+  return in_array( $mode, self::MANAGED_MODES, true ) ? $mode : null;
+ }
+ public static function managed_setup(): ?string { return self::managed_mode( get_option( self::OPTION, null ) ); }
+ public static function supports_memberships(): bool {
+  return in_array( self::managed_setup(), [ null, 'membership', 'both' ], true );
+ }
  public static function requested(): bool {
   $stored = get_option( self::OPTION, null );
+  $managed = self::managed_mode( $stored );
+  if ( null !== $managed ) return 'services' !== $managed;
   return null === $stored ? self::available() : in_array( $stored, [ true, 1, '1' ], true );
+ }
+ /** Called by the managed WordPress installer after it verifies the exact site and signed Apps. */
+ public static function provision_setup( string $mode ): true|\WP_Error {
+  if ( !defined( 'WP_CLI' ) || !WP_CLI || !self::allowed() || is_multisite() || !in_array( $mode, self::MANAGED_MODES, true ) ) {
+   return new \WP_Error( 'kiwe_site_setup_forbidden', 'The managed website setup requires the site installer and owner.' );
+  }
+  $existing = self::managed_setup();
+  if ( null !== $existing && $mode !== $existing ) {
+   return new \WP_Error( 'kiwe_site_setup_locked', 'This website already has a different managed setup.' );
+  }
+  if ( 'services' === $mode ) {
+   if ( function_exists( 'WC' ) || is_file( WP_PLUGIN_DIR . '/woocommerce/woocommerce.php' ) ) {
+    return new \WP_Error( 'kiwe_site_setup_contains_store', 'The services and portfolio setup requires WordPress without WooCommerce.' );
+   }
+  } elseif ( !self::available() || !Runtime_Registry::installed( 'store' ) || !class_exists( \DSA\Commerce\Subscription_Product_Service::class ) ) {
+   return new \WP_Error( 'kiwe_site_setup_store', 'Install and verify the matching WooCommerce and signed Kiwe Store packages first.' );
+  } elseif ( null === $existing ) {
+   $billing = in_array( $mode, [ 'membership', 'both' ], true ) ? '1' : '0';
+   $option = \DSA\Commerce\Subscription_Product_Service::OPTION;
+   update_option( $option, $billing, false );
+   if ( $billing !== get_option( $option ) ) return new \WP_Error( 'kiwe_site_setup_billing', 'Could not verify the website billing setup.' );
+  }
+  $value = 'start:' . $mode;
+  update_option( self::OPTION, $value, false );
+  if ( $value !== get_option( self::OPTION, null ) || ( 'services' !== $mode ) !== self::enabled() ) {
+   return new \WP_Error( 'kiwe_site_setup_save', 'Could not verify the managed website setup.' );
+  }
+  return true;
  }
  public static function enabled(): bool { return Runtime_Registry::installed('store') && self::available() && self::requested(); }
  public static function content_available( string $type ): bool {
@@ -42,18 +82,20 @@ final class Store_App_Service {
  public function register(): void {
   // The Core gate respects an explicit Off choice even when Store services are unloaded.
   add_action('plugins_loaded',static function():void{if(function_exists('WC'))Store_Checkout_Gate::register(self::enabled());},29);
+  add_filter( 'wp_insert_post_data', [ \DSA\Utilities\Content_Visibility::class, 'keep_membership_pages_private' ], 20, 2 );
   // The closure is inert on visitor requests and loads no optional Store/MCP code.
   add_action('kiwe_mcp_register_providers',static function($registry,int $api):void{if(self::enabled()&&class_exists(\DSA\Commerce\MCP_Store_Provider::class))\DSA\Commerce\MCP_Store_Provider::register($registry,$api);},10,2);
   add_action( 'rest_api_init', [ $this, 'routes' ] );
   add_action( 'admin_post_' . self::ACTION, [ $this, 'handle' ] );
  }
  public static function card(): array {
-  $enabled = self::enabled(); $available = self::available();
-  return [ 'id'=>'store', 'enabled'=>$enabled, 'canChange'=>self::allowed(), 'blocked'=>!$available || !Runtime_Registry::installed('store'), 'installed'=>Runtime_Registry::installed('store'), 'manageUrl'=>current_user_can('install_plugins') || current_user_can('update_plugins') ? Library_Service::url('store') : '',
+  $enabled = self::enabled(); $available = self::available(); $managed = self::managed_setup();
+  $editable = null === $managed && self::allowed();
+  return [ 'id'=>'store', 'enabled'=>$enabled, 'canChange'=>$editable, 'blocked'=>!$available || !Runtime_Registry::installed('store'), 'installed'=>Runtime_Registry::installed('store'), 'manageUrl'=>'services' !== $managed && ( current_user_can('install_plugins') || current_user_can('update_plugins') ) ? Library_Service::url('store') : '',
    'status'=>$enabled ? 'On' : 'Off', 'toggleLabel'=>'Store',
-   'description'=>!Runtime_Registry::installed('store') ? 'Add Kiwe Store when this website needs ecommerce. Existing business details and native records stay in place.' : (!$available ? 'WooCommerce is not active. Your site manager can add it when this website needs a store.' : ( $enabled ? 'Products, delivery, taxes, offers, carts, wishlists and orders.' : 'Turn on Store to open checkout for products and subscriptions.' )),
-   'url'=>$enabled ? self::url() : '', 'endpoint'=>self::allowed() ? rest_url( 'dsa/v1/workspace/apps/store' ) : '',
-   'expected'=>self::allowed() ? self::expected() : '', 'action'=>admin_url( 'admin-post.php' ), 'nonce'=>self::allowed() ? wp_create_nonce( self::ACTION ) : '',
+   'description'=>null !== $managed ? ( 'services' === $managed ? 'Services and portfolio setup selected in Kiwe Start.' : 'Store setup selected in Kiwe Start.' ) : ( !Runtime_Registry::installed('store') ? 'Add Kiwe Store when this website needs ecommerce. Existing business details and native records stay in place.' : (!$available ? 'WooCommerce is not active. Your site manager can add it when this website needs a store.' : ( $enabled ? 'Products, delivery, taxes, offers, carts, wishlists and orders.' : 'Turn on Store to open checkout for products and subscriptions.' )) ),
+   'url'=>$enabled ? self::url() : '', 'endpoint'=>$editable ? rest_url( 'dsa/v1/workspace/apps/store' ) : '',
+   'expected'=>$editable ? self::expected() : '', 'action'=>admin_url( 'admin-post.php' ), 'nonce'=>$editable ? wp_create_nonce( self::ACTION ) : '',
   ];
  }
  public function routes(): void {
@@ -78,6 +120,10 @@ final class Store_App_Service {
    wp_cache_delete( self::OPTION, 'options' ); wp_cache_delete( 'alloptions', 'options' ); wp_cache_delete( 'notoptions', 'options' );
    if ( !hash_equals( self::expected(), $expected ) ) return new \WP_Error( 'kiwe_store_app_stale', 'The app state changed. Refresh before saving.' );
    if ( $enabled && (!self::available() || !Runtime_Registry::installed('store')) ) return new \WP_Error( 'kiwe_store_app_dependency', 'WooCommerce must be active before Kiwe Store can be turned on.' );
+   $managed = self::managed_setup();
+   if ( null !== $managed ) {
+    return $enabled === ( 'services' !== $managed ) ? true : new \WP_Error( 'kiwe_store_setup_managed', 'This website’s Store choice was set during setup in Kiwe Start.' );
+   }
    $value = $enabled ? '1' : '0'; update_option( self::OPTION, $value, false );
    if ( get_option( self::OPTION, null ) !== $value ) return new \WP_Error( 'kiwe_store_app_save', 'The app change could not be confirmed. Refresh and review.' );
   } finally { $wpdb->get_var( $wpdb->prepare( 'SELECT RELEASE_LOCK(%s)', $lock ) ); }
