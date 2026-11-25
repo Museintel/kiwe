@@ -23,7 +23,7 @@
         <a href="#appsites">Appsites</a><a href="#features">Features</a><a href="#plan">Plan</a><a href="/partners/">Become a partner</a>
       </nav>
       <div class="header-actions"><a class="login" href="https://start.kiwelaunch.com/login/">Log in</a><a class="button button-small" href="#demo">Book a demo</a></div>
-      <details class="nav-mobile">
+      <details class="nav-mobile" data-launch-mobile-menu data-bricks-element="html">
         <summary>Menu</summary>
         <nav aria-label="Mobile navigation"><a href="#appsites">Appsites</a><a href="#features">Features</a><a href="#plan">Plan</a><a href="/partners/">Become a partner</a><a href="https://start.kiwelaunch.com/login/">Log in</a></nav>
       </details>
@@ -43,11 +43,11 @@
           <div class="logo-window">
             <div class="logo-track" data-loop>
               <ul class="logo-set" aria-label="Technology used or planned by Kiwe">
-                <li><img src="/assets/launch/wordpress.png" width="32" height="32" alt="">WordPress</li>
+                <li><img src="/assets/launch/wordpress.png" width="32" height="32" alt="" loading="eager">WordPress</li>
                 <li><img src="/assets/launch/hostinger.svg" width="32" height="32" alt="">Hostinger</li>
                 <li><img src="/assets/launch/cloudflare.svg" width="36" height="32" alt="">Cloudflare</li>
                 <li><img src="/assets/launch/razorpay.svg" width="28" height="32" alt="">Razorpay</li>
-                <li><img src="/assets/launch/shiprocket.png" width="96" height="96" alt="">Shiprocket</li>
+                <li><img src="/assets/launch/shiprocket.png" width="96" height="96" alt="" loading="eager">Shiprocket</li>
               </ul>
             </div>
           </div>
@@ -60,7 +60,7 @@
             <img src="/assets/launch/dharwad.webp" width="1240" height="820" alt="Dharwad Pedha’s Kiwe Appsite on desktop, with regional sweets and a featured product" fetchpriority="high">
           </div>
           <div class="phone-frame">
-            <img src="/assets/launch/dharwad-dock.webp" width="410" height="820" alt="Dharwad Pedha’s product card on a phone">
+            <img src="/assets/launch/dharwad-dock.webp" width="410" height="820" alt="Dharwad Pedha’s product card on a phone" loading="eager">
           </div>
         </div>
         <figcaption><span class="live-dot" aria-hidden="true"></span> Dharwad Pedha <span class="caption-divider" aria-hidden="true"></span> Live Kiwe Appsite</figcaption>
@@ -165,7 +165,7 @@
     <section class="section demo-section" id="demo" aria-labelledby="demo-title">
       <div class="wrap demo-layout">
         <div><p class="eyebrow">Let’s talk</p><h2 id="demo-title">See what Kiwe can do for your business.</h2><p>Tell us a little about what you’re building. We’ll get in touch to arrange a demo and walk through the right setup for you.</p></div>
-        <form class="intake-form" action="/launch-api/intake.php" method="post" data-intake>
+        <form class="intake-form" action="/launch-api/intake.php" method="post" data-intake data-bricks-element="html">
           <input type="hidden" name="kind" value="demo">
           <div class="field-pair">
             <label>Your name<input name="name" autocomplete="name" maxlength="100" required></label>
@@ -179,7 +179,7 @@
           <div hidden aria-hidden="true"><label>Leave this empty<input name="website_code" tabindex="-1" autocomplete="off"></label></div>
           <label class="consent"><input type="checkbox" name="consent" value="yes" required><span>Kiwe may contact me about this demo. <a href="/privacy/">How we use your details</a></span></label>
           <button class="button" type="submit">Request a demo call</button>
-          <p class="form-status" role="status" aria-live="polite"></p>
+          <p class="form-status" role="status" aria-live="polite" data-intake-status></p>
         </form>
       </div>
     </section>

@@ -13,7 +13,7 @@ if (output === publicRoot || output.startsWith(publicRoot + sep)) {
 }
 
 const assets = join(launch, 'assets', 'launch');
-const input = join(output, 'kiwe-launch-home-r7');
+const input = join(output, 'kiwe-launch-home');
 const compilerAssets = join(input, 'assets', 'launch');
 const nativeAssets = join(output, 'site-assets');
 const [html, styles] = await Promise.all([
