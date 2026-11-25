@@ -127,6 +127,16 @@ function domainSetupStep(project) {
       : '';
   }
   if (setup.status === 'ownership_verified') {
+    if (project.domainMove?.status === 'awaiting_wordpress') {
+      return `<section><h2>Your domain</h2><p>Approve WordPress at your final address. Your temporary site is available while Kiwe prepares the move.</p>
+<form method="post" action="/projects/${project.id}/connect-domain">
+<input type="hidden" name="revision" value="${project.revision}">
+<button class="button">Verify WordPress at your domain</button>
+</form></section>`;
+    }
+    if (project.domainMove?.status === 'wordpress_verified') {
+      return '<section><h2>Your domain</h2><p>WordPress is verified at your final address. Your temporary site is available while Kiwe prepares the WhatsApp connection.</p></section>';
+    }
     return '<section><h2>Your domain</h2><p>Domain ownership verified. Kiwe needs to review the move to your domain. You can use your temporary site while the move is pending.</p></section>';
   }
   const record = setup.record;

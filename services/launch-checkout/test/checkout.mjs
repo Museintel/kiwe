@@ -120,6 +120,12 @@ try {
     arguments: { purchaseId: 'kiwe_' + '1'.repeat(32), domain: 'eligible.in' } });
   assert.ok(registration.isError);
   assert.match(registration.content[0].text, /Paid domain registration is disabled/);
+  const move = await mcp.callTool({ name: 'kiwe_launch_review_domain_move', arguments: {
+    purchaseId: 'kiwe_' + '1'.repeat(32), domain: 'owned.example', sourceUrl: 'https://unrelated.example',
+    recoverySha256: '9'.repeat(64),
+  } });
+  assert.ok(move.isError);
+  assert.match(move.content[0].text, /Provide the exact temporary site/);
   assert.equal((await operation('kiwe_launch_check_domain', { domain: 'test.in' })).status, 'eligible');
   assert.equal((await operation('kiwe_launch_check_domain', { domain: 'Test.COM.' })).status, 'excluded');
   assert.equal((await operation('kiwe_launch_check_domain', { domain: 'restricted.in' })).status, 'restricted');

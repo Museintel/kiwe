@@ -7,6 +7,7 @@
 
 ## Version 1.x (Start project candidate)
 
+- Record a reviewed owned-domain restoration through Launch and allow native WordPress approval at the final address from the same Start project.
 - Require verified `.in` registration before provisioning on a new custom address. Add private Launch registrar reconciliation and client-owned DNS verification through Start and MCP.
 - Add Shiprocket to the live Launch hero’s Powered by rail. Keep its full height in view on the supported first-load viewport checks.
 - Provision signed Kiwe Core and MCP, licensed stable Bricks, and inactive Razorpay and Shiprocket packages on managed WordPress. Set up the default Key sender and offer verified client pairing through Start and MCP.

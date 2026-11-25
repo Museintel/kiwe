@@ -140,6 +140,12 @@ The hosted run passed 18 capture and 45 restore checks on PHP 8.2.36 with signed
 
 Run `node --test test/hosted-domain-origins.mjs` with `KIWE_KEY_FIXTURE_SOURCE` set to the qualified Key checkout. The lab checks Start and Key against an owned-domain project with simulated DNS and WordPress approval. A connected Start project keeps its temporary URL after TXT verification. Key's existing managed request rejects a second origin even when that origin is explicitly approved. A separate approved fixture enrollment gets a fresh credential and can sign at the final origin. Plan a same-project native reauthorization and Key transition before using these steps for a client cutover. Direct `.in` provisioning also needs admission of its exact final origin under Key's managed policy.
 
+### Reviewed domain move
+
+The Launch operator checks the restored copy and independently verified recovery archive, then records the review with private MCP or CLI. Launch calls `POST /projects/api/domain-moves` using its purchase service credential. The exact captured payment, entitlement and buyer identify the existing project. Start matches the approved owned domain and connected temporary WordPress address and stores the recovery digest privately. Repeating the same review returns the saved state.
+
+The buyer can select **Verify WordPress at your domain** or call `kiwe_start_verify_domain_wordpress`. The existing native approval requires a fresh authorization at that exact origin. Start saves the result on the move review and continues to serve the temporary address as the project's active site. The candidate reports `awaiting_wordpress` or `wordpress_verified`. Key verification and final activation are a separate pending step.
+
 ## Checkout handoff
 
 1. After verifying the payment, account, any referral and the domain selection, the trusted Launch backend sends JSON to `POST /projects/api/purchases` with the separate purchase service credential. Supply `entitlementId`, `purchaseId`, `accountId`, `accountType: "client"`, `planId: "kiwe-client-managed-v1"`, `hostingIncluded: true` and a `clientOrder`. Use the payment provider's stable payment identifier as `purchaseId`.

@@ -189,9 +189,9 @@ export function createSiteConnections(projects, startOrigin, wordpress = createW
   const inFlight = new Map();
   const redirect = startOrigin + siteCallbackPath;
   return {
-    async begin(accountId, input) {
+    async begin(accountId, input, move = false) {
       const details = parse(siteLinkInput, input);
-      const project = projects.siteLinkTarget(accountId, details);
+      const project = projects.siteLinkTarget(accountId, details, move);
       const existing = projects.pendingSiteLink(project.id, project.revision);
       if (existing) return { authorizationUrl: existing.authorizationUrl };
 
@@ -200,7 +200,7 @@ export function createSiteConnections(projects, startOrigin, wordpress = createW
       const prepare = (async () => {
         const state = opaque();
         const connection = await wordpress.begin(project.domain, redirect, state, opaque());
-        const current = projects.saveSiteLink(accountId, details, state, connection);
+        const current = projects.saveSiteLink(accountId, details, state, connection, project.moveId);
         return { authorizationUrl: current.authorizationUrl };
       })();
       inFlight.set(key, prepare);

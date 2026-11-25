@@ -326,24 +326,46 @@ final class KiweBilling
         return ['ticket' => $reply['ticket'], 'action' => $action];
     }
 
-    private function domainPurchase(string $purchaseId, string $domain): array
+    private function domainPurchase(string $purchaseId, string $domain, string $mode = 'register'): array
     {
         if (!preg_match('/^kiwe_[a-f0-9]{32}$/D', $purchaseId)) {
             throw new KiweCheckoutError('Enter a confirmed Kiwe purchase ID.');
         }
         $purchase = $this->purchase($purchaseId);
         $quote = $purchase ? $this->quote($purchase) : [];
+        $selection = ['mode' => $mode, 'name' => $domain];
+        if ($mode === 'register') $selection['category'] = 'standard';
         if (!$purchase || $purchase['retired_at'] || !$purchase['confirmed_at'] || !$purchase['start_project_id']
-            || $purchase['first_term_end'] <= time() || ($quote['planId'] ?? null) !== $this->checkout->plan['id']
-            || ($quote['domain'] ?? null) !== ['mode' => 'register', 'name' => $domain, 'category' => 'standard']) {
-            throw new KiweCheckoutError('Use the exact included domain and an active first-year purchase already delivered to Start.', 409);
+            || ($mode === 'register' && $purchase['first_term_end'] <= time())
+            || ($quote['planId'] ?? null) !== $this->checkout->plan['id'] || ($quote['domain'] ?? null) !== $selection) {
+            throw new KiweCheckoutError('Use the exact domain and a confirmed purchase that was delivered to Start.', 409);
         }
         $dispute = $this->row('SELECT COALESCE(SUM(deducted + held), 0) AS withheld FROM launch_disputes WHERE payment_id = ?',
             [$purchase['payment_id']]);
         if ($this->refunded($purchase['payment_id'], $purchase['payment_refunded']) > 0 || $dispute['withheld'] > 0) {
-            throw new KiweCheckoutError('Registration is on hold while Launch reviews the payment.', 409);
+            throw new KiweCheckoutError('Domain setup is on hold while Launch reviews the payment.', 409);
         }
         return $purchase;
+    }
+
+    public function reviewDomainMove(string $purchaseId, string $domain, string $sourceUrl, string $recoverySha256): array
+    {
+        if (!preg_match('~^https://[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.hostingersite\.com$~D', $sourceUrl)
+            || !preg_match('/^[a-f0-9]{64}$/D', $recoverySha256)) {
+            throw new KiweCheckoutError('Provide the exact temporary site and the verified recovery digest.', 400);
+        }
+        $purchase = $this->domainPurchase($purchaseId, $domain, 'owned');
+        $reply = ($this->start)('domain-moves', [
+            'entitlementId' => $purchaseId, 'accountId' => $purchase['account_id'], 'purchaseId' => $purchase['payment_id'],
+            'domain' => $domain, 'sourceUrl' => $sourceUrl, 'recoverySha256' => $recoverySha256,
+        ]);
+        $target = $reply['domainMove']['targetUrl'] ?? null;
+        $status = $reply['domainMove']['status'] ?? null;
+        if (($reply['projectId'] ?? null) !== $purchase['start_project_id'] || $target !== 'https://' . $domain
+            || !in_array($status, ['awaiting_wordpress', 'wordpress_verified'], true)) {
+            throw new KiweCheckoutError('Start could not confirm the reviewed move.', 503);
+        }
+        return ['projectId' => $purchase['start_project_id'], 'domainMove' => ['status' => $status, 'targetUrl' => $target]];
     }
 
     public function registerDomain(KiweRegistration $registrar, string $purchaseId, string $domain, int $contact): array

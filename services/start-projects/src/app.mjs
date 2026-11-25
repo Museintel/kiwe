@@ -147,6 +147,11 @@ function mcpTools(projects, siteConnections, managedHosting, domainProof, keyCon
       outputSchema: singleProjectOutput,
       annotations: { destructiveHint: false, idempotentHint: true },
     }, (input) => run(async () => result('Domain verification', { project: await domainProof(accountId, input) })));
+    server.registerTool('kiwe_start_verify_domain_wordpress', {
+      description: 'Open the WordPress owner’s approval for the reviewed restoration at the final domain. This prepares the move while the temporary website stays active.',
+      inputSchema: siteLinkInput,
+      annotations: { destructiveHint: false, idempotentHint: true, openWorldHint: true },
+    }, (input) => run(async () => result('Approve WordPress at the final domain', await siteConnections.begin(accountId, input, true))));
   }
   server.registerTool('kiwe_start_connect_site', {
     description: 'Open native authorization for the selected existing or ready managed WordPress site with Kiwe MCP installed. The website owner approves the link.',
@@ -467,6 +472,14 @@ export function createStartServer({ projects, startOrigin, checkoutOrigin, issue
       }
       return json(response, 200, projects.confirmDomainRegistration(input));
     }
+    if ((!pilot || launchBuyers) && endpoint === 'POST /projects/api/domain-moves') {
+      purchaseWrite(request);
+      const input = await readBody(request, jsonType);
+      if (typeof input?.accountId !== 'string' || !/^launch:[a-f0-9]{32}$/.test(input.accountId)) {
+        throw new StartError(403, 'launch_buyer_required', 'This connection reviews Kiwe Launch Client domain moves.');
+      }
+      return json(response, 200, projects.reviewDomainMove(input));
+    }
     if (!pilot && endpoint === 'POST /projects/api/client-handoffs') {
       purchaseWrite(request);
       const handoff = projects.issueClientHandoff(await readBody(request, jsonType));
@@ -507,7 +520,10 @@ export function createStartServer({ projects, startOrigin, checkoutOrigin, issue
         if (accountForBrowser(request) === project.accountId) {
           return redirect(response, '/projects/' + project.id);
         }
-        return send(response, 200, siteReturnPage('The verified site is saved on your project.', true));
+        const message = project.domainMove?.status === 'wordpress_verified'
+          ? 'WordPress is verified at the final address. The temporary website is available while the move is prepared.'
+          : 'The verified site is saved on your project.';
+        return send(response, 200, siteReturnPage(message, true));
       } catch (error) {
         if (!(error instanceof StartError)) throw error;
         return send(response, error.status, siteReturnPage(error.message, false));
@@ -718,7 +734,7 @@ export function createStartServer({ projects, startOrigin, checkoutOrigin, issue
         return send(response, error.status, projectsPage(projects.listProjects(accountId), projects.agencySites(accountId), error.message, pilot));
       }
     }
-    const match = pathname.match(/^\/projects\/([a-f0-9-]{36})(?:\/(domain|domain-dns|connect|hosting|key|key-pair|invite-client|revoke-client))?$/);
+    const match = pathname.match(/^\/projects\/([a-f0-9-]{36})(?:\/(domain|domain-dns|connect|connect-domain|hosting|key|key-pair|invite-client|revoke-client))?$/);
     const listRoute = endpoint === 'GET /projects' || endpoint === 'GET /projects/';
     if (listRoute || match) {
       const accountId = accountForBrowser(request);
@@ -760,6 +776,10 @@ export function createStartServer({ projects, startOrigin, checkoutOrigin, issue
           if (action === 'connect') {
             const pending = await siteConnections.begin(accountId, input);
             return send(response, 200, siteAuthorizationPage(project, pending.authorizationUrl));
+          }
+          if (action === 'connect-domain') {
+            const pending = await siteConnections.begin(accountId, input, true);
+            return send(response, 200, siteAuthorizationPage(project, pending.authorizationUrl, 'verify WordPress at your final address'));
           }
           if (action === 'key') {
             const key = await keyConnections.resume(accountId, input);

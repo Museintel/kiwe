@@ -57,7 +57,16 @@ $charges = 0;
 $readyAt = null;
 $fixtureProject = '00000000-1221-4111-8111-000000000001';
 $domainConfirmation = null;
-$startCallback = static function (string $action, array $data) use ($buyer, $draft, $fixtureProject, &$readyAt, &$charges, &$domainConfirmation): array {
+$ownedMove = null;
+$startCallback = static function (string $action, array $data) use ($buyer, $draft, $fixtureProject, &$readyAt, &$charges, &$domainConfirmation, &$ownedMove): array {
+    if ($ownedMove && $data['accountId'] === $ownedMove['accountId']) {
+        if ($action === 'purchases') {
+            kiwe_checkout_expect($data['clientOrder']['domain'] === ['mode' => 'owned', 'name' => $ownedMove['domain']], 'Keep the owned domain from checkout.');
+            return ['projectId' => $ownedMove['projectId']];
+        }
+        kiwe_checkout_expect($action === 'domain-moves' && $data === $ownedMove['receipt'], 'Forward only the exact paid move to Start.');
+        return ['projectId' => $ownedMove['projectId'], 'domainMove' => ['status' => 'awaiting_wordpress', 'targetUrl' => 'https://' . $ownedMove['domain']]];
+    }
     kiwe_checkout_expect($data['accountId'] === $buyer['id'], 'Start keeps the verified account ID.');
     if ($action === 'purchases') {
         kiwe_checkout_expect($data['clientOrder']['paidMinor'] === $draft['quote']['upfrontMinor'], 'Start receives the paid quote.');
@@ -250,6 +259,38 @@ $refund = ['id' => 'rfnd_HostedAnnual', 'payment_id' => $payment['id'], 'currenc
 $send('refund.processed', ['refund' => ['entity' => $refund]], 'hosted-annual-refund');
 kiwe_checkout_expect($partners->summary($partnerId) === ['earned' => 60000, 'available' => 0, 'pending' => 0,
     'paid' => 60000, 'held' => 0, 'adjustmentDue' => 0], 'Refunded charges reduce the available balance after recorded payouts.');
+
+$ownedBuyer = kiwe_checkout_fixture_buyer($checkout, $file, 'domain-owner@example.invalid');
+$ownedDomain = 'client-domain.example';
+$temporary = 'https://temporary-fixture.hostingersite.com';
+$archiveHash = str_repeat('8', 64);
+$ownedDraft = $checkout->saveDraft($ownedBuyer, [
+    'revision' => '0', 'mode' => 'owned', 'owns_domain' => 'yes', 'domain' => $ownedDomain, 'name' => 'Domain Owner',
+    'phone' => '+919876500004', 'billing_address' => '30 Synthetic Lane', 'city' => 'Mumbai',
+    'region' => 'Maharashtra', 'postcode' => '400001', 'country' => 'India',
+], '127.0.0.1');
+$billing->begin($ownedBuyer, $ownedDraft['revision'], '127.0.0.1');
+$ownedPurchase = $billing->status($ownedBuyer['id'])['id'];
+$ownedState = json_decode(file_get_contents($gatewayFile), true, flags: JSON_THROW_ON_ERROR);
+$ownedLink = end($ownedState['links']);
+$ownedPayment = ['id' => 'pay_OwnedDomainFixture', 'amount' => $ownedDraft['quote']['upfrontMinor'], 'currency' => 'INR',
+    'status' => 'captured', 'amount_refunded' => 0, 'order_id' => 'order_OwnedDomainFixture'];
+$ownedLink = [...$ownedLink, 'status' => 'paid', 'amount_paid' => $ownedPayment['amount'], 'order_id' => $ownedPayment['order_id']];
+$ownedState['payments'][$ownedPayment['id']] = $ownedPayment;
+$ownedState['links'][$ownedLink['id']] = $ownedLink;
+file_put_contents($gatewayFile, json_encode($ownedState, JSON_THROW_ON_ERROR));
+$ownedMove = [
+    'accountId' => $ownedBuyer['id'], 'domain' => $ownedDomain, 'projectId' => '00000000-1221-4111-8111-000000000002',
+    'receipt' => ['entitlementId' => $ownedPurchase, 'accountId' => $ownedBuyer['id'], 'purchaseId' => $ownedPayment['id'],
+        'domain' => $ownedDomain, 'sourceUrl' => $temporary, 'recoverySha256' => $archiveHash],
+];
+$reviewMove = fn () => $billing->reviewDomainMove($ownedPurchase, $ownedDomain, $temporary, $archiveHash);
+$rejectDomain($reviewMove, 409, 'An unpaid checkout cannot review a move.');
+$send('payment_link.paid', ['payment_link' => ['entity' => $ownedLink], 'payment' => ['entity' => $ownedPayment]], 'owned-domain-fixture');
+$rejectDomain($reviewMove, 409, 'The purchase must reach its existing Start project first.');
+kiwe_checkout_expect($billing->deliver($ownedBuyer['id']) === $ownedMove['projectId'], 'Deliver the same owned-domain order.');
+kiwe_checkout_expect($reviewMove() === ['projectId' => $ownedMove['projectId'],
+    'domainMove' => ['status' => 'awaiting_wordpress', 'targetUrl' => 'https://' . $ownedDomain]], 'Expose only the review status and final address.');
 
 echo json_encode(['ok' => true, 'php' => PHP_VERSION, 'accountId' => $buyer['id'], 'partnerAccountId' => $partnerId,
     'draftRevision' => $draft['revision']], JSON_THROW_ON_ERROR), PHP_EOL;

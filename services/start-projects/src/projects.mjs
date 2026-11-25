@@ -39,6 +39,10 @@ export const purchaseInput = z.strictObject({
 });
 export const handoffInput = z.strictObject({ entitlementId: id, accountId: id });
 export const domainRegistrationInput = handoffInput.extend({ purchaseId: id, domain: domainName });
+export const domainMoveReviewInput = domainRegistrationInput.extend({
+  sourceUrl: z.url().max(265),
+  recoverySha256: z.string().regex(/^[a-f0-9]{64}$/),
+});
 export const ticketInput = z.strictObject({ ticket: z.string().regex(/^[A-Za-z0-9_-]{43}$/) });
 export const claimInput = z.strictObject({ projectId: z.uuid() });
 const verifiedEmail = z.string().trim().toLowerCase().max(254).pipe(z.email());
@@ -113,6 +117,10 @@ const projectOutput = z.strictObject({
   site: connectedSite.nullable(),
   managedSite: managedSite.nullable(),
   domainSetup: domainSetup.optional(),
+  domainMove: z.strictObject({
+    status: z.enum(['awaiting_wordpress', 'wordpress_verified']),
+    targetUrl: z.url(),
+  }).optional(),
   key: keyState.extend({ manageUrl: z.url().nullable() }).nullable(),
   next: z.enum(['choose_domain', 'register_domain', 'provision_site', 'activate_kiwe', 'connect_site', 'connect_key', 'fill_design_context']),
 });
@@ -192,6 +200,10 @@ function view(row, launchWebsite, time) {
     status: row.managed_status, url: row.managed_status === 'ready' ? 'https://' + row.setup_domain : null,
   } : null;
   const domainSetup = domainView(row, time);
+  const domainMove = row.move_id && row.move_revision === row.revision && row.move_source_url === row.site_url ? {
+    status: row.move_verified_at ? 'wordpress_verified' : 'awaiting_wordpress',
+    targetUrl: row.move_target_url,
+  } : null;
   const key = row.key_state ? {
     state: row.key_state, sender: row.key_sender, siteAuthenticated: Boolean(row.key_site_authenticated), pairingPending: Boolean(row.key_pairing_pending),
     manageUrl: row.key_manage_url,
@@ -214,6 +226,7 @@ function view(row, launchWebsite, time) {
     site,
     managedSite: hosted,
     ...(domainSetup ? { domainSetup } : {}),
+    ...(domainMove ? { domainMove } : {}),
     key,
     next,
   };
@@ -301,6 +314,18 @@ export function openProjects(filename, { now = Date.now, launchWebsite = 'https:
       verified_at TEXT NOT NULL
     ) STRICT;
     CREATE UNIQUE INDEX IF NOT EXISTS project_sites_url ON project_sites(site_url);
+    CREATE TABLE IF NOT EXISTS project_domain_moves (
+      project_id TEXT PRIMARY KEY REFERENCES projects(id),
+      id TEXT NOT NULL UNIQUE,
+      project_revision INTEGER NOT NULL,
+      source_url TEXT NOT NULL,
+      target_url TEXT NOT NULL UNIQUE,
+      recovery_sha256 TEXT NOT NULL,
+      reviewed_at INTEGER NOT NULL,
+      verified_at INTEGER,
+      core_version TEXT,
+      wordpress_version TEXT
+    ) STRICT;
 
     CREATE TABLE IF NOT EXISTS project_client_invites (
       project_id TEXT PRIMARY KEY REFERENCES projects(id),
@@ -407,11 +432,14 @@ export function openProjects(filename, { now = Date.now, launchWebsite = 'https:
     + 'm.status AS managed_status, m.setup_domain, '
     + "json_extract(o.details, '$.domain.mode') AS domain_mode, "
     + 'd.registered_domain, d.dns_challenge, d.dns_expires_at, d.owner_verified_at, '
+    + 'v.id AS move_id, v.project_revision AS move_revision, v.source_url AS move_source_url, '
+    + 'v.target_url AS move_target_url, v.verified_at AS move_verified_at, '
     + 'k.project_id AS key_project_id, k.state AS key_state, k.sender AS key_sender, k.site_authenticated AS key_site_authenticated, '
     + 'k.manage_url AS key_manage_url, k.pairing_pending AS key_pairing_pending, '
     + 'a.name AS agency_name, a.website AS agency_website FROM projects p '
     + 'LEFT JOIN project_sites s ON p.id = s.project_id LEFT JOIN managed_sites m ON p.id = m.project_id '
     + 'LEFT JOIN project_client_orders o ON p.id = o.project_id LEFT JOIN project_domain_setup d ON p.id = d.project_id '
+    + 'LEFT JOIN project_domain_moves v ON p.id = v.project_id '
     + 'LEFT JOIN project_key_links k ON p.id = k.project_id LEFT JOIN agency_spaces a ON p.account_id = a.account_id';
   const owned = db.prepare(projection + ' WHERE p.id = ? AND p.account_id = ?');
   const list = db.prepare(projection + ' WHERE p.account_id = ? ORDER BY p.rowid');
@@ -481,18 +509,41 @@ export function openProjects(filename, { now = Date.now, launchWebsite = 'https:
   const confirmLink = db.prepare(
     'INSERT INTO project_sites(project_id, site_url, core_version, wordpress_version, verified_at) VALUES (?, ?, ?, ?, ?)',
   );
+  const domainMoveByProject = db.prepare('SELECT * FROM project_domain_moves WHERE project_id = ?');
+  const addDomainMove = db.prepare(
+    'INSERT INTO project_domain_moves(project_id,id,project_revision,source_url,target_url,recovery_sha256,reviewed_at) '
+    + 'VALUES (?,?,?,?,?,?,?) ON CONFLICT DO NOTHING',
+  );
+  const confirmDomainMove = db.prepare(
+    'UPDATE project_domain_moves SET verified_at = ?, core_version = ?, wordpress_version = ? WHERE id = ? AND verified_at IS NULL',
+  );
+  const assignedMoveDomain = db.prepare('SELECT project_id FROM managed_sites WHERE setup_domain = ?');
+  const registeredMoveDomain = db.prepare('SELECT project_id FROM project_domain_setup WHERE registered_domain = ?');
 
-  function requireLinkTarget(accountId, { projectId, revision }) {
+  function requireLinkTarget(accountId, { projectId, revision }, move = false) {
     const row = owned.get(projectId, accountId);
     if (!row) throw missingProject();
     if (row.revision !== revision) {
       throw new StartError(409, 'project_changed', 'The project changed. Reload it before connecting a site.');
+    }
+    if (move) {
+      if (!row.move_id || row.move_revision !== row.revision || row.move_source_url !== row.site_url || row.move_verified_at) {
+        throw new StartError(409, 'domain_move_not_ready', 'The final address needs a hosting review before WordPress can be verified here.');
+      }
+      return { row, domain: row.domain, moveId: row.move_id };
     }
     const domain = row.hosting === 'existing' ? row.domain : row.managed_status === 'ready' ? row.setup_domain : null;
     if (!domain || row.site_url) {
       throw new StartError(409, 'site_link_choice', 'Choose an existing WordPress site or finish the managed WordPress setup first.');
     }
     return { row, domain };
+  }
+
+  function checkMoveTarget(row, targetUrl) {
+    const claimed = [attachedSite.get(targetUrl), assignedMoveDomain.get(row.domain), registeredMoveDomain.get(row.domain)];
+    if (claimed.some((entry) => entry && entry.project_id !== row.id)) {
+      throw new StartError(409, 'domain_already_assigned', 'This domain already belongs to another Kiwe project.');
+    }
   }
 
   const managedJob = db.prepare('SELECT status, setup_domain AS domain, reserved_at AS reservedAt, hold_until AS holdUntil FROM managed_sites WHERE project_id = ?');
@@ -811,6 +862,31 @@ export function openProjects(filename, { now = Date.now, launchWebsite = 'https:
       });
     },
 
+    reviewDomainMove(input) {
+      const { entitlementId, accountId, purchaseId, domain, sourceUrl, recoverySha256 } = parse(domainMoveReviewInput, input);
+      return transaction(() => {
+        const order = byEntitlement.get(entitlementId);
+        if (!order || order.account_id !== accountId || order.purchase_id !== purchaseId) throw missingProject();
+        const row = owned.get(order.id, accountId);
+        const targetUrl = 'https://' + row.domain;
+        if (row.domain_mode !== 'owned' || row.owner_verified_at === null || row.domain !== domain
+            || row.managed_status !== 'ready' || !row.setup_domain?.endsWith('.hostingersite.com')
+            || row.site_url !== sourceUrl || sourceUrl !== 'https://' + row.setup_domain || sourceUrl === targetUrl) {
+          throw new StartError(409, 'domain_move_mismatch', 'Review the verified domain and temporary WordPress site on this purchase.');
+        }
+        checkMoveTarget(row, targetUrl);
+        const existing = domainMoveByProject.get(row.id);
+        if (existing && (existing.source_url !== sourceUrl || existing.target_url !== targetUrl
+            || existing.recovery_sha256 !== recoverySha256 || existing.project_revision !== row.revision)) {
+          throw new StartError(409, 'domain_move_conflict', 'This project already has a different domain move review.');
+        }
+        if (!existing && !addDomainMove.run(row.id, randomUUID(), row.revision, sourceUrl, targetUrl, recoverySha256, now()).changes) {
+          throw new StartError(409, 'domain_already_assigned', 'This domain already has a Kiwe move review.');
+        }
+        return { projectId: row.id, domainMove: projectView(owned.get(row.id, accountId)).domainMove };
+      });
+    },
+
     canVerifyDomain(accountId) {
       return Boolean(ownedDomainByAccount.get(accountId));
     },
@@ -1112,9 +1188,9 @@ export function openProjects(filename, { now = Date.now, launchWebsite = 'https:
       });
     },
 
-    siteLinkTarget(accountId, input) {
-      const { row, domain } = requireLinkTarget(accountId, parse(siteLinkInput, input));
-      return { id: row.id, revision: row.revision, domain };
+    siteLinkTarget(accountId, input, move = false) {
+      const { row, domain, moveId } = requireLinkTarget(accountId, parse(siteLinkInput, input), move);
+      return { id: row.id, revision: row.revision, domain, moveId };
     },
 
     pendingSiteLink(projectId, revision) {
@@ -1122,18 +1198,19 @@ export function openProjects(filename, { now = Date.now, launchWebsite = 'https:
       return existing ? JSON.parse(existing.connection) : null;
     },
 
-    saveSiteLink(accountId, details, state, connection) {
+    saveSiteLink(accountId, details, state, connection, moveId) {
       return transaction(() => {
-        const { row, domain } = requireLinkTarget(accountId, details);
-        if (connection.origin !== 'https://' + domain) {
+        const { row, domain, moveId: reviewedMove } = requireLinkTarget(accountId, details, Boolean(moveId));
+        if (connection.origin !== 'https://' + domain || reviewedMove !== moveId) {
           throw new StartError(409, 'site_domain_mismatch', 'The authorization must use the assigned website address.');
         }
         const previous = pendingLink.get(row.id, row.revision, now());
         if (previous) return JSON.parse(previous.connection);
         pruneLinks.run(now());
         dropLinkAttempt.run(row.id);
+        const recorded = moveId ? { ...connection, domainMoveId: moveId } : connection;
         addLinkAttempt.run(digest(state), row.id, accountId, row.revision, connection.issuer,
-          JSON.stringify(connection), now() + handoffLifetime * 2);
+          JSON.stringify(recorded), now() + handoffLifetime * 2);
         return connection;
       });
     },
@@ -1149,9 +1226,17 @@ export function openProjects(filename, { now = Date.now, launchWebsite = 'https:
 
     confirmSiteLink(flow, proof) {
       return transaction(() => {
-        const { row, domain } = requireLinkTarget(flow.accountId, flow);
+        const move = flow.connection?.domainMoveId;
+        const { row, domain, moveId } = requireLinkTarget(flow.accountId, flow, Boolean(move));
         if (proof.url !== 'https://' + domain) {
           throw new StartError(409, 'site_domain_mismatch', 'The verified website must use the assigned website address.');
+        }
+        if (move) {
+          if (move !== moveId) throw missingProject();
+          checkMoveTarget(row, proof.url);
+          confirmDomainMove.run(now(), proof.coreVersion, proof.wordpressVersion, move);
+          dropLinkAttempt.run(row.id);
+          return { ...projectView(owned.get(row.id, row.account_id)), accountId: row.account_id };
         }
         if (attachedSite.get(proof.url)) {
           throw new StartError(409, 'site_already_linked', 'This website is already connected to a Kiwe project.');

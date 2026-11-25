@@ -91,6 +91,16 @@ if (checkoutRoot) {
     inputSchema: { purchaseId: z.string().regex(/^kiwe_[a-f0-9]{32}$/), domain: z.string().min(1).max(253) },
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
   }, ({ purchaseId, domain }) => operation('reconcile-domain', purchaseId, domain));
+  server.registerTool('kiwe_launch_review_domain_move', {
+    description: 'Record the operator review of a restored client-owned domain after verifying the exact WordPress copy and its recovery archive.',
+    inputSchema: {
+      purchaseId: z.string().regex(/^kiwe_[a-f0-9]{32}$/),
+      domain: z.string().min(1).max(253),
+      sourceUrl: z.url().max(265),
+      recoverySha256: z.string().regex(/^[a-f0-9]{64}$/),
+    },
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
+  }, ({ purchaseId, domain, sourceUrl, recoverySha256 }) => operation('review-domain-move', purchaseId, domain, sourceUrl, recoverySha256));
   server.registerTool('kiwe_launch_recover_renewal', {
     description: 'Reconcile a previously reserved Kiwe renewal to its verified Razorpay subscription ID.',
     inputSchema: { accountId: z.string().regex(/^launch:[a-f0-9]{32}$/), subscriptionId: z.string().regex(/^sub_[A-Za-z0-9]{4,80}$/) },
