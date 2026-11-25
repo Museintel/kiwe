@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-function kiwe_billing_json_request(string $method, string $url, string $authorization, array $data = [], bool $allowMissing = false): array
+function kiwe_billing_json_request(string $method, string $url, string $authorization, array $data = [], bool $allowMissing = false, int $timeout = 6): array
 {
     $handle = curl_init($url);
     $body = '';
     $options = [
         CURLOPT_CUSTOMREQUEST => $method,
         CURLOPT_CONNECTTIMEOUT => 3,
-        CURLOPT_TIMEOUT => 6,
+        CURLOPT_TIMEOUT => $timeout,
         CURLOPT_FOLLOWLOCATION => false,
         CURLOPT_PROTOCOLS => CURLPROTO_HTTPS,
         CURLOPT_HTTPHEADER => ['Authorization: ' . $authorization, 'Accept: application/json', 'Content-Type: application/json'],
@@ -46,7 +46,8 @@ function kiwe_billing_gateway(string $keyId, string $keySecret): Closure
 function kiwe_billing_start(string $origin, string $token): Closure
 {
     return static fn (string $action, array $payload): array =>
-        kiwe_billing_json_request('POST', $origin . '/projects/api/' . $action, 'Bearer ' . $token, $payload);
+        kiwe_billing_json_request('POST', $origin . '/projects/api/' . $action, 'Bearer ' . $token, $payload,
+            timeout: $action === 'domain-moves/activate' ? 28 : 6);
 }
 
 function kiwe_billing_id(mixed $id, string $prefix): ?string

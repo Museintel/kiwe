@@ -480,13 +480,15 @@ export function createStartServer({ projects, startOrigin, checkoutOrigin, issue
       }
       return json(response, 200, projects.confirmDomainRegistration(input));
     }
-    if ((!pilot || launchBuyers) && endpoint === 'POST /projects/api/domain-moves') {
+    if ((!pilot || launchBuyers) && ['POST /projects/api/domain-moves', 'POST /projects/api/domain-moves/activate'].includes(endpoint)) {
       purchaseWrite(request);
       const input = await readBody(request, jsonType);
       if (typeof input?.accountId !== 'string' || !/^launch:[a-f0-9]{32}$/.test(input.accountId)) {
         throw new StartError(403, 'launch_buyer_required', 'This connection reviews Kiwe Launch Client domain moves.');
       }
-      return json(response, 200, projects.reviewDomainMove(input));
+      const result = endpoint.endsWith('/activate')
+        ? await managedHosting.activateDomainMove(input) : projects.reviewDomainMove(input);
+      return json(response, 200, result);
     }
     if (!pilot && endpoint === 'POST /projects/api/client-handoffs') {
       purchaseWrite(request);

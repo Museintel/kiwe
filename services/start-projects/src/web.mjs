@@ -127,6 +127,16 @@ function domainSetupStep(project, verifyDomainKey) {
       : '';
   }
   if (setup.status === 'ownership_verified') {
+    if (project.domainMove?.status === 'active') return '';
+    const verifyKeyForm = verifyDomainKey ? `<form method="post" action="/projects/${project.id}/verify-domain-key">
+<input type="hidden" name="revision" value="${project.revision}">
+<button class="button">Verify WhatsApp connection</button>
+</form>` : '';
+    if (project.domainMove?.status === 'activating') {
+      return `<section><h2>Your domain</h2><p>Kiwe is finalizing the move to your domain. Reload this page to check the address.
+${project.domainMove.needsKeyProof ? ' Verify the WhatsApp connection again if the previous check expired.' : ''}</p>
+${project.domainMove.needsKeyProof ? verifyKeyForm : ''}</section>`;
+    }
     if (project.domainMove?.status === 'awaiting_wordpress') {
       return `<section><h2>Your domain</h2><p>Approve WordPress at your final address. Your temporary site is available while Kiwe prepares the move.</p>
 <form method="post" action="/projects/${project.id}/connect-domain">
@@ -136,10 +146,7 @@ function domainSetupStep(project, verifyDomainKey) {
     }
     if (project.domainMove?.status === 'wordpress_verified') {
       return `<section><h2>Your domain</h2><p>WordPress is verified at your final address. Your temporary site is available while Kiwe prepares the WhatsApp connection.</p>
-${verifyDomainKey ? `<form method="post" action="/projects/${project.id}/verify-domain-key">
-<input type="hidden" name="revision" value="${project.revision}">
-<button class="button">Verify WhatsApp connection</button>
-</form>` : ''}</section>`;
+${verifyKeyForm}</section>`;
     }
     if (project.domainMove?.status === 'key_verified') {
       return '<section><h2>Your domain</h2><p>WordPress and the WhatsApp connection are verified at your final address. Your temporary site stays active until the move is complete.</p></section>';
@@ -217,7 +224,8 @@ ${notice}${invite}${revoke}</section>`;
 export function projectPage(project, { error, managed = false, keyEnabled = false, managedKey = false, verifyDomainKey = false, clientAccess = null, invitation = null } = {}) {
   const alert = error ? `<p class="error" role="alert">${escape(error)}</p>` : '';
   const purchased = project.planId === clientPlan.id;
-  const status = project.site
+  const moving = project.domainMove?.status === 'activating';
+  const status = moving ? '' : project.site
     ? `<p class="status">Website verified at <a href="${escape(project.site.url)}">${escape(new URL(project.site.url).hostname)}</a>.${project.next === 'fill_design_context' ? ' Next, fill in Design Context in WordPress.' : ''}</p>`
     : project.domain && !project.managedSite && project.next !== 'register_domain'
       ? `<p class="status">Domain saved. Next, ${project.hosting === 'included' ? 'set up Kiwe hosting' : 'connect your WordPress site'}.</p>`
@@ -245,10 +253,10 @@ ${selection}
 </form>`;
   return page(purchased ? project.domain : 'Choose your domain', `<p><a href="/projects">All projects</a>${project.workspace.type === 'agency' ? ` · <a href="/projects/agency">${escape(project.workspace.name)}</a>` : ' · Kiwe Launch'}</p>
 ${alert}${status}${domainForm}
-${project.site ? '' : hostingStep(project, managed)}${domainSetupStep(project, verifyDomainKey)}${connect}${keyStep(project, keyEnabled, managedKey)}
+${project.site ? '' : hostingStep(project, managed)}${domainSetupStep(project, verifyDomainKey)}${connect}${moving ? '' : keyStep(project, keyEnabled, managedKey)}
 ${clientAccessPanel(project, clientAccess, invitation)}
-${project.site ? `<p>${designContextButton(project.site)} <a class="button" href="/projects/${project.id}/pages">Pages &amp; Templates</a></p>` : ''}
-${project.key?.siteAuthenticated && project.key.state !== 'inactive' ? `<p><a class="button" href="/projects/${project.id}/homepage">Homepage draft</a></p>` : ''}`, true);
+${project.site && !moving ? `<p>${designContextButton(project.site)} <a class="button" href="/projects/${project.id}/pages">Pages &amp; Templates</a></p>` : ''}
+${!moving && project.key?.siteAuthenticated && project.key.state !== 'inactive' ? `<p><a class="button" href="/projects/${project.id}/homepage">Homepage draft</a></p>` : ''}`, true);
 }
 
 export function websitePage(project, state, message) {

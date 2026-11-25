@@ -350,20 +350,42 @@ final class KiweBilling
 
     public function reviewDomainMove(string $purchaseId, string $domain, string $sourceUrl, string $recoverySha256): array
     {
+        return $this->domainMove($purchaseId, $domain, $sourceUrl, $recoverySha256);
+    }
+
+    public function activateDomainMove(
+        string $purchaseId, string $domain, string $sourceUrl, string $recoverySha256, string $finalRecoverySha256, bool $sourceFrozen
+    ): array {
+        if (!$sourceFrozen || !preg_match('/^[a-f0-9]{64}$/D', $finalRecoverySha256)) {
+            throw new KiweCheckoutError('Confirm that writes at the temporary site are paused and provide the verified final-copy digest.', 400);
+        }
+        return $this->domainMove($purchaseId, $domain, $sourceUrl, $recoverySha256, $finalRecoverySha256);
+    }
+
+    private function domainMove(
+        string $purchaseId, string $domain, string $sourceUrl, string $recoverySha256, ?string $finalRecoverySha256 = null
+    ): array
+    {
         if (!preg_match('~^https://[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.hostingersite\.com$~D', $sourceUrl)
             || !preg_match('/^[a-f0-9]{64}$/D', $recoverySha256)) {
             throw new KiweCheckoutError('Provide the exact temporary site and the verified recovery digest.', 400);
         }
         $purchase = $this->domainPurchase($purchaseId, $domain, 'owned');
-        $reply = ($this->start)('domain-moves', [
+        $payload = [
             'entitlementId' => $purchaseId, 'accountId' => $purchase['account_id'], 'purchaseId' => $purchase['payment_id'],
             'domain' => $domain, 'sourceUrl' => $sourceUrl, 'recoverySha256' => $recoverySha256,
-        ]);
+        ];
+        if ($finalRecoverySha256 !== null) {
+            $payload['finalRecoverySha256'] = $finalRecoverySha256;
+            $payload['sourceFrozen'] = true;
+        }
+        $reply = ($this->start)($finalRecoverySha256 === null ? 'domain-moves' : 'domain-moves/activate', $payload);
         $target = $reply['domainMove']['targetUrl'] ?? null;
         $status = $reply['domainMove']['status'] ?? null;
+        $allowed = $finalRecoverySha256 === null ? ['awaiting_wordpress', 'wordpress_verified', 'key_verified', 'activating', 'active'] : ['active'];
         if (($reply['projectId'] ?? null) !== $purchase['start_project_id'] || $target !== 'https://' . $domain
-            || !in_array($status, ['awaiting_wordpress', 'wordpress_verified'], true)) {
-            throw new KiweCheckoutError('Start could not confirm the reviewed move.', 503);
+            || !in_array($status, $allowed, true)) {
+            throw new KiweCheckoutError('Start could not confirm this domain move.', 503);
         }
         return ['projectId' => $purchase['start_project_id'], 'domainMove' => ['status' => $status, 'targetUrl' => $target]];
     }

@@ -18,7 +18,7 @@ async function callPhp(script, ...input) {
   const php = process.env.KIWE_LAUNCH_PHP ?? 'php';
   const args = process.env.KIWE_LAUNCH_PHP_CONFIG ? ['-c', path.resolve(process.env.KIWE_LAUNCH_PHP_CONFIG)] : [];
   const timeout = input[0] === 'reconcile-billing' ? 55000
-    : ['reconcile-partner-deliveries', 'reconcile-domain'].includes(input[0]) ? 30000 : 12000;
+    : ['reconcile-partner-deliveries', 'reconcile-domain', 'activate-domain-move'].includes(input[0]) ? 35000 : 12000;
   const { stdout } = await run(php, [...args, script, ...input], { timeout, maxBuffer: 512 * 1024 });
   return JSON.parse(stdout);
 }
@@ -91,16 +91,23 @@ if (checkoutRoot) {
     inputSchema: { purchaseId: z.string().regex(/^kiwe_[a-f0-9]{32}$/), domain: z.string().min(1).max(253) },
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
   }, ({ purchaseId, domain }) => operation('reconcile-domain', purchaseId, domain));
+  const domainMoveFields = {
+    purchaseId: z.string().regex(/^kiwe_[a-f0-9]{32}$/),
+    domain: z.string().min(1).max(253),
+    sourceUrl: z.url().max(265),
+    recoverySha256: z.string().regex(/^[a-f0-9]{64}$/),
+  };
   server.registerTool('kiwe_launch_review_domain_move', {
     description: 'Record the operator review of a restored client-owned domain after verifying the exact WordPress copy and its recovery archive.',
-    inputSchema: {
-      purchaseId: z.string().regex(/^kiwe_[a-f0-9]{32}$/),
-      domain: z.string().min(1).max(253),
-      sourceUrl: z.url().max(265),
-      recoverySha256: z.string().regex(/^[a-f0-9]{64}$/),
-    },
+    inputSchema: domainMoveFields,
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
   }, ({ purchaseId, domain, sourceUrl, recoverySha256 }) => operation('review-domain-move', purchaseId, domain, sourceUrl, recoverySha256));
+  server.registerTool('kiwe_launch_activate_domain_move', {
+    description: 'Activate the approved domain on the same paid Start project once writes at the temporary site are paused and the final WordPress copy is verified. Retry with the same final recovery digest.',
+    inputSchema: { ...domainMoveFields, finalRecoverySha256: domainMoveFields.recoverySha256, sourceFrozen: z.literal(true) },
+    annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: true },
+  }, ({ purchaseId, domain, sourceUrl, recoverySha256, finalRecoverySha256 }) =>
+    operation('activate-domain-move', purchaseId, domain, sourceUrl, recoverySha256, finalRecoverySha256, '--source-frozen'));
   server.registerTool('kiwe_launch_recover_renewal', {
     description: 'Reconcile a previously reserved Kiwe renewal to its verified Razorpay subscription ID.',
     inputSchema: { accountId: z.string().regex(/^launch:[a-f0-9]{32}$/), subscriptionId: z.string().regex(/^sub_[A-Za-z0-9]{4,80}$/) },

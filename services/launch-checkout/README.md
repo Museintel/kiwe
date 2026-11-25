@@ -64,7 +64,13 @@ Use `php operator.php register-domain PURCHASE_ID EXACT_DOMAIN WHOIS_PROFILE_ID`
 
 Use `php operator.php reconcile-domain PURCHASE_ID EXACT_DOMAIN` or the private `kiwe_launch_reconcile_domain` tool to check a saved registration. Preserve the attempt after an interrupted request or a pending payment. Reconcile it with hPanel before any recovery action. Launch confirms the exact active registration and owner contact before notifying Start. Reconciliation handles a lost Start response through the same receipt. Customer-facing tools expose the domain's progress only.
 
-For a client-owned domain, use `kiwe_launch_review_domain_move` or `php operator.php review-domain-move PURCHASE_ID EXACT_DOMAIN TEMPORARY_URL RECOVERY_SHA256` after the operator has verified the restored WordPress copy and recovery archive. Launch checks the confirmed owned-domain order and sends the review to its existing project in Start. The buyer then approves WordPress at the final address. [Reviewed move and approval](../start-projects/README.md#reviewed-domain-move)
+### Owned-domain moves
+
+Use the private `kiwe_launch_review_domain_move` or `php operator.php review-domain-move PURCHASE DOMAIN SOURCE_URL REVIEW_SHA256` to record the verified restoration on the original paid purchase. The buyer verifies WordPress and Key at the final address through Start.
+
+After pausing writes at the temporary address and verifying the final synchronized recovery copy, use `kiwe_launch_activate_domain_move` with the purchase, exact final domain, temporary HTTPS URL, reviewed recovery digest, final recovery digest and confirmation of the write pause. The equivalent command is `php operator.php activate-domain-move PURCHASE DOMAIN SOURCE_URL REVIEW_SHA256 FINAL_SHA256 --source-frozen`. Start checks the public final address and returns the active domain on the same project. Retry with the same details after an interrupted response and preserve the original recovery copy through the final checks.
+
+See the [Start move and recovery workflow](../start-projects/README.md#reviewed-domain-move).
 
 ## Qualification and recovery
 

@@ -28,6 +28,22 @@ export function createHostingerProvider({ token, orderId, username, adminEmail, 
     return entry.status;
   }
 
+  async function wordpressAvailable(origin, exactHome = false) {
+    for (const path of ['/wp-json/?_fields=home,namespaces', '/?rest_route=%2F&_fields=home,namespaces']) {
+      try {
+        const { body } = await probe(origin, origin + path);
+        const value = JSON.parse(body);
+        const homeMatches = exactHome ? [origin, origin + '/'].includes(value.home) : new URL(value.home).origin === origin;
+        if (homeMatches && Array.isArray(value.namespaces) && value.namespaces.includes('wp/v2')) {
+          return true;
+        }
+      } catch {
+        // Site setup can finish before HTTPS and the WordPress routes respond.
+      }
+    }
+    return false;
+  }
+
   return {
     prepareWordPress, connectKey,
     async reserve() {
@@ -70,18 +86,11 @@ export function createHostingerProvider({ token, orderId, username, adminEmail, 
 
     async wordpressReady(domain) {
       if (!(freeDomain.test(domain) || registeredDomain.test(domain))) throw providerUnavailable();
-      const origin = 'https://' + domain;
-      for (const path of ['/wp-json/?_fields=home,namespaces', '/?rest_route=%2F&_fields=home,namespaces']) {
-        try {
-          const { body } = await probe(origin, origin + path);
-          const value = JSON.parse(body);
-          if (new URL(value.home).origin === origin && Array.isArray(value.namespaces)
-              && value.namespaces.includes('wp/v2')) return true;
-        } catch {
-          // Site setup can finish before HTTPS and the WordPress routes respond.
-        }
-      }
-      return false;
+      return wordpressAvailable('https://' + domain);
+    },
+
+    destinationReady(origin) {
+      return wordpressAvailable(origin, true);
     },
   };
 }
@@ -133,6 +142,9 @@ export function createManagedHosting(projects, provider, keyConnections) {
     canVerifyDomainKey: Boolean(provider?.connectKey && keyConnections?.managed),
     verifyDomainKey(accountId, input) {
       return keyConnections.verifyDomainMove(accountId, input, provider?.connectKey);
+    },
+    activateDomainMove(input) {
+      return keyConnections.activateDomainMove(input, provider?.destinationReady);
     },
     async step(accountId, input) {
       if (!provider) throw new StartError(503, 'hosting_unconfigured', 'Kiwe hosting is not available for this setup yet.');

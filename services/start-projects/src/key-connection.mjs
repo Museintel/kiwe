@@ -4,6 +4,7 @@ import { keyState, parse, siteLinkInput, StartError } from './projects.mjs';
 const receipt = keyState.extend({ origin: z.url(), approvalUrl: z.url() });
 const setupCode = z.string().regex(/^[A-Za-z0-9_-]{43}$/).nullable();
 const managedReceipt = receipt.extend({ setupCode });
+const activationReceipt = receipt.extend({ moveId: z.uuid(), state: z.enum(['sender_ready', 'sender_offline', 'inactive']) });
 const moveFields = z.strictObject({ moveId: z.uuid(), origin: z.url(), expiresAt: z.number().int().positive() });
 const moveReceipt = z.discriminatedUnion('state', [
   moveFields.extend({ state: z.literal('awaiting_wordpress'), setupCode: setupCode.unwrap() }),
@@ -69,6 +70,13 @@ export function createKeyProvider({ origin, token, managedToken, http = fetch })
       if (!parsed.success || parsed.data.moveId !== request.moveId) throw unavailable();
       return parsed.data;
     },
+    async activateManagedMove(request) {
+      const value = verifyReceipt(activationReceipt, await post('managed-sites/move/activate', request, managedToken));
+      if (value.moveId !== request.moveId || (value.state !== 'inactive' && (!value.sender || !value.siteAuthenticated))) {
+        throw unavailable();
+      }
+      return value;
+    },
     async pairManaged(request, phone) {
       const value = await post('managed-sites/pair', { ...request, phone }, managedToken);
       return verifyLink(value.pairingUrl, /^\/start\/pair\/[A-Za-z0-9_-]{43}$/);
@@ -108,6 +116,18 @@ export function createKeyConnections(projects, provider) {
       })();
       active.set(request.moveId, pending);
       try { return await pending; } finally { active.delete(request.moveId); }
+    },
+    async activateDomainMove(input, destinationReady) {
+      if (!provider?.managed || !provider.activateManagedMove || !destinationReady) throw unavailable();
+      const target = projects.domainActivationTarget(input);
+      if (target.result) return target.result;
+      if (!(await destinationReady(target.origin))) {
+        throw new StartError(409, 'domain_https_unavailable', 'The final WordPress address must answer over public HTTPS.');
+      }
+      const { request, result } = projects.beginDomainActivation(input);
+      if (result) return result;
+      const activated = await provider.activateManagedMove(request);
+      return projects.completeDomainActivation(input, activated);
     },
     async pair(accountId, input) {
       if (!provider?.managed) throw unavailable();

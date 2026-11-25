@@ -22,6 +22,9 @@ try {
         'register-domain', 'reconcile-domain' => kiwe_checkout_operator_domain($state, $argv[1], $value, $argv[3] ?? '', $argv[4] ?? ''),
         'review-domain-move' => ($billing ?? throw new KiweCheckoutError('Launch billing is unavailable.', 503))
             ->reviewDomainMove($value, kiwe_checkout_domain($argv[3] ?? ''), $argv[4] ?? '', $argv[5] ?? ''),
+        'activate-domain-move' => ($billing ?? throw new KiweCheckoutError('Launch billing is unavailable.', 503))
+            ->activateDomainMove($value, kiwe_checkout_domain($argv[3] ?? ''), $argv[4] ?? '', $argv[5] ?? '', $argv[6] ?? '',
+                ($argv[7] ?? '') === '--source-frozen'),
         'recover-renewal' => kiwe_checkout_operator_recover($billing, $value, $argv[3] ?? ''),
         'partner-summary' => ['balance' => kiwe_checkout_operator_partners($billing)->summary($value)],
         'reconcile-partner-deliveries' => kiwe_checkout_operator_partners($billing)->reconcileDeliveries(),

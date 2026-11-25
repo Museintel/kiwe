@@ -64,8 +64,13 @@ $startCallback = static function (string $action, array $data) use ($buyer, $dra
             kiwe_checkout_expect($data['clientOrder']['domain'] === ['mode' => 'owned', 'name' => $ownedMove['domain']], 'Keep the owned domain from checkout.');
             return ['projectId' => $ownedMove['projectId']];
         }
-        kiwe_checkout_expect($action === 'domain-moves' && $data === $ownedMove['receipt'], 'Forward only the exact paid move to Start.');
-        return ['projectId' => $ownedMove['projectId'], 'domainMove' => ['status' => 'awaiting_wordpress', 'targetUrl' => 'https://' . $ownedMove['domain']]];
+        $activate = $action === 'domain-moves/activate';
+        $expected = $ownedMove['receipt'];
+        if ($activate) $expected += ['finalRecoverySha256' => $ownedMove['finalRecoverySha256'], 'sourceFrozen' => true];
+        kiwe_checkout_expect(($activate || $action === 'domain-moves') && $data === $expected, 'Forward only the exact paid move to Start.');
+        if ($activate) $ownedMove['activated'] = true;
+        $status = empty($ownedMove['activated']) ? 'awaiting_wordpress' : 'active';
+        return ['projectId' => $ownedMove['projectId'], 'domainMove' => ['status' => $status, 'targetUrl' => 'https://' . $ownedMove['domain']]];
     }
     kiwe_checkout_expect($data['accountId'] === $buyer['id'], 'Start keeps the verified account ID.');
     if ($action === 'purchases') {
@@ -281,16 +286,27 @@ $ownedState['links'][$ownedLink['id']] = $ownedLink;
 file_put_contents($gatewayFile, json_encode($ownedState, JSON_THROW_ON_ERROR));
 $ownedMove = [
     'accountId' => $ownedBuyer['id'], 'domain' => $ownedDomain, 'projectId' => '00000000-1221-4111-8111-000000000002',
+    'finalRecoverySha256' => str_repeat('9', 64),
     'receipt' => ['entitlementId' => $ownedPurchase, 'accountId' => $ownedBuyer['id'], 'purchaseId' => $ownedPayment['id'],
         'domain' => $ownedDomain, 'sourceUrl' => $temporary, 'recoverySha256' => $archiveHash],
 ];
 $reviewMove = fn () => $billing->reviewDomainMove($ownedPurchase, $ownedDomain, $temporary, $archiveHash);
+$finalHash = $ownedMove['finalRecoverySha256'];
+$activateMove = fn () => $billing->activateDomainMove($ownedPurchase, $ownedDomain, $temporary, $archiveHash, $finalHash, true);
 $rejectDomain($reviewMove, 409, 'An unpaid checkout cannot review a move.');
+$rejectDomain($activateMove, 409, 'An unpaid checkout cannot activate a move.');
 $send('payment_link.paid', ['payment_link' => ['entity' => $ownedLink], 'payment' => ['entity' => $ownedPayment]], 'owned-domain-fixture');
 $rejectDomain($reviewMove, 409, 'The purchase must reach its existing Start project first.');
 kiwe_checkout_expect($billing->deliver($ownedBuyer['id']) === $ownedMove['projectId'], 'Deliver the same owned-domain order.');
 kiwe_checkout_expect($reviewMove() === ['projectId' => $ownedMove['projectId'],
     'domainMove' => ['status' => 'awaiting_wordpress', 'targetUrl' => 'https://' . $ownedDomain]], 'Expose only the review status and final address.');
+$rejectDomain(fn () => $billing->activateDomainMove($ownedPurchase, $ownedDomain, $temporary, $archiveHash, $finalHash, false),
+    400, 'Finalization needs a verified write pause at the temporary site.');
+$rejectDomain(fn () => $billing->activateDomainMove($ownedPurchase, $ownedDomain, $temporary, $archiveHash, 'unverified', true),
+    400, 'Pass a verified final archive digest.');
+$activation = ['projectId' => $ownedMove['projectId'], 'domainMove' => ['status' => 'active', 'targetUrl' => 'https://' . $ownedDomain]];
+kiwe_checkout_expect($activateMove() === $activation && $activateMove() === $activation && $reviewMove() === $activation,
+    'The same paid project reports the final address after activation and replay.');
 
 echo json_encode(['ok' => true, 'php' => PHP_VERSION, 'accountId' => $buyer['id'], 'partnerAccountId' => $partnerId,
     'draftRevision' => $draft['revision']], JSON_THROW_ON_ERROR), PHP_EOL;
