@@ -544,18 +544,37 @@ final class KiweBilling
         $this->transaction(fn () => $this->acceptSubscription($mandate, $subscription, time()));
     }
 
-    private function acceptRenewal(array $mandate, array $subscription, array $payment): void
+    private function subscriptionMandate(array $subscription): ?array
     {
-        $start = $subscription['current_start'] ?? 0;
-        $end = $subscription['current_end'] ?? 0;
+        return $this->row('SELECT * FROM launch_renewal_mandates WHERE id = ? OR subscription_id = ?',
+            [$subscription['notes']['kiwe_mandate'] ?? '', kiwe_billing_id($subscription['id'] ?? null, 'sub')]);
+    }
+
+    private function acceptRenewal(array $mandate, string $subscriptionId, array $payment, array $invoice): void
+    {
+        $start = $invoice['billing_start'] ?? null;
+        $end = $invoice['billing_end'] ?? null;
         $paymentId = kiwe_billing_id($payment['id'] ?? null, 'pay');
-        if (!$paymentId || !is_int($start) || !is_int($end) || $start < $mandate['start_at'] || $end <= $start
-            || $end - $start > 32 * 86400 || !$this->validPayment($payment, $mandate['amount'], 'INR')) {
-            throw new KiweCheckoutError('The renewal payment does not match the approved amount or period.', 409);
+        $orderId = kiwe_billing_id($payment['order_id'] ?? null, 'order');
+        if (!$paymentId || !$orderId || ($invoice['id'] ?? null) !== ($payment['invoice_id'] ?? null)
+            || ($invoice['payment_id'] ?? null) !== $paymentId || ($invoice['order_id'] ?? null) !== $orderId
+            || ($invoice['subscription_id'] ?? null) !== $subscriptionId
+            || ($invoice['status'] ?? null) !== 'paid' || ($invoice['currency'] ?? null) !== 'INR'
+            || ($invoice['amount'] ?? null) !== $mandate['amount'] || ($invoice['amount_paid'] ?? null) !== $mandate['amount']
+            || !$this->validPayment($payment, $mandate['amount'], 'INR')
+            || !is_int($start) || !is_int($end) || $start < $mandate['start_at'] || $end <= $start || $end - $start > 32 * 86400) {
+            throw new KiweCheckoutError('The paid renewal invoice does not match the approved amount or period.', 409);
         }
+
+        $recorded = $this->row('SELECT payment_id, mandate_id, period_start, period_end FROM launch_renewal_payments
+            WHERE payment_id = ? OR (mandate_id = ? AND period_start = ?)', [$paymentId, $mandate['id'], $start]);
+        if ($recorded && ($recorded['payment_id'] !== $paymentId || $recorded['mandate_id'] !== $mandate['id']
+            || $recorded['period_start'] !== $start || $recorded['period_end'] !== $end)) {
+            throw new KiweCheckoutError('A different payment or period is already recorded for this renewal.', 409);
+        }
+
         $this->query('INSERT INTO launch_renewal_payments VALUES (?, ?, ?, ?, ?, ?)
-            ON CONFLICT(payment_id) DO UPDATE SET amount_refunded = MAX(amount_refunded, excluded.amount_refunded)
-            WHERE mandate_id = excluded.mandate_id AND period_start = excluded.period_start AND period_end = excluded.period_end',
+            ON CONFLICT(payment_id) DO UPDATE SET amount_refunded = MAX(amount_refunded, excluded.amount_refunded)',
             [$paymentId, $mandate['id'], $mandate['amount'], $payment['amount_refunded'] ?? 0, $start, $end]);
     }
 
@@ -601,19 +620,34 @@ final class KiweBilling
         if (!preg_match('/^[A-Za-z0-9_-]{1,128}$/D', $eventId)) throw new KiweCheckoutError('Invalid event identifier.', 422);
         $time = $event['created_at'] ?? null;
         if (!is_int($time) || $time <= 0 || $time > time() + 300) throw new KiweCheckoutError('Invalid event date.', 422);
-        $this->transaction(function () use ($event, $name, $hash, $eventId, $time): void {
-            $known = $this->row('SELECT digest FROM launch_billing_events WHERE id = ?', [$eventId]);
-            if ($known) {
-                if ($known['digest'] !== $hash) throw new KiweCheckoutError('Conflicting billing event.', 409);
-                return;
-            }
-            $this->applyEvent($name, $event['payload'] ?? [], $time);
+        if ($this->receivedEvent($eventId, $hash)) return;
+
+        $payload = $event['payload'] ?? [];
+        $invoice = [];
+        if ($name === 'subscription.charged' && $this->subscriptionMandate($payload['subscription']['entity'] ?? [])) {
+            $id = kiwe_billing_id($payload['payment']['entity']['invoice_id'] ?? null, 'inv');
+            if (!$id) throw new KiweCheckoutError('The renewal payment did not identify its invoice.', 409);
+            // Razorpay delivers a current subscription snapshot, which can have advanced past this payment.
+            // Read the invoice before opening the SQLite write transaction.
+            $invoice = ($this->razorpay)('GET', '/invoices/' . $id, [], 2);
+        }
+
+        $this->transaction(function () use ($payload, $name, $hash, $eventId, $time, $invoice): void {
+            if ($this->receivedEvent($eventId, $hash)) return;
+            $this->applyEvent($name, $payload, $time, $invoice);
             $this->query('INSERT INTO launch_billing_events VALUES (?, ?, ?)', [$eventId, $hash, time()]);
             $this->query('DELETE FROM launch_billing_events WHERE received_at < ?', [time() - 90 * 86400]);
         });
     }
 
-    private function applyEvent(string $event, array $payload, int $time): void
+    private function receivedEvent(string $eventId, string $digest): bool
+    {
+        $known = $this->row('SELECT digest FROM launch_billing_events WHERE id = ?', [$eventId]);
+        if ($known && $known['digest'] !== $digest) throw new KiweCheckoutError('Conflicting billing event.', 409);
+        return $known !== null;
+    }
+
+    private function applyEvent(string $event, array $payload, int $time, array $invoice): void
     {
         if (in_array($event, ['payment_link.paid', 'payment_link.expired', 'payment_link.cancelled'], true)) {
             $link = $payload['payment_link']['entity'] ?? [];
@@ -623,12 +657,10 @@ final class KiweBilling
             else $this->saveLink($purchase, $link);
         } elseif (str_starts_with($event, 'subscription.')) {
             $subscription = $payload['subscription']['entity'] ?? [];
-            $reference = $subscription['notes']['kiwe_mandate'] ?? '';
-            $mandate = $this->row('SELECT * FROM launch_renewal_mandates WHERE id = ? OR subscription_id = ?',
-                [$reference, kiwe_billing_id($subscription['id'] ?? null, 'sub')]);
+            $mandate = $this->subscriptionMandate($subscription);
             if (!$mandate) return;
             $this->acceptSubscription($mandate, $subscription, $time);
-            if ($event === 'subscription.charged') $this->acceptRenewal($mandate, $subscription, $payload['payment']['entity'] ?? []);
+            if ($event === 'subscription.charged') $this->acceptRenewal($mandate, $subscription['id'], $payload['payment']['entity'] ?? [], $invoice);
         } elseif (str_starts_with($event, 'payment.dispute.')) {
             $this->acceptDispute($event, $payload['dispute']['entity'] ?? [], $time);
         } elseif ($event === 'refund.processed') {

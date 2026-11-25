@@ -7,6 +7,7 @@
 
 ## Version 1.x (Start project candidate)
 
+- Record Razorpay renewals against each paid invoice's billing period so delayed charges settle the correct month.
 - Record a reviewed owned-domain restoration through Launch and allow native WordPress approval at the final address from the same Start project.
 - Require verified `.in` registration before provisioning on a new custom address. Add private Launch registrar reconciliation and client-owned DNS verification through Start and MCP.
 - Add Shiprocket to the live Launch hero’s Powered by rail. Keep its full height in view on the supported first-load viewport checks.

@@ -189,17 +189,42 @@ export async function verifyBilling({ origin, data, page, direct, directEmail, d
   assert.equal(await event('subscription.authenticated', subEvent('authenticated'), 'renewal-stale', { at: point }), 200);
   assert.equal((await status()).mandate.status, 'pending');
   assert.equal((await status()).renewals.length, 0);
-  const renewal = { id: 'pay_MonthlyFixture', amount: quote.renewalMinor, currency: 'INR', status: 'captured', amount_refunded: 0 };
-  const cycle = subEvent('active');
-  Object.assign(cycle.subscription.entity, { current_start: subscription.start_at, current_end: subscription.start_at + 31 * 86400 });
-  cycle.payment = { entity: renewal };
-  assert.equal(await event('subscription.charged', cycle, 'renewal-paid', { at: point + 2 }), 200);
-  assert.equal(await event('subscription.charged', cycle, 'renewal-repeat', { at: point + 2 }), 200);
+  const firstStart = subscription.start_at;
+  const secondStart = firstStart + 31 * 86400;
+  const secondEnd = secondStart + 30 * 86400;
+  const renewal = { id: 'pay_MonthlyFixture', invoice_id: 'inv_MonthlyFixture', order_id: 'order_MonthlyFixture',
+    amount: quote.renewalMinor, currency: 'INR', status: 'captured', amount_refunded: 0 };
+  const nextRenewal = { ...renewal, id: 'pay_NextMonthFixture', invoice_id: 'inv_NextMonthFixture', order_id: 'order_NextMonthFixture' };
+  const invoice = (payment, billing_start, billing_end) => ({
+    id: payment.invoice_id, payment_id: payment.id, order_id: payment.order_id, subscription_id: subscription.id,
+    status: 'paid', amount: payment.amount, amount_paid: payment.amount, currency: payment.currency, billing_start, billing_end,
+  });
+  const charged = payment => ({
+    subscription: { entity: { ...subscription, status: 'active', current_start: secondStart, current_end: secondEnd } },
+    payment: { entity: payment },
+  });
+  const fixture = await gateway();
+  fixture.invoices = { [nextRenewal.invoice_id]: invoice(nextRenewal, secondStart, secondEnd) };
+  await save(fixture);
+  assert.equal(await event('subscription.charged', charged(nextRenewal), 'next-renewal-paid', { at: point + 3 }), 200);
+  const delayed = () => event('subscription.charged', charged(renewal), 'renewal-paid', { at: point + 2 });
+  assert.equal(await delayed(), 503, 'An unavailable invoice leaves the webhook eligible for retry');
+  fixture.invoices[renewal.invoice_id] = { ...invoice(renewal, firstStart, secondStart), subscription_id: 'sub_UnrelatedFixture' };
+  await save(fixture);
+  assert.equal(await delayed(), 409, 'An invoice from another subscription does not settle this month');
+  assert.deepEqual((await status()).renewals.map(row => row.start), [secondStart]);
+  fixture.invoices[renewal.invoice_id] = invoice(renewal, firstStart, secondStart);
+  await save(fixture);
+  assert.equal(await delayed(), 200, 'A delayed charge uses its own invoice period');
+  assert.equal(await delayed(), 200);
+  assert.equal(await event('subscription.charged', charged(renewal), 'renewal-repeat', { at: point + 2 }), 200);
   const refund = { id: 'rfnd_PartialFixture', payment_id: renewal.id, amount: 5000, currency: 'INR', status: 'processed' };
   assert.equal(await event('refund.processed', { refund: { entity: refund } }, 'renewal-refund'), 200);
   const history = (await status()).renewals;
-  assert.equal(history.length, 1);
-  assert.equal(history[0].refunded, 5000);
+  assert.deepEqual(history, [
+    { amount: quote.renewalMinor, start: secondStart, end: secondEnd, refunded: 0 },
+    { amount: quote.renewalMinor, start: firstStart, end: secondStart, refunded: 5000 },
+  ]);
   await page.goto(origin + '/checkout/');
   await page.getByRole('button', { name: 'Cancel automatic renewal' }).click();
   await page.getByText('Automatic renewal is cancelled', { exact: false }).waitFor();

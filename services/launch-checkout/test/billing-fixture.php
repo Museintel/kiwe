@@ -28,6 +28,9 @@ function kiwe_test_gateway(string $root, string $method, string $route, array $b
     $path = explode('/', trim($route, '/'));
     if ($path[0] === 'payment_links') return $state['links'][$path[1]];
     if ($path[0] === 'payments') return $state['payments'][$path[1]] ?? throw new RuntimeException('Payment is missing from the fixture.');
+    if ($path[0] === 'invoices' && $method === 'GET') {
+        return $state['invoices'][$path[1]] ?? throw new KiweCheckoutError('The provider invoice is temporarily unavailable.', 503);
+    }
     if ($path[0] === 'orders') {
         return ['items' => array_values(array_filter($state['payments'], static fn ($item) => $item['order_id'] === $path[1]))];
     }

@@ -39,8 +39,8 @@ function kiwe_billing_json_request(string $method, string $url, string $authoriz
 function kiwe_billing_gateway(string $keyId, string $keySecret): Closure
 {
     $authorization = 'Basic ' . base64_encode($keyId . ':' . $keySecret);
-    return static fn (string $method, string $path, array $payload = []): array =>
-        kiwe_billing_json_request($method, 'https://api.razorpay.com/v1' . $path, $authorization, $payload);
+    return static fn (string $method, string $path, array $payload = [], int $timeout = 6): array =>
+        kiwe_billing_json_request($method, 'https://api.razorpay.com/v1' . $path, $authorization, $payload, timeout: $timeout);
 }
 
 function kiwe_billing_start(string $origin, string $token): Closure

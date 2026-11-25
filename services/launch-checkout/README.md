@@ -20,6 +20,8 @@ When Launch confirms the payment, the first term runs for 12 calendar months in 
 
 Renewal requires a separate buyer approval for the exact amount, start date and number of payments. Razorpay begins monthly billing at the end of the prepaid term. The default mandate is up to 120 monthly payments. A new approval after cancellation or expiry begins at the end of the latest paid term or on a new disclosed date if service has lapsed. Each payment and processed refund is recorded by provider ID. Failed or halted renewals surface in checkout. Existing paid periods remain recorded when the buyer cancels automatic renewal.
 
+A signed renewal charge identifies its paid Razorpay invoice. Launch reads that invoice before opening its database write transaction and checks the subscription, order, payment, currency and full amount. The invoice sets the billing period, including when a late charge arrives after the subscription advances to the next month. A failed invoice read leaves the webhook eligible for retry. Repeated notifications preserve the original ledger entry. [Razorpay subscription invoices](https://razorpay.com/docs/api/payments/subscriptions/fetch-invoices)
+
 A Razorpay subscription request with an uncertain outcome keeps its reservation. The private recovery operation verifies the matching subscription ID with Razorpay before accepting it. Manage refunds through Razorpay. Launch records processed refunds and blocks an undelivered first-year entitlement after a full refund. Project data stays under its existing owner.
 
 ## Partner earnings and withdrawals

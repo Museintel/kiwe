@@ -232,7 +232,14 @@ $subscription['start_at'] = $last;
 $subscription['current_start'] = $last;
 $subscription['current_end'] = kiwe_billing_month_end($last, 1);
 $monthPayment = ['id' => 'pay_HostedMonth', 'amount' => $draft['quote']['renewalMinor'], 'currency' => 'INR',
-    'status' => 'captured', 'amount_refunded' => 0];
+    'status' => 'captured', 'amount_refunded' => 0, 'invoice_id' => 'inv_HostedMonth', 'order_id' => 'order_HostedMonth'];
+$gateway['invoices'][$monthPayment['invoice_id']] = [
+    'id' => $monthPayment['invoice_id'], 'payment_id' => $monthPayment['id'], 'order_id' => $monthPayment['order_id'],
+    'subscription_id' => $subscription['id'], 'status' => 'paid', 'currency' => 'INR',
+    'amount' => $monthPayment['amount'], 'amount_paid' => $monthPayment['amount'],
+    'billing_start' => $last, 'billing_end' => kiwe_billing_month_end($last, 1),
+];
+file_put_contents($gatewayFile, json_encode($gateway, JSON_THROW_ON_ERROR));
 $cycle = ['subscription' => ['entity' => $subscription], 'payment' => ['entity' => $monthPayment]];
 $send('subscription.charged', $cycle, 'hosted-month');
 $send('subscription.charged', $cycle, 'hosted-month-replay');
