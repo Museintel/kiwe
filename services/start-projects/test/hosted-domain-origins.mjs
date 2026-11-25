@@ -1,5 +1,4 @@
 import assert from 'node:assert/strict';
-import { randomUUID } from 'node:crypto';
 import path from 'node:path';
 import test from 'node:test';
 import { pathToFileURL } from 'node:url';
@@ -28,6 +27,8 @@ test('a DNS-verified move needs a new WordPress authorization and a reviewed Key
     },
   });
   let credential;
+  let finalCredential;
+  let setupPasses = 0;
   let dnsProof;
   const browserApprovals = [];
   const f = await startFixture(t, {
@@ -38,21 +39,27 @@ test('a DNS-verified move needs a new WordPress authorization and a reviewed Key
     },
     hostingProvider: {
       reserve: async () => temp, status: async () => 'completed', wordpressReady: async () => true,
-      async connectKey(domain, setupCode) {
-        assert.equal(domain, temp);
-        const redeemed = await gateway.exchange(setupCode, temporaryOrigin);
+      async connectKey(domain, setupCode, settings) {
+        assert.ok([temp, target].includes(domain));
+        if (domain === target) assert.deepEqual(settings, { enableAuth: false });
+        const redeemed = await gateway.exchange(setupCode, 'https://' + domain);
         assert.equal(redeemed.status, 200);
-        credential = redeemed.json();
-        assert.equal((await gateway.proof(credential, open())).status, 200);
+        const connected = redeemed.json();
+        assert.equal((await gateway.proof(connected, open())).status, 200);
+        if (domain === temp) credential = connected;
+        else {
+          finalCredential = connected;
+          setupPasses++;
+        }
       },
     },
     wordpressLink: {
       async begin(domain, redirect, state) {
         browserApprovals.push(domain);
-        return { origin: temporaryOrigin, issuer: temporaryOrigin, redirect,
-          authorizationUrl: temporaryOrigin + '/authorize?state=' + state };
+        const origin = 'https://' + domain;
+        return { origin, issuer: origin, redirect, authorizationUrl: origin + '/authorize?state=' + state };
       },
-      async verify() { return { url: temporaryOrigin, coreVersion: '8.0.0-rc.498', wordpressVersion: '7.1.5' }; },
+      async verify(connection) { return { url: connection.origin, coreVersion: '8.0.0-rc.498', wordpressVersion: '7.1.5' }; },
     },
   });
   const order = clientPurchase('own-domain-cutover', { accountId: buyer, domain: { mode: 'owned', name: target } });
@@ -87,12 +94,40 @@ test('a DNS-verified move needs a new WordPress authorization and a reviewed Key
   assert.equal((await gateway.proof({ ...credential, origin: finalOrigin }, open())).status, 403);
   assert.equal((await gateway.proof(credential, open())).status, 200);
 
-  // A separate, explicitly approved Key test enrollment can prove the final origin with fresh credentials.
-  const finalSetup = await gateway.manage({ ...managed, projectId: randomUUID() });
-  assert.equal(finalSetup.status, 200);
-  const finalCredential = await gateway.exchange(finalSetup.json().setupCode, finalOrigin);
-  assert.equal(finalCredential.status, 200);
-  assert.notEqual(finalCredential.json().keyId, credential.keyId);
-  assert.equal((await gateway.proof(finalCredential.json(), open())).status, 200);
+  assert.equal((await call('verify_domain_key', { revision })).isError, true);
+  const review = await f.postReceipt('domain-moves', { entitlementId: order.entitlementId, accountId: buyer,
+    purchaseId: order.purchaseId, domain: target, sourceUrl: temporaryOrigin, recoverySha256: 'a'.repeat(64) });
+  assert.equal(review.status, 200);
+  assert.equal((await call('verify_domain_key', { revision })).isError, true);
+  const destination = await call('verify_domain_wordpress', { revision });
+  const accepted = await f.request('/projects/site-return?' + new URLSearchParams({
+    iss: finalOrigin, state: new URL(destination.structuredContent.authorizationUrl).searchParams.get('state'),
+    code: 'kiwe_mcp_code_c_' + 'b'.repeat(32) + '.' + 'Y'.repeat(43),
+  }), { headers: { Cookie: session } });
+  assert.equal(accepted.status, 303);
+  const outsider = await f.connect('launch:' + '2'.repeat(32));
+  assert.equal((await outsider.callTool({ name: 'kiwe_start_verify_domain_key', arguments: { projectId, revision } })).isError, true);
+  const pending = await f.request('/projects/' + projectId, { headers: { Cookie: session } });
+  assert.match(await pending.text(), /Verify WhatsApp connection/);
+
+  const keyProof = await call('verify_domain_key', { revision });
+  assert.equal(keyProof.isError, undefined, keyProof.content?.[0]?.text);
+  assert.deepEqual(keyProof.structuredContent.project.domainMove, { status: 'key_verified', targetUrl: finalOrigin });
+  assert.equal(keyProof.structuredContent.project.site.url, temporaryOrigin);
+  assert.equal(keyProof.structuredContent.project.managedSite.url, temporaryOrigin);
+  assert.equal(finalCredential.keyId, credential.keyId);
+  assert.notEqual(finalCredential.secret, credential.secret);
+  assert.equal((await gateway.proof(finalCredential, open())).status, 200);
+  assert.equal((await gateway.proof(credential, open())).status, 200);
+  assert.doesNotMatch(JSON.stringify(keyProof), new RegExp(finalCredential.secret));
+  const browser = await f.form('/projects/' + projectId + '/verify-domain-key', { revision }, { cookie: session });
+  assert.equal(browser.status, 303);
+  await f.restart();
+  const reconnected = await f.connect(buyer);
+  const saved = await reconnected.callTool({ name: 'kiwe_start_project', arguments: { projectId } });
+  assert.equal(saved.structuredContent.project.domainMove.status, 'key_verified');
+  assert.deepEqual(browserApprovals, [temp, target]);
+  assert.equal(setupPasses, 1);
+  assert.equal(gateway.store.sitesFor(gateway.owner.id).length, 1);
   assert.equal(gateway.store.sitesFor(gateway.owner.id).every((site) => site.transactionCount === 0), true);
 });

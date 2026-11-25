@@ -118,7 +118,7 @@ function hostingStep(project, available) {
 </form>`;
 }
 
-function domainSetupStep(project) {
+function domainSetupStep(project, verifyDomainKey) {
   const setup = project.domainSetup;
   if (!setup) return '';
   if (setup.mode === 'register') {
@@ -135,7 +135,14 @@ function domainSetupStep(project) {
 </form></section>`;
     }
     if (project.domainMove?.status === 'wordpress_verified') {
-      return '<section><h2>Your domain</h2><p>WordPress is verified at your final address. Your temporary site is available while Kiwe prepares the WhatsApp connection.</p></section>';
+      return `<section><h2>Your domain</h2><p>WordPress is verified at your final address. Your temporary site is available while Kiwe prepares the WhatsApp connection.</p>
+${verifyDomainKey ? `<form method="post" action="/projects/${project.id}/verify-domain-key">
+<input type="hidden" name="revision" value="${project.revision}">
+<button class="button">Verify WhatsApp connection</button>
+</form>` : ''}</section>`;
+    }
+    if (project.domainMove?.status === 'key_verified') {
+      return '<section><h2>Your domain</h2><p>WordPress and the WhatsApp connection are verified at your final address. Your temporary site stays active until the move is complete.</p></section>';
     }
     return '<section><h2>Your domain</h2><p>Domain ownership verified. Kiwe needs to review the move to your domain. You can use your temporary site while the move is pending.</p></section>';
   }
@@ -207,7 +214,7 @@ function clientAccessPanel(project, state, invitation) {
 ${notice}${invite}${revoke}</section>`;
 }
 
-export function projectPage(project, { error, managed = false, keyEnabled = false, managedKey = false, clientAccess = null, invitation = null } = {}) {
+export function projectPage(project, { error, managed = false, keyEnabled = false, managedKey = false, verifyDomainKey = false, clientAccess = null, invitation = null } = {}) {
   const alert = error ? `<p class="error" role="alert">${escape(error)}</p>` : '';
   const purchased = project.planId === clientPlan.id;
   const status = project.site
@@ -238,7 +245,7 @@ ${selection}
 </form>`;
   return page(purchased ? project.domain : 'Choose your domain', `<p><a href="/projects">All projects</a>${project.workspace.type === 'agency' ? ` · <a href="/projects/agency">${escape(project.workspace.name)}</a>` : ' · Kiwe Launch'}</p>
 ${alert}${status}${domainForm}
-${project.site ? '' : hostingStep(project, managed)}${domainSetupStep(project)}${connect}${keyStep(project, keyEnabled, managedKey)}
+${project.site ? '' : hostingStep(project, managed)}${domainSetupStep(project, verifyDomainKey)}${connect}${keyStep(project, keyEnabled, managedKey)}
 ${clientAccessPanel(project, clientAccess, invitation)}
 ${project.site ? `<p>${designContextButton(project.site)} <a class="button" href="/projects/${project.id}/pages">Pages &amp; Templates</a></p>` : ''}
 ${project.key?.siteAuthenticated && project.key.state !== 'inactive' ? `<p><a class="button" href="/projects/${project.id}/homepage">Homepage draft</a></p>` : ''}`, true);

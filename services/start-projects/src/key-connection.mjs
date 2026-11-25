@@ -4,6 +4,11 @@ import { keyState, parse, siteLinkInput, StartError } from './projects.mjs';
 const receipt = keyState.extend({ origin: z.url(), approvalUrl: z.url() });
 const setupCode = z.string().regex(/^[A-Za-z0-9_-]{43}$/).nullable();
 const managedReceipt = receipt.extend({ setupCode });
+const moveFields = z.strictObject({ moveId: z.uuid(), origin: z.url(), expiresAt: z.number().int().positive() });
+const moveReceipt = z.discriminatedUnion('state', [
+  moveFields.extend({ state: z.literal('awaiting_wordpress'), setupCode: setupCode.unwrap() }),
+  moveFields.extend({ state: z.literal('verified'), setupCode: z.null() }),
+]);
 export const keyPairingInput = siteLinkInput.extend({
   phone: z.string().trim().regex(/^\+?[1-9][0-9]{9,14}$/),
   useForMessages: z.literal(true),
@@ -58,6 +63,12 @@ export function createKeyProvider({ origin, token, managedToken, http = fetch })
     async prepareManaged(request) {
       return verifyReceipt(managedReceipt, await post('managed-sites', request, managedToken));
     },
+    async prepareManagedMove(request) {
+      const value = await post('managed-sites/move', request, managedToken);
+      const parsed = moveReceipt.safeParse(value);
+      if (!parsed.success || parsed.data.moveId !== request.moveId) throw unavailable();
+      return parsed.data;
+    },
     async pairManaged(request, phone) {
       const value = await post('managed-sites/pair', { ...request, phone }, managedToken);
       return verifyLink(value.pairingUrl, /^\/start\/pair\/[A-Za-z0-9_-]{43}$/);
@@ -77,6 +88,26 @@ export function createKeyConnections(projects, provider) {
       if (status.state !== 'sender_ready' || (!status.siteAuthenticated && !status.setupCode)) return false;
       await connectSite(new URL(request.origin).hostname, status.setupCode);
       return (await provider.prepareManaged(request)).siteAuthenticated;
+    },
+    async verifyDomainMove(accountId, input, connectSite) {
+      if (!provider?.managed || !connectSite) throw unavailable();
+      const details = parse(siteLinkInput, input);
+      const request = projects.managedKeyMoveRequest(accountId, details);
+      if (active.has(request.moveId)) return active.get(request.moveId);
+      const pending = (async () => {
+        let status = await provider.prepareManagedMove(request);
+        if (status.state === 'awaiting_wordpress') {
+          try {
+            await connectSite(new URL(request.origin).hostname, status.setupCode, { enableAuth: false });
+          } catch {
+            throw unavailable();
+          }
+          status = await provider.prepareManagedMove(request);
+        }
+        return projects.saveDomainMoveKey(accountId, details, status);
+      })();
+      active.set(request.moveId, pending);
+      try { return await pending; } finally { active.delete(request.moveId); }
     },
     async pair(accountId, input) {
       if (!provider?.managed) throw unavailable();

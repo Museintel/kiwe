@@ -118,7 +118,7 @@ const projectOutput = z.strictObject({
   managedSite: managedSite.nullable(),
   domainSetup: domainSetup.optional(),
   domainMove: z.strictObject({
-    status: z.enum(['awaiting_wordpress', 'wordpress_verified']),
+    status: z.enum(['awaiting_wordpress', 'wordpress_verified', 'key_verified']),
     targetUrl: z.url(),
   }).optional(),
   key: keyState.extend({ manageUrl: z.url().nullable() }).nullable(),
@@ -201,7 +201,7 @@ function view(row, launchWebsite, time) {
   } : null;
   const domainSetup = domainView(row, time);
   const domainMove = row.move_id && row.move_revision === row.revision && row.move_source_url === row.site_url ? {
-    status: row.move_verified_at ? 'wordpress_verified' : 'awaiting_wordpress',
+    status: row.move_key_verified_until > time ? 'key_verified' : row.move_verified_at ? 'wordpress_verified' : 'awaiting_wordpress',
     targetUrl: row.move_target_url,
   } : null;
   const key = row.key_state ? {
@@ -323,6 +323,7 @@ export function openProjects(filename, { now = Date.now, launchWebsite = 'https:
       recovery_sha256 TEXT NOT NULL,
       reviewed_at INTEGER NOT NULL,
       verified_at INTEGER,
+      key_verified_until INTEGER,
       core_version TEXT,
       wordpress_version TEXT
     ) STRICT;
@@ -422,6 +423,9 @@ export function openProjects(filename, { now = Date.now, launchWebsite = 'https:
   const draftColumns = db.prepare('PRAGMA table_info(homepage_drafts)').all().map(column => column.name);
   if (!draftColumns.includes('target')) db.exec("ALTER TABLE homepage_drafts ADD COLUMN target TEXT NOT NULL DEFAULT 'home'");
   if (!draftColumns.includes('document')) db.exec('ALTER TABLE homepage_drafts ADD COLUMN document TEXT');
+  if (!db.prepare('PRAGMA table_info(project_domain_moves)').all().some(({ name }) => name === 'key_verified_until')) {
+    db.exec('ALTER TABLE project_domain_moves ADD COLUMN key_verified_until INTEGER');
+  }
   db.exec('CREATE INDEX IF NOT EXISTS start_drafts_by_target ON homepage_drafts(project_id,target,version)');
   const byEntitlement = db.prepare('SELECT * FROM projects WHERE entitlement_id = ?');
   const pruneLogins = db.prepare('DELETE FROM browser_logins WHERE expires_at <= ?');
@@ -433,6 +437,7 @@ export function openProjects(filename, { now = Date.now, launchWebsite = 'https:
     + "json_extract(o.details, '$.domain.mode') AS domain_mode, "
     + 'd.registered_domain, d.dns_challenge, d.dns_expires_at, d.owner_verified_at, '
     + 'v.id AS move_id, v.project_revision AS move_revision, v.source_url AS move_source_url, '
+    + 'v.key_verified_until AS move_key_verified_until, '
     + 'v.target_url AS move_target_url, v.verified_at AS move_verified_at, '
     + 'k.project_id AS key_project_id, k.state AS key_state, k.sender AS key_sender, k.site_authenticated AS key_site_authenticated, '
     + 'k.manage_url AS key_manage_url, k.pairing_pending AS key_pairing_pending, '
@@ -517,6 +522,7 @@ export function openProjects(filename, { now = Date.now, launchWebsite = 'https:
   const confirmDomainMove = db.prepare(
     'UPDATE project_domain_moves SET verified_at = ?, core_version = ?, wordpress_version = ? WHERE id = ? AND verified_at IS NULL',
   );
+  const confirmDomainMoveKey = db.prepare('UPDATE project_domain_moves SET key_verified_until = ? WHERE id = ?');
   const assignedMoveDomain = db.prepare('SELECT project_id FROM managed_sites WHERE setup_domain = ?');
   const registeredMoveDomain = db.prepare('SELECT project_id FROM project_domain_setup WHERE registered_domain = ?');
 
@@ -544,6 +550,24 @@ export function openProjects(filename, { now = Date.now, launchWebsite = 'https:
     if (claimed.some((entry) => entry && entry.project_id !== row.id)) {
       throw new StartError(409, 'domain_already_assigned', 'This domain already belongs to another Kiwe project.');
     }
+  }
+
+  function requireKeyMove(accountId, { projectId, revision }) {
+    const row = owned.get(projectId, accountId);
+    if (!row) throw missingProject();
+    if (row.revision !== revision) {
+      throw new StartError(409, 'project_changed', 'The project changed. Reload it before verifying Key.');
+    }
+    const workspaceId = keyWorkspace.get(accountId)?.workspace_id;
+    if (!workspaceId || !/^launch:[a-f0-9]{32}$/.test(accountId) || row.account_type !== 'client'
+        || row.plan_id !== clientPlan.id || row.hosting !== 'included' || row.managed_status !== 'ready'
+        || row.domain_mode !== 'owned' || !row.owner_verified_at || !row.move_verified_at || row.move_revision !== revision
+        || row.move_source_url !== row.site_url || row.site_url !== 'https://' + row.setup_domain
+        || row.move_target_url !== 'https://' + row.domain) {
+      throw new StartError(409, 'domain_key_not_ready', 'Verify WordPress at the reviewed final address before connecting Key.');
+    }
+    checkMoveTarget(row, row.move_target_url);
+    return { projectId, workspaceId, accountType: 'client', sourceOrigin: row.site_url, origin: row.move_target_url, moveId: row.move_id };
   }
 
   const managedJob = db.prepare('SELECT status, setup_domain AS domain, reserved_at AS reservedAt, hold_until AS holdUntil FROM managed_sites WHERE project_id = ?');
@@ -1258,6 +1282,20 @@ export function openProjects(filename, { now = Date.now, launchWebsite = 'https:
       ensureKeyWorkspace.run(accountId, randomUUID());
       addKeyLink.run(row.id);
       return { projectId: row.id, workspaceId: keyWorkspace.get(accountId).workspace_id, origin, accountType: 'client' };
+    },
+
+    managedKeyMoveRequest: requireKeyMove,
+
+    saveDomainMoveKey(accountId, details, receipt) {
+      return transaction(() => {
+        const move = requireKeyMove(accountId, details);
+        if (receipt.moveId !== move.moveId || receipt.origin !== move.origin || receipt.state !== 'verified'
+            || receipt.expiresAt <= now()) {
+          throw new StartError(409, 'domain_key_not_verified', 'Key has not verified the final address. Open the project to retry.');
+        }
+        confirmDomainMoveKey.run(receipt.expiresAt, move.moveId);
+        return projectView(owned.get(move.projectId, accountId), undefined, now());
+      });
     },
 
     prepareKeyRequest(accountId, details) {

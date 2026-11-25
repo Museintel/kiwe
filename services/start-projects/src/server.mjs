@@ -64,10 +64,10 @@ function managedProvider() {
     return true;
   };
   const setup = fileURLToPath(new URL('./managed-key-setup.php', import.meta.url));
-  const connectKey = async (domain, code) => {
+  const connectKey = async (domain, code, { enableAuth = true } = {}) => {
     const command = await resolveSite(domain);
     const response = await command(['eval-file', setup], {
-      KIWE_MANAGED_KEY_CODE: code ?? '', KIWE_MANAGED_SITE_ORIGIN: 'https://' + domain, KIWE_MANAGED_ENABLE_AUTH: 'yes',
+      KIWE_MANAGED_KEY_CODE: code ?? '', KIWE_MANAGED_SITE_ORIGIN: 'https://' + domain, KIWE_MANAGED_ENABLE_AUTH: enableAuth ? 'yes' : 'no',
     });
     if (response !== 'verified') throw new Error('The site could not confirm its Key connection.');
   };

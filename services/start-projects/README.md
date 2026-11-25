@@ -138,11 +138,13 @@ The private `test/hosted-domain-recovery.php` driver uses the existing Kiwe port
 
 The hosted run passed 18 capture and 45 restore checks on PHP 8.2.36 with signed Core RC498, WordPress 7.1.5 and Bricks 2.4.6. The full file set had 5,245 members. The WordPress administrator authenticated at the destination and Bricks rendered the restored page. Media and serialized image URLs resolved to the destination origin in native WordPress. The first destination assembly exceeded the account's quota with an extra seed copy present. The successful run reused read-only WordPress core files and retired the isolated roots and tables.
 
-Run `node --test test/hosted-domain-origins.mjs` with `KIWE_KEY_FIXTURE_SOURCE` set to the qualified Key checkout. The lab checks Start and Key against an owned-domain project with simulated DNS and WordPress approval. A connected Start project keeps its temporary URL after TXT verification. Key's existing managed request rejects a second origin even when that origin is explicitly approved. A separate approved fixture enrollment gets a fresh credential and can sign at the final origin. Plan a same-project native reauthorization and Key transition before using these steps for a client cutover. Direct `.in` provisioning also needs admission of its exact final origin under Key's managed policy.
+Run `node --test test/hosted-domain-origins.mjs` with `KIWE_KEY_FIXTURE_SOURCE` set to the Key checkout with managed domain move support. For Hostinger's private lab, set `KIWE_START_TEST_SOCKET=1` and `KIWE_KEY_TEST_SOCKET=1`. The test uses simulated DNS, WordPress authorization and sender transport. It verifies that TXT proof preserves the temporary address, the ordinary Key setup rejects a second origin, and the approved move uses the same Key tenant for destination proof. Direct `.in` provisioning needs admission of its exact final origin under Key's managed policy.
 
 ### Reviewed domain move
 
 The Launch operator checks the restored copy and independently verified recovery archive, then records the review with private MCP or CLI. Launch calls `POST /projects/api/domain-moves` using its purchase service credential. The exact captured payment, entitlement and buyer identify the existing project. Start matches the approved owned domain and connected temporary WordPress address and stores the recovery digest privately. Repeating the same review returns the saved state.
+
+After the buyer approves WordPress at the final address, **Verify WhatsApp connection** or `kiwe_start_verify_domain_key` prepares the same project's Key proof. Start sends the private setup code to the restored WordPress installation through the existing managed command. WordPress seals the destination credential and signs the proof. The project shows the final address as verified until the proof expires. The temporary address serves the site and its Key delivery until activation. Activation must reconcile both services on the same reviewed move.
 
 The buyer can select **Verify WordPress at your domain** or call `kiwe_start_verify_domain_wordpress`. The existing native approval requires a fresh authorization at that exact origin. Start saves the result on the move review and continues to serve the temporary address as the project's active site. The candidate reports `awaiting_wordpress` or `wordpress_verified`. Key verification and final activation are a separate pending step.
 
@@ -201,6 +203,7 @@ The protected resource is `/projects/mcp`, with resource metadata at `/.well-kno
 - `kiwe_start_project` reads the specified project and reports its verified WordPress Design Context link in `project.site.designContextUrl`.
 - `kiwe_start_set_domain` saves a human-confirmed domain and hosting choice at the current revision.
 - `kiwe_start_domain_dns` prepares or confirms the TXT verification record for an owned domain on the signed-in buyer's paid project.
+- `kiwe_start_verify_domain_key` verifies the WhatsApp connection on the already approved WordPress restoration and leaves the current project active.
 
 - `kiwe_start_connect_site` prepares the same native WordPress approval link for the saved existing site. After approval, the project reports its verified site and the next Key step.
 

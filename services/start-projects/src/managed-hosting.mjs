@@ -130,6 +130,10 @@ export function createManagedHosting(projects, provider, keyConnections) {
 
   return {
     available: Boolean(provider),
+    canVerifyDomainKey: Boolean(provider?.connectKey && keyConnections?.managed),
+    verifyDomainKey(accountId, input) {
+      return keyConnections.verifyDomainMove(accountId, input, provider?.connectKey);
+    },
     async step(accountId, input) {
       if (!provider) throw new StartError(503, 'hosting_unconfigured', 'Kiwe hosting is not available for this setup yet.');
       const details = parse(siteLinkInput, input);

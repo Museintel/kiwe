@@ -152,6 +152,14 @@ function mcpTools(projects, siteConnections, managedHosting, domainProof, keyCon
       inputSchema: siteLinkInput,
       annotations: { destructiveHint: false, idempotentHint: true, openWorldHint: true },
     }, (input) => run(async () => result('Approve WordPress at the final domain', await siteConnections.begin(accountId, input, true))));
+    if (managedHosting.canVerifyDomainKey) {
+      server.registerTool('kiwe_start_verify_domain_key', {
+        description: 'Verify Key at the reviewed final domain after the WordPress owner approves it. The temporary site and sender stay active.',
+        inputSchema: siteLinkInput,
+        outputSchema: singleProjectOutput,
+        annotations: { destructiveHint: false, idempotentHint: true, openWorldHint: true },
+      }, (input) => run(async () => result('Key verified at the final domain', { project: await managedHosting.verifyDomainKey(accountId, input) })));
+    }
   }
   server.registerTool('kiwe_start_connect_site', {
     description: 'Open native authorization for the selected existing or ready managed WordPress site with Kiwe MCP installed. The website owner approves the link.',
@@ -734,7 +742,7 @@ export function createStartServer({ projects, startOrigin, checkoutOrigin, issue
         return send(response, error.status, projectsPage(projects.listProjects(accountId), projects.agencySites(accountId), error.message, pilot));
       }
     }
-    const match = pathname.match(/^\/projects\/([a-f0-9-]{36})(?:\/(domain|domain-dns|connect|connect-domain|hosting|key|key-pair|invite-client|revoke-client))?$/);
+    const match = pathname.match(/^\/projects\/([a-f0-9-]{36})(?:\/(domain|domain-dns|connect|connect-domain|verify-domain-key|hosting|key|key-pair|invite-client|revoke-client))?$/);
     const listRoute = endpoint === 'GET /projects' || endpoint === 'GET /projects/';
     if (listRoute || match) {
       const accountId = accountForBrowser(request);
@@ -755,7 +763,8 @@ export function createStartServer({ projects, startOrigin, checkoutOrigin, issue
           ? projects.clientAccess(accountId, ref) : null;
         const managedKey = keyConnections.managed && /^launch:[a-f0-9]{32}$/.test(accountId) && project.accountType === 'client'
           && project.managedSite?.url === project.site?.url;
-        return projectPage(project, { managed: managedHosting.available, keyEnabled: keyConnections.available, managedKey, clientAccess, ...options });
+        return projectPage(project, { managed: managedHosting.available, keyEnabled: keyConnections.available, managedKey,
+          verifyDomainKey: managedKey && managedHosting.canVerifyDomainKey, clientAccess, ...options });
       }
       const project = projects.getProject(accountId, ref);
       if (method === 'POST' && action) {
@@ -780,6 +789,10 @@ export function createStartServer({ projects, startOrigin, checkoutOrigin, issue
           if (action === 'connect-domain') {
             const pending = await siteConnections.begin(accountId, input, true);
             return send(response, 200, siteAuthorizationPage(project, pending.authorizationUrl, 'verify WordPress at your final address'));
+          }
+          if (action === 'verify-domain-key') {
+            await managedHosting.verifyDomainKey(accountId, input);
+            return redirect(response, '/projects/' + projectId);
           }
           if (action === 'key') {
             const key = await keyConnections.resume(accountId, input);
