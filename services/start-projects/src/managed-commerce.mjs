@@ -3,9 +3,11 @@ import { realpath } from 'node:fs/promises';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { promisify } from 'node:util';
+import { siteSetups, siteSetupMode } from './site-setup.mjs';
 
 const execute = promisify(execFile);
 const plugins = Object.freeze({ 'woo-razorpay': '4.8.9', shiprocket: '2.0.9' });
+const storePlugins = Object.freeze({ woocommerce: '11.3.1', ...plugins });
 const domainName = /^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,}$/;
 
 export function createManagedWordPressCommands({ domainsDirectory, wp = 'wp', run = execute, resolvePath = realpath }) {
@@ -30,24 +32,40 @@ export function createManagedWordPressCommands({ domainsDirectory, wp = 'wp', ru
 
 export function createManagedCommerceInstaller(options) {
   const resolveSite = createManagedWordPressCommands(options);
-  return async (domain) => {
+  return async (domain, mode = null) => {
+    if (mode !== null) siteSetupMode.parse(mode);
     const command = await resolveSite(domain);
     const wpCommand = (...args) => command(args);
     const installed = async () => JSON.parse(await wpCommand('plugin', 'list', '--fields=name,version,status', '--format=json'));
     const original = await installed();
-    for (const [name, version] of Object.entries(plugins)) {
-      if (!original.some((entry) => entry.name === name)) {
+    if (mode === 'services') {
+      if (original.some(({ name }) => Object.hasOwn(storePlugins, name) || name === 'kiwe-store')) {
+        throw new Error('The services and portfolio setup needs a fresh WordPress site without Store plugins.');
+      }
+      return [];
+    }
+    const targets = Object.entries(mode && siteSetups[mode].store ? storePlugins : plugins);
+    for (const [name, version] of targets) {
+      const entry = original.find(item => item.name === name);
+      if (mode && entry && entry.version !== version) {
+        throw new Error('The existing WordPress commerce version needs an installation review.');
+      }
+      if (!entry) {
         await wpCommand('plugin', 'install', name, '--version=' + version);
+      }
+      if (mode || !entry) {
         await wpCommand('plugin', 'verify-checksums', name, '--strict');
       }
     }
+    if (mode && !original.some(entry => entry.name === 'woocommerce' && entry.status === 'active')) {
+      await wpCommand('plugin', 'activate', 'woocommerce');
+    }
     const current = await installed();
-    return Object.entries(plugins).map(([name, version]) => {
+    return targets.map(([name, version]) => {
       const found = current.find((entry) => entry.name === name);
       const previous = original.find((entry) => entry.name === name);
-      if (!found || (previous
-        ? (found.version !== previous.version || found.status !== previous.status)
-        : (found.version !== version || found.status !== 'inactive'))) {
+      const status = mode && name === 'woocommerce' ? 'active' : previous?.status ?? 'inactive';
+      if (!found || found.version !== (previous?.version ?? version) || found.status !== status) {
         throw new Error('The managed commerce plugin could not be verified.');
       }
       return { name, version: found.version, status: found.status };

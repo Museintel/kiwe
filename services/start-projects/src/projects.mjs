@@ -4,6 +4,7 @@ import { DatabaseSync } from 'node:sqlite';
 import { domainToASCII } from 'node:url';
 import { z } from 'zod';
 import { clientPlan } from './client-plan.mjs';
+import { siteSetupMode } from './site-setup.mjs';
 
 export class StartError extends Error {
   constructor(status, code, message) {
@@ -68,6 +69,7 @@ export const domainInput = claimInput.extend({
   revision: z.number().int().positive(),
 });
 export const siteLinkInput = claimInput.extend({ revision: z.number().int().positive() });
+export const siteSetupInput = siteLinkInput.extend({ mode: siteSetupMode });
 export const agencyHomeInput = z.strictObject({
   name: z.string().trim().min(1).max(80).regex(/^[^\u0000-\u001f\u007f]+$/u),
   domain: z.string().min(1).max(253),
@@ -120,6 +122,7 @@ const projectOutput = z.strictObject({
   revision: z.number().int().positive(),
   site: connectedSite.nullable(),
   managedSite: managedSite.nullable(),
+  setup: z.strictObject({ mode: siteSetupMode.nullable(), locked: z.boolean() }).optional(),
   domainSetup: domainSetup.optional(),
   domainMove: z.strictObject({
     status: z.enum(['awaiting_wordpress', 'wordpress_verified', 'key_verified', 'activating', 'active']),
@@ -127,7 +130,7 @@ const projectOutput = z.strictObject({
     needsKeyProof: z.literal(true).optional(),
   }).optional(),
   key: keyState.extend({ manageUrl: z.url().nullable() }).nullable(),
-  next: z.enum(['choose_domain', 'register_domain', 'provision_site', 'activate_kiwe', 'connect_site', 'connect_key', 'fill_design_context']),
+  next: z.enum(['choose_domain', 'register_domain', 'choose_site_setup', 'provision_site', 'activate_kiwe', 'connect_site', 'connect_key', 'fill_design_context']),
 });
 export const singleProjectOutput = z.strictObject({ project: projectOutput });
 export const projectsOutput = z.strictObject({ projects: z.array(projectOutput) });
@@ -196,6 +199,10 @@ function domainView(row, time) {
   return { mode: 'owned', status: 'verify_ownership' };
 }
 
+function managedClient(row) {
+  return row.plan_id === clientPlan.id && row.account_type === 'client' && row.hosting === 'included';
+}
+
 function view(row, launchWebsite, time) {
   const moved = row.move_completed_at && row.move_target_url === row.site_url;
   const site = row.site_url ? {
@@ -206,6 +213,7 @@ function view(row, launchWebsite, time) {
   const hosted = row.managed_status ? {
     status: row.managed_status, url: row.managed_status === 'ready' ? 'https://' + row.setup_domain : null,
   } : null;
+  const setup = managedClient(row) ? { mode: row.setup_mode, locked: Boolean(row.managed_status || row.site_url) } : null;
   const domainSetup = domainView(row, time);
   const reviewedMove = row.move_id && row.move_revision === row.revision && row.move_source_url === row.site_url;
   const currentKeyProof = row.move_key_verified_until > time;
@@ -223,6 +231,7 @@ function view(row, launchWebsite, time) {
   if (site) next = key?.siteAuthenticated && key.state === 'sender_ready' ? 'fill_design_context' : 'connect_key';
   else if (hosted?.status === 'ready') next = 'activate_kiwe';
   else if (!row.setup_domain && domainSetup?.status === 'awaiting_registration') next = 'register_domain';
+  else if (setup && !setup.locked && !setup.mode) next = 'choose_site_setup';
   else if (row.hosting === 'included') next = 'provision_site';
   else if (row.domain) next = 'connect_site';
   return {
@@ -236,6 +245,7 @@ function view(row, launchWebsite, time) {
     revision: row.revision,
     site,
     managedSite: hosted,
+    ...(setup ? { setup } : {}),
     ...(domainSetup ? { domainSetup } : {}),
     ...(domainMove ? { domainMove } : {}),
     key,
@@ -268,6 +278,7 @@ export function openProjects(filename, { now = Date.now, launchWebsite = 'https:
       hosting_included INTEGER NOT NULL CHECK(hosting_included IN (0, 1)),
       domain TEXT,
       hosting TEXT CHECK(hosting IN ('included', 'existing')),
+      setup_mode TEXT CHECK(setup_mode IN ('services', 'ecommerce', 'membership', 'both')),
       revision INTEGER NOT NULL DEFAULT 1,
       CHECK((domain IS NULL) = (hosting IS NULL))
     ) STRICT;
@@ -443,6 +454,11 @@ export function openProjects(filename, { now = Date.now, launchWebsite = 'https:
   if (!db.prepare('PRAGMA table_info(project_domain_moves)').all().some(({ name }) => name === 'key_verified_until')) {
     db.exec('ALTER TABLE project_domain_moves ADD COLUMN key_verified_until INTEGER');
   }
+  transaction(() => {
+    if (!db.prepare('PRAGMA table_info(projects)').all().some(({ name }) => name === 'setup_mode')) {
+      db.exec("ALTER TABLE projects ADD COLUMN setup_mode TEXT CHECK(setup_mode IN ('services', 'ecommerce', 'membership', 'both'))");
+    }
+  });
   db.exec('CREATE INDEX IF NOT EXISTS start_drafts_by_target ON homepage_drafts(project_id,target,version)');
   const byEntitlement = db.prepare('SELECT * FROM projects WHERE entitlement_id = ?');
   const pruneLogins = db.prepare('DELETE FROM browser_logins WHERE expires_at <= ?');
@@ -504,6 +520,8 @@ export function openProjects(filename, { now = Date.now, launchWebsite = 'https:
     'UPDATE projects SET domain = ?, hosting = ?, revision = revision + 1 '
     + 'WHERE id = ? AND account_id = ?',
   );
+  const updateSetup = db.prepare('UPDATE projects SET setup_mode = ?, revision = revision + 1 WHERE id = ?');
+  const setupOwner = db.prepare("SELECT 1 FROM projects WHERE account_id = ? AND plan_id = ? AND account_type = 'client' AND hosting = 'included' LIMIT 1");
   const addHandoff = db.prepare('INSERT INTO handoffs(digest, project_id, expires_at) VALUES (?, ?, ?)');
   const consumeHandoff = db.prepare('DELETE FROM handoffs WHERE digest = ? AND expires_at > ? RETURNING project_id');
   const addSession = db.prepare('INSERT INTO sessions(digest, account_id, expires_at) VALUES (?, ?, ?)');
@@ -1285,14 +1303,39 @@ export function openProjects(filename, { now = Date.now, launchWebsite = 'https:
       });
     },
 
+    canChooseSiteSetup(accountId) {
+      return Boolean(setupOwner.get(accountId, clientPlan.id));
+    },
+
+    setSiteSetup(accountId, input) {
+      const details = parse(siteSetupInput, input);
+      return transaction(() => {
+        const row = owned.get(details.projectId, accountId);
+        if (!row) throw missingProject();
+        if (!managedClient(row)) throw new StartError(409, 'site_setup_unavailable', 'This setup is for a new website with included Kiwe hosting.');
+        if (row.setup_mode === details.mode) return projectView(row);
+        if (row.revision !== details.revision) {
+          throw new StartError(409, 'project_changed', 'The project changed. Reload it before saving your website setup.');
+        }
+        if (row.managed_status || row.site_url) {
+          throw new StartError(409, 'site_setup_locked', 'This website’s hosting setup has already started.');
+        }
+        updateSetup.run(details.mode, row.id);
+        return projectView(owned.get(row.id, accountId));
+      });
+    },
+
     prepareManagedSite(accountId, details) {
       return transaction(() => {
         const row = requireManagedTarget(accountId, details);
         if (row.domain_mode === 'register' && !row.setup_domain && !row.registered_domain) {
           throw new StartError(409, 'registration_pending', 'Hosting opens after Hostinger confirms your domain registration.');
         }
+        if (managedClient(row) && !row.managed_status && !row.setup_mode) {
+          throw new StartError(409, 'site_setup_required', 'Choose what your website needs before setting up hosting.');
+        }
         addManaged.run(row.id, 'queued');
-        return { ...managedJob.get(row.id), registeredDomain: row.registered_domain };
+        return { ...managedJob.get(row.id), registeredDomain: row.registered_domain, setupMode: row.setup_mode };
       });
     },
 

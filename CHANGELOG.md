@@ -7,6 +7,7 @@
 
 ## Version 1.x (Start project candidate)
 
+- Choose the client's WordPress stack in Start or MCP before provisioning. Services and portfolio sites omit WooCommerce. Ecommerce and membership sites receive the matching Store setup.
 - Record Razorpay renewals against each paid invoice's billing period so delayed charges settle the correct month.
 - Record a reviewed owned-domain restoration through Launch and allow native WordPress approval at the final address from the same Start project.
 - Require verified `.in` registration before provisioning on a new custom address. Add private Launch registrar reconciliation and client-owned DNS verification through Start and MCP.

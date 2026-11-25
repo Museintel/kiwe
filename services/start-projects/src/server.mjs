@@ -52,13 +52,13 @@ function managedProvider() {
   });
   const kiweRelease = process.env.KIWE_START_KIWE_RELEASE_DIRECTORY;
   const installKiwe = kiweRelease && createManagedKiweInstaller({ directory: kiweRelease, resolveSite });
-  const prepareWordPress = async (domain, retail) => {
+  const prepareWordPress = async (domain, retail, mode) => {
     if (retail && (!installBricks || !installKiwe || !managedKeyToken)) {
       throw new StartError(503, 'managed_stack_unavailable', 'The managed site package needs its Bricks, signed Kiwe and Key configuration.');
     }
-    await installCommerce(domain);
+    await installCommerce(domain, mode);
     if (retail) {
-      await installKiwe(domain);
+      await installKiwe(domain, mode);
       return installBricks(domain);
     }
     return true;

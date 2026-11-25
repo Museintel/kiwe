@@ -91,9 +91,10 @@ test('a reviewed paid domain activates the same Start project after an interrupt
   const approvalDetails = { ...reviewDetails, finalRecoverySha256: 'b'.repeat(64), sourceFrozen: true };
   const activate = (input = approvalDetails, token) => f.postReceipt('domain-moves/activate', input, token);
   const call = (name, args) => client.callTool({ name: 'kiwe_start_' + name, arguments: { projectId, ...args } });
-  const provision = await call('provision_site', { revision: 1 });
+  const setup = (await call('set_site_setup', { revision: 1, mode: 'services' })).structuredContent.project;
+  const provision = await call('provision_site', { revision: setup.revision });
   assert.equal(provision.structuredContent?.project.managedSite.url, temporaryOrigin);
-  const approval = await call('connect_site', { revision: 1 });
+  const approval = await call('connect_site', { revision: setup.revision });
   const approved = await f.request('/projects/site-return?' + new URLSearchParams({
     iss: temporaryOrigin, state: new URL(approval.structuredContent.authorizationUrl).searchParams.get('state'),
     code: 'kiwe_mcp_code_c_' + 'a'.repeat(32) + '.' + 'Z'.repeat(43),

@@ -97,32 +97,34 @@ function kiwe_managed_core(string $directory, array $release): void
     }
 }
 
-function kiwe_managed_mcp(string $directory, array $release): void
+function kiwe_managed_app(string $directory, array $release, string $id): void
 {
     $app = json_decode(file_get_contents($directory . '/release.json'), true, flags: JSON_THROW_ON_ERROR);
-    if ($app['id'] !== 'mcp' || !defined('DSA_VERSION') || DSA_VERSION !== $release['version']
+    if ($app['id'] !== $id || !defined('DSA_VERSION') || DSA_VERSION !== $release['version']
         || empty(\DSA\Runtime\Package_Manifest::verify(true)['complete'])) {
-        throw new RuntimeException('The verified managed Core must boot before the MCP App.');
+        throw new RuntimeException('The verified managed Core must boot before its Apps.');
     }
-    $archive = $directory . '/kiwe-mcp.zip';
+    $slug = 'kiwe-' . $id;
+    $archive = $directory . '/' . $slug . '.zip';
     \DSA\Apps\Package_Verifier::archive($archive, $app);
-    $target = WP_PLUGIN_DIR . '/kiwe-mcp';
+    $target = WP_PLUGIN_DIR . '/' . $slug;
     require_once ABSPATH . 'wp-admin/includes/plugin.php';
     if (!is_dir($target)) {
         require_once ABSPATH . 'wp-admin/includes/class-wp-upgrader.php';
         require_once ABSPATH . 'wp-admin/includes/file.php';
         require_once ABSPATH . 'wp-admin/includes/misc.php';
-        if (is_link($target)) throw new RuntimeException('The MCP App target is not a native plugin directory.');
+        if (is_link($target)) throw new RuntimeException('The App target is not a native plugin directory.');
         $upgrader = new Plugin_Upgrader(new Automatic_Upgrader_Skin());
         $installed = $upgrader->install($archive);
-        if (is_wp_error($installed) || !$installed) throw new RuntimeException('WordPress could not install the signed MCP App.');
+        if (is_wp_error($installed) || !$installed) throw new RuntimeException('WordPress could not install the signed App.');
     }
     \DSA\Apps\Package_Verifier::directory($target, $app);
-    $result = activate_plugin('kiwe-mcp/kiwe-mcp.php');
-    if (is_wp_error($result)) throw new RuntimeException('WordPress could not activate the MCP App.');
+    $result = activate_plugin($slug . '/' . $slug . '.php');
+    if (is_wp_error($result)) throw new RuntimeException('WordPress could not activate the signed App.');
 }
 
 $directory = getenv('KIWE_MANAGED_RELEASE_DIR') ?: '';
+$mode = getenv('KIWE_MANAGED_SITE_SETUP') ?: '';
 $release = json_decode(file_get_contents($directory . '/manifest.json'), true, flags: JSON_THROW_ON_ERROR);
 $lock = fopen(dirname(untrailingslashit(ABSPATH)) . '/.kiwe-managed-release.lock', 'c');
 if (!$lock || !flock($lock, LOCK_EX | LOCK_NB)) WP_CLI::error('The signed stack is being prepared. Check again to resume.');
@@ -133,11 +135,18 @@ try {
             echo 'core ready';
             break;
         case 'mcp':
-            kiwe_managed_mcp($directory, $release);
+            kiwe_managed_app($directory, $release, 'mcp');
             echo 'mcp ready';
             break;
+        case 'store':
+            if (!in_array($mode, ['ecommerce', 'membership', 'both'], true) || !function_exists('WC')) {
+                throw new RuntimeException('This website setup needs active WooCommerce before installing Kiwe Store.');
+            }
+            kiwe_managed_app($directory . '/store', $release, 'store');
+            echo 'store ready';
+            break;
         case 'boot':
-            if (!\DSA\Apps\MCP_App_Service::enabled()) {
+            if (!\DSA\Apps\MCP_App_Service::enabled() || '' !== $mode) {
                 $owner = \DSA\Access\Site_Owner_Service::owner_id();
                 if (!$owner) {
                     $admins = get_users(['role' => 'administrator', 'fields' => 'ID', 'number' => 2]);
@@ -145,10 +154,16 @@ try {
                     $owner = (int) $admins[0];
                 }
                 wp_set_current_user($owner);
+            }
+            if (!\DSA\Apps\MCP_App_Service::enabled()) {
                 $changed = \DSA\Apps\MCP_App_Service::change(true, \DSA\Apps\MCP_App_Service::expected());
                 if (is_wp_error($changed)) throw new RuntimeException('The native Kiwe owner could not enable MCP.');
             }
             if (!\DSA\Apps\MCP_App_Service::enabled()) throw new RuntimeException('Kiwe MCP did not finish its native setup.');
+            if ('' !== $mode) {
+                $setup = \DSA\Apps\Store_App_Service::provision_setup($mode);
+                if (is_wp_error($setup)) throw new RuntimeException($setup->get_error_message());
+            }
             echo 'kiwe ready';
             break;
         default:

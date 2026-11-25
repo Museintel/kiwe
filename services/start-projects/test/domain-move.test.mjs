@@ -50,8 +50,9 @@ test('one reviewed domain move can verify WordPress without switching the manage
   assert.equal((await submit(review, await f.token(buyer))).status, 401);
   assert.equal((await submit({ ...review, accountId: stranger })).status, 404);
   assert.equal((await submit({ ...review, purchaseId: 'another-payment' })).status, 404);
-  assert.equal((await call('provision_site', { revision: 1 })).structuredContent.project.managedSite.url, sourceUrl);
-  const connect = await call('connect_site', { revision: 1 });
+  const setup = (await call('set_site_setup', { revision: 1, mode: 'services' })).structuredContent.project;
+  assert.equal((await call('provision_site', { revision: setup.revision })).structuredContent.project.managedSite.url, sourceUrl);
+  const connect = await call('connect_site', { revision: setup.revision });
   assert.equal((await callback(new URL(connect.structuredContent.authorizationUrl))).status, 303);
   const original = await read();
   assert.equal(original.site.url, sourceUrl);

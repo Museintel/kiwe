@@ -99,6 +99,7 @@ export function createManagedHosting(projects, provider, keyConnections) {
   const inFlight = new Map();
 
   async function advance(accountId, details, job) {
+    const project = { projectId: details.projectId };
     let { domain, status, holdUntil } = job;
     if (!domain) {
       let reserved = job.registeredDomain;
@@ -117,7 +118,10 @@ export function createManagedHosting(projects, provider, keyConnections) {
     if (current === 'failed') return projects.saveManagedStatus(accountId, details, 'needs_attention');
     if (current === 'completed') {
       let ready = await provider.wordpressReady(domain);
-      if (ready && provider.prepareWordPress) ready = await provider.prepareWordPress(domain, /^launch:[a-f0-9]{32}$/.test(accountId)) !== false;
+      if (ready && provider.prepareWordPress) {
+        const retail = Boolean(job.setupMode) || /^launch:[a-f0-9]{32}$/.test(accountId);
+        ready = await provider.prepareWordPress(domain, retail, job.setupMode) !== false;
+      }
       if (ready && provider.connectKey && keyConnections?.managed) {
         ready = await keyConnections.provision(accountId, details, provider.connectKey);
       }
@@ -127,8 +131,8 @@ export function createManagedHosting(projects, provider, keyConnections) {
     if (projects.managedReservationExpired(accountId, details)) {
       return projects.saveManagedStatus(accountId, details, 'needs_attention');
     }
-    if (status === 'provisioning') return projects.getProject(accountId, details);
-    if (!projects.claimManagedStart(accountId, details)) return projects.getProject(accountId, details);
+    if (status === 'provisioning') return projects.getProject(accountId, project);
+    if (!projects.claimManagedStart(accountId, details)) return projects.getProject(accountId, project);
     if (primary && !(await provider.primaryAvailable(domain))) {
       return projects.saveManagedStatus(accountId, details, 'needs_attention');
     }
@@ -150,7 +154,7 @@ export function createManagedHosting(projects, provider, keyConnections) {
       if (!provider) throw new StartError(503, 'hosting_unconfigured', 'Kiwe hosting is not available for this setup yet.');
       const details = parse(siteLinkInput, input);
       const job = projects.prepareManagedSite(accountId, details);
-      if (job.status === 'ready' || job.status === 'needs_attention') return projects.getProject(accountId, details);
+      if (job.status === 'ready' || job.status === 'needs_attention') return projects.getProject(accountId, { projectId: details.projectId });
       if (inFlight.has(details.projectId)) return inFlight.get(details.projectId);
       const pending = advance(accountId, details, job).catch((error) => {
         if (error instanceof StartError) throw error;

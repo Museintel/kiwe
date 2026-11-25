@@ -1,5 +1,6 @@
 import { documentPath, wooPresentation } from './document-targets.mjs';
 import { clientPlan } from './client-plan.mjs';
+import { siteSetups } from './site-setup.mjs';
 
 const escape = (value) => String(value ?? '').replace(/[&<>"']/g, (character) => ({
   '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
@@ -100,7 +101,7 @@ ${alert}${current}
 }
 
 function hostingStep(project, available) {
-  if (!available || project.hosting !== 'included' || project.next === 'register_domain') return '';
+  if (!available || project.hosting !== 'included' || ['register_domain', 'choose_site_setup'].includes(project.next)) return '';
   const hosted = project.managedSite;
   if (hosted?.status === 'ready') {
     const address = new URL(hosted.url).hostname;
@@ -221,6 +222,29 @@ function clientAccessPanel(project, state, invitation) {
 ${notice}${invite}${revoke}</section>`;
 }
 
+function siteSetupStep(project) {
+  const setup = project.setup;
+  if (!setup) return '';
+  if (setup.locked) {
+    return setup.mode ? `<section class="card"><h2>Website setup</h2>
+<p>${escape(siteSetups[setup.mode].label)}</p></section>` : '';
+  }
+  const choices = Object.entries(siteSetups).map(([mode, { label }]) =>
+    `<option value="${mode}"${setup.mode === mode ? ' selected' : ''}>${escape(label)}</option>`,
+  ).join('');
+  return `<section class="card"><h2>Website setup</h2>
+<form method="post" action="/projects/${project.id}/site-setup">
+<label for="site-setup">What will your website do?</label>
+<select id="site-setup" name="mode" required>
+${setup.mode ? '' : '<option value="" disabled selected>Choose a website setup</option>'}
+${choices}
+</select>
+<p>Stores and paid memberships use WooCommerce.</p>
+<input type="hidden" name="revision" value="${project.revision}">
+<button class="button">Save website setup</button>
+</form></section>`;
+}
+
 export function projectPage(project, { error, managed = false, keyEnabled = false, managedKey = false, verifyDomainKey = false, clientAccess = null, invitation = null } = {}) {
   const alert = error ? `<p class="error" role="alert">${escape(error)}</p>` : '';
   const purchased = project.planId === clientPlan.id;
@@ -228,7 +252,7 @@ export function projectPage(project, { error, managed = false, keyEnabled = fals
   const status = moving ? '' : project.site
     ? `<p class="status">Website verified at <a href="${escape(project.site.url)}">${escape(new URL(project.site.url).hostname)}</a>.${project.next === 'fill_design_context' ? ' Next, fill in Design Context in WordPress.' : ''}</p>`
     : project.domain && !project.managedSite && project.next !== 'register_domain'
-      ? `<p class="status">Domain saved. Next, ${project.hosting === 'included' ? 'set up Kiwe hosting' : 'connect your WordPress site'}.</p>`
+      ? `<p class="status">Domain saved. Next, ${project.next === 'choose_site_setup' ? 'choose your website setup' : project.hosting === 'included' ? 'set up Kiwe hosting' : 'connect your WordPress site'}.</p>`
       : '';
   const connect = project.next === 'connect_site' || project.next === 'activate_kiwe'
     ? `<form method="post" action="/projects/${project.id}/connect">
@@ -252,7 +276,7 @@ ${selection}
 <button class="button">Save domain</button>
 </form>`;
   return page(purchased ? project.domain : 'Choose your domain', `<p><a href="/projects">All projects</a>${project.workspace.type === 'agency' ? ` · <a href="/projects/agency">${escape(project.workspace.name)}</a>` : ' · Kiwe Launch'}</p>
-${alert}${status}${domainForm}
+${alert}${status}${domainForm}${siteSetupStep(project)}
 ${project.site ? '' : hostingStep(project, managed)}${domainSetupStep(project, verifyDomainKey)}${connect}${moving ? '' : keyStep(project, keyEnabled, managedKey)}
 ${clientAccessPanel(project, clientAccess, invitation)}
 ${project.site && !moving ? `<p>${designContextButton(project.site)} <a class="button" href="/projects/${project.id}/pages">Pages &amp; Templates</a></p>` : ''}

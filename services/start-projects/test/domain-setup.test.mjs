@@ -53,7 +53,9 @@ test('registered .in hosting waits for the matched payment and Hostinger, then u
   const f = await fixture(t, { hostingProvider });
   const selection = { mode: 'register', name: domain, category: 'standard' };
   const order = clientPurchase('paid-registry', { accountId: buyer, domain: selection });
-  const { projectId, endpoint, session, revision } = await project(f, order);
+  const { projectId, endpoint, session, revision: initialRevision } = await project(f, order);
+  assert.equal((await f.form(endpoint + '/site-setup', { revision: initialRevision, mode: 'services' }, { cookie: session })).status, 303);
+  const revision = initialRevision + 1;
   const web = () => f.form(endpoint + '/hosting', { revision }, { cookie: session });
   const pending = await f.request(endpoint, { headers: { Cookie: session } });
   assert.match(await pending.text(), /Hosting opens when Hostinger confirms registration/);
@@ -110,12 +112,15 @@ test('owned domain proof is tenant-specific, renewable and keeps the running tem
   });
   const selected = { mode: 'owned', name: domain };
   const order = clientPurchase('owned-domain', { accountId: buyer, domain: selected });
-  const { projectId, endpoint, session, revision } = await project(f, order);
+  const { projectId, endpoint, session, revision: initialRevision } = await project(f, order);
+  assert.equal((await f.form(endpoint + '/site-setup', { revision: initialRevision, mode: 'ecommerce' }, { cookie: session })).status, 303);
+  const revision = initialRevision + 1;
   let activeSession = session;
   const other = await project(f, clientPurchase('other-owned-domain', { accountId: otherBuyer, domain: selected }));
   const firstClient = await f.connect(buyer);
   const secondClient = await f.connect(otherBuyer);
-  const dns = (client, id, action) => client.callTool({ name: 'kiwe_start_domain_dns', arguments: { projectId: id, revision, action } });
+  const dns = (client, id, action) => client.callTool({ name: 'kiwe_start_domain_dns',
+    arguments: { projectId: id, revision: id === projectId ? revision : other.revision, action } });
   const route = endpoint + '/domain-dns';
   const form = (action, origin) => f.form(route, { revision, action }, { cookie: activeSession, origin });
   assert.equal((await dns(secondClient, projectId, 'prepare')).isError, true);

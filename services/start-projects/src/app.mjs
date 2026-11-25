@@ -6,7 +6,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import {
   agencyHomeInput, agencySiteInput, agencySpaceOutput, agencyVerificationInput, clientInvitationInput,
-  StartError, browserLifetime, claimInput, domainInput, parse, pilotBrowserLifetime, projectScope, projectsOutput, singleProjectOutput, siteLinkInput, ticketInput,
+  StartError, browserLifetime, claimInput, domainInput, parse, pilotBrowserLifetime, projectScope, projectsOutput, singleProjectOutput, siteLinkInput, siteSetupInput, ticketInput,
 } from './projects.mjs';
 import { browserLoginInput, browserLoginLifetime, browserLoginPath, browserLoginReturn } from './browser-login.mjs';
 import { agencyPage, homepagePage, websitePage, clientProjectPage, pilotMcpPage, projectPage, projectsPage, signInPage, siteAuthorizationPage, siteReturnPage, stylesheet } from './web.mjs';
@@ -140,6 +140,14 @@ function mcpTools(projects, siteConnections, managedHosting, domainProof, keyCon
     outputSchema: singleProjectOutput,
     annotations: { destructiveHint: false, idempotentHint: true },
   }, (input) => run(() => result('Domain saved', { project: projects.setDomain(accountId, input) })));
+  if (projects.canChooseSiteSetup(accountId)) {
+    server.registerTool('kiwe_start_set_site_setup', {
+      description: 'Save the owner’s choice for a new managed website before provisioning. Choose services for a portfolio or service site without WooCommerce, ecommerce for an online store, membership for paid memberships, or both.',
+      inputSchema: siteSetupInput,
+      outputSchema: singleProjectOutput,
+      annotations: { destructiveHint: false, idempotentHint: true },
+    }, (input) => run(() => result('Website setup saved', { project: projects.setSiteSetup(accountId, input) })));
+  }
   if (projects.canVerifyDomain(accountId)) {
     server.registerTool('kiwe_start_domain_dns', {
       description: 'Prepare or verify the TXT record for the domain a client already owns. Share the record with the owner so they can add it to their DNS.',
@@ -168,7 +176,7 @@ function mcpTools(projects, siteConnections, managedHosting, domainProof, keyCon
   }, (input) => run(async () => result('Open this link to approve the website connection', await siteConnections.begin(accountId, input))));
   if (managedHosting.available) {
     server.registerTool('kiwe_start_provision_site', {
-      description: 'Set up or check included Kiwe hosting for the selected project. Confirm the hosting choice with the owner before the first request.',
+      description: 'Set up or check included Kiwe hosting for the selected project. For a new managed Client project, save the owner’s website setup choice first.',
       inputSchema: siteLinkInput,
       outputSchema: singleProjectOutput,
       annotations: { destructiveHint: false, idempotentHint: true },
@@ -744,7 +752,7 @@ export function createStartServer({ projects, startOrigin, checkoutOrigin, issue
         return send(response, error.status, projectsPage(projects.listProjects(accountId), projects.agencySites(accountId), error.message, pilot));
       }
     }
-    const match = pathname.match(/^\/projects\/([a-f0-9-]{36})(?:\/(domain|domain-dns|connect|connect-domain|verify-domain-key|hosting|key|key-pair|invite-client|revoke-client))?$/);
+    const match = pathname.match(/^\/projects\/([a-f0-9-]{36})(?:\/(domain|domain-dns|site-setup|connect|connect-domain|verify-domain-key|hosting|key|key-pair|invite-client|revoke-client))?$/);
     const listRoute = endpoint === 'GET /projects' || endpoint === 'GET /projects/';
     if (listRoute || match) {
       const accountId = accountForBrowser(request);
@@ -808,6 +816,7 @@ export function createStartServer({ projects, startOrigin, checkoutOrigin, issue
           }
           if (action === 'domain-dns') await domainProof(accountId, input);
           else if (action === 'hosting') await managedHosting.step(accountId, input);
+          else if (action === 'site-setup') projects.setSiteSetup(accountId, input);
           else projects.setDomain(accountId, input);
           return redirect(response, '/projects/' + projectId);
         } catch (error) {
