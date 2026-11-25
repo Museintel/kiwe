@@ -4,6 +4,7 @@ if(!defined('ABSPATH'))exit;
 
 use DSA\MCP\Authoring_Service as Native;
 use DSA\Apps\MCP_Provider_Contract as Contract;
+use DSA\Apps\Razorpay_App_Service;
 
 /** Local Store capabilities plug into MCP's existing provider boundary. */
 final class MCP_Store_Provider {
@@ -20,6 +21,15 @@ final class MCP_Store_Provider {
   $input=self::object(['area'=>self::choice(MCP_Store_Authoring::AREAS),'id'=>self::integer(),'parentId'=>self::integer(),'relatedId'=>self::integer(),'page'=>['type'=>'integer','minimum'=>1,'maximum'=>1000],'search'=>self::text(100),'country'=>self::text(2),'locationKind'=>self::choice(['city','postcode'])],['area']);
   $read=self::object(['area'=>self::text(100),'page'=>self::integer(1),'hasMore'=>['type'=>'boolean'],'dataJson'=>self::text(24000),'guidance'=>self::text(1500)],['area','page','hasMore','dataJson','guidance']);
   $ops=['store.authoring.read'=>['scope'=>'store.authoring.read','label'=>'Read applicable native product and Store setup records','effect'=>'read','approval'=>'none','accessVersion'=>1,'inputSchema'=>$input,'outputSchema'=>$read,'permission'=>$allowed,'discoverPermission'=>$allowed,'execute'=>static fn($a)=>$service->read($a)]];
+  $gatewayFields=array_fill_keys(['storeEnabled','gatewayInstalled','gatewayActive','gatewayEnabled','wooSubscriptionsActive','razorpaySubscriptionsActive'],['type'=>'boolean']);
+  $gatewayFields['mode']=self::choice(['unconfigured','test','live']);
+  $gatewayAllowed=static fn()=>class_exists(Razorpay_App_Service::class)&&Razorpay_App_Service::allowed();
+  $ops['store.razorpay.status']=[
+   'scope'=>'store.authoring.read','label'=>'Check the local Razorpay gateway configuration and installed subscription dependencies',
+   'effect'=>'read','approval'=>'none','accessVersion'=>1,'inputSchema'=>self::object([]),
+   'outputSchema'=>self::object($gatewayFields,array_keys($gatewayFields)),
+   'permission'=>$gatewayAllowed,'discoverPermission'=>$gatewayAllowed,'execute'=>static fn()=>Razorpay_App_Service::status(),
+  ];
   $definitions=[
    'store.product.create'=>['create',[],[]],
    'store.product.save'=>['save',['id'],[]],

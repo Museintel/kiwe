@@ -332,6 +332,10 @@ final class Workspace_Admin_Service {
 		if ( \DSA\Apps\Store_App_Service::allowed() || ( \DSA\Apps\Store_App_Service::enabled() && ( current_user_can( 'edit_products' ) || ( current_user_can( 'edit_shop_orders' ) && current_user_can( 'edit_others_shop_orders' ) ) ) ) ) {
 			$apps[] = [ 'label'=>__( 'Store', 'dsa' ), 'description'=>__( 'Products, delivery, taxes, offers and orders', 'dsa' ), 'url'=>\DSA\Apps\Store_App_Service::home_url(), 'icon'=>'dashicons-store', 'app'=>\DSA\Apps\Store_App_Service::card() ];
 		}
+		if ( \DSA\Apps\Razorpay_App_Service::allowed() ) {
+			$app = \DSA\Apps\Razorpay_App_Service::card();
+			$apps[] = [ 'label'=>__( 'Razorpay', 'dsa' ), 'description'=>$app['description'], 'url'=>$app['url'], 'icon'=>'dashicons-money-alt', 'app'=>$app ];
+		}
 
 		foreach ( [ \DSA\Apps\Guest_App_Service::class=>'dashicons-welcome-write-blog',\DSA\Apps\AI_App_Service::class=>'dashicons-lightbulb',\DSA\Apps\SiteGraph_App_Service::class=>'dashicons-networking',\DSA\Apps\MCP_App_Service::class=>'dashicons-admin-links' ] as $owner=>$icon ) {
 			if ( ! $owner::allowed() && ! ( $owner === \DSA\Apps\MCP_App_Service::class && $owner::enabled() && $owner::can_connect() ) ) continue;

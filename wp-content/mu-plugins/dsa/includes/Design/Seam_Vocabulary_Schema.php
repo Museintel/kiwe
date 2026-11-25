@@ -228,6 +228,12 @@ final class Seam_Vocabulary_Schema {
 								'values' => [ 'CSS selector, e.g. #cart-status' ],
 								'purpose' => 'Optional on-page status element. Give it role="status" and aria-live="polite". Kiwe also announces progress and errors through its existing live region.',
 							],
+							[
+								'attribute' => 'data-kiwe-checkout-details',
+								'values' => [ 'boolean HTML attribute' ],
+								'purpose' => 'Open the Kiwe checkout sheet from a classic WooCommerce checkout. Link to #customer_details so the browser can reach the native form directly.',
+								'example' => '<a href="#customer_details" data-kiwe-checkout-details>Edit checkout details</a>',
+							],
 						],
 					],
 					'browserNotifications' => [

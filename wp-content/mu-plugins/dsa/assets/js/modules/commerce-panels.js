@@ -169,21 +169,30 @@ function renderCheckoutPanel( payload ) {
 	payload = payload || {};
 	const copy = checkoutCopy( payload );
 	const contract = checkoutState.contract || {};
+	const nativeFormLink = checkoutState.returnToPage && document.querySelector( 'form.checkout #customer_details' )
+		? '<a href="#customer_details" data-dsa-checkout-native-details>Open the checkout form</a>' : '';
 
 	if ( checkoutState.loading || ! checkoutState.contract ) {
 		return [
 			'<section class="dsa-panel dsa-checkout-panel" role="dialog" aria-modal="false" aria-label="' + escapeHtml( copy.label ) + '" data-dsa-checkout-panel>',
 			'<p class="dsa-checkout-panel__loading">' + escapeHtml( copy.loadingText ) + '</p>',
+			nativeFormLink,
 			'</section>',
 		].join( '' );
 	}
 
 	if ( ! contract.available ) {
+		if ( nativeFormLink ) {
+			return '<section class="dsa-panel" role="dialog" aria-modal="false" aria-label="' + escapeHtml( copy.label ) + '" data-dsa-checkout-panel>'
+				+ '<p role="status">The checkout sheet could not load.</p>' + nativeFormLink + '</section>';
+		}
 		return renderBasicPanel( copy.label, copy.unavailableText );
 	}
 
 	const groups = contract.groups || {};
 	const showDelivery = contract.cartShowDelivery !== undefined ? Boolean( contract.cartShowDelivery ) : Boolean( commerce.settings && commerce.settings.cartShowDelivery );
+	const submitLabel = checkoutState.editDetails ? 'Save details' : ( checkoutState.returnToPage ? copy.returnLabel : copy.continueLabel );
+	const submitAmount = checkoutState.editDetails ? '' : '<span class="dsa-cart-panel__checkout-amount"><small>' + ( showDelivery ? 'Current total' : 'Products' ) + '</small><strong>' + escapeHtml( contract.cartTotal || '' ) + '</strong></span>';
 	const fields = [ 'billing', 'shipping', 'account', 'order' ].map( function ( group ) {
 		const html = ( Array.isArray( groups[ group ] ) ? groups[ group ] : [] ).map( renderCheckoutField ).join( '' );
 		if ( group !== 'shipping' ) return html;
@@ -203,7 +212,7 @@ function renderCheckoutPanel( payload ) {
 		fields,
 		'</div>',
 		'<div class="dsa-checkout-actions" data-dsa-context-slot data-dsa-context-name="checkout" data-dsa-context-width="dock">',
-		'<button class="dsa-cart-panel__checkout dsa-checkout-continue" type="submit" form="dsa-checkout-surface-form"><span>' + escapeHtml( checkoutState.returnToPage ? copy.returnLabel : copy.continueLabel ) + '</span><span class="dsa-cart-panel__checkout-amount"><small>' + ( showDelivery ? 'Current total' : 'Products' ) + '</small><strong>' + escapeHtml( contract.cartTotal || '' ) + '</strong></span></button>',
+		'<button class="dsa-cart-panel__checkout dsa-checkout-continue" type="submit" form="dsa-checkout-surface-form"><span>' + escapeHtml( submitLabel ) + '</span>' + submitAmount + '</button>',
 		'<span class="dsa-panel__meta" data-dsa-checkout-message></span>',
 		'</div>',
 		'</form>',

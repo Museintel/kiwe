@@ -25,6 +25,7 @@ final class Checkout_Service {
 		if ( ! \DSA\Apps\Store_App_Service::enabled() ) return;
 		add_filter( 'woocommerce_checkout_get_value', [ $this, 'checkout_value' ], 5, 2 );
 		foreach ( [ 'billing_first_name','billing_last_name','billing_email','billing_phone' ] as $contact_field ) add_filter( 'default_checkout_' . $contact_field, [ $this, 'contact_checkout_value' ], 20, 2 );
+		add_action( 'woocommerce_checkout_before_customer_details', [ $this, 'render_details_link' ] );
 		add_filter( 'woocommerce_ship_to_different_address_checked', [ $this, 'ship_to_different_address_checked' ], 5 );
 		add_filter( 'woocommerce_checkout_posted_data', [ $this, 'merge_draft_into_posted_data' ], 5 );
 		add_action( 'woocommerce_after_checkout_validation', [ $this, 'capture_checkout_errors' ], 90, 2 );
@@ -42,6 +43,11 @@ final class Checkout_Service {
 
 	public function available(): bool {
 		return $this->enabled() && $this->identity_allowed() && $this->load_checkout();
+	}
+
+	public function render_details_link(): void {
+		if ( ! $this->enabled() || ! $this->identity_allowed() ) return;
+		echo '<a href="#customer_details" data-kiwe-checkout-details>' . esc_html__( 'Edit checkout details', 'dsa' ) . '</a>';
 	}
 
 	public function contract( bool $consume_errors = false ): array {

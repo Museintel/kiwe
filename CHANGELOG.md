@@ -1,3 +1,8 @@
+## Version 1.x checkout candidate
+
+- Show Razorpay setup status in Kiwe Apps and Store MCP.
+- Open the existing checkout sheet from the native WooCommerce checkout form and return saved details to the same page.
+
 ## 8.0.0-rc.499 (2026-11-25, candidate)
 
 - Use an existing event session index to check protected incidents before retiring old page history. Preserve those pages when the lookup index is unavailable so other retention work can continue.

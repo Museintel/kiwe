@@ -4989,13 +4989,16 @@
 			notices: options.notices || [],
 			loading: true,
 			returnToPage: options.returnToPage !== undefined ? Boolean( options.returnToPage ) : isCurrentCheckoutPage(),
+			editDetails: Boolean( options.editDetails ),
 		};
 
 		clearSurfaceReturnState();
 		openOverlay( 'checkout', 'Checkout' );
-		refreshCartState( { rerender: false } ).then( function () {
-			syncAiInsights( 'checkout', true );
-		} );
+		if ( ! checkoutState.editDetails ) {
+			refreshCartState( { rerender: false } ).then( function () {
+				syncAiInsights( 'checkout', true );
+			} );
+		}
 	}
 
 	function bindCheckoutPanel() {
@@ -5003,6 +5006,11 @@
 
 		if ( ! panel ) {
 			return;
+		}
+
+		const nativeLink = panel.querySelector( '[data-dsa-checkout-native-details]' );
+		if ( nativeLink ) {
+			nativeLink.addEventListener( 'click', function () { closeOverlay(); } );
 		}
 
 		if ( ! checkoutState.contract ) {
@@ -5197,6 +5205,7 @@
 			applyCheckoutValuesToPage( checkoutPageDraftValues, true );
 			closeOverlay();
 			window.setTimeout( triggerWooCheckoutRefresh, 30 );
+			if ( checkoutState.editDetails ) return;
 			const placeOrder = document.querySelector( '#place_order, .wc-block-components-checkout-place-order-button' );
 			if ( placeOrder && typeof placeOrder.focus === 'function' ) {
 				placeOrder.focus( { preventScroll: false } );
@@ -11761,6 +11770,17 @@
 		if ( purchaseAttemptTarget( link ) && openPurchaseIdentityGate( link.href ) ) {
 			event.preventDefault();
 			event.stopPropagation();
+			return;
+		}
+
+		if ( link.hasAttribute( 'data-kiwe-checkout-details' )
+			&& link.getAttribute( 'href' ) === '#customer_details'
+			&& ( ! link.target || link.target === '_self' )
+			&& commerce.settings && commerce.settings.checkoutSurfaceEnabled
+			&& isCurrentCheckoutPage() && document.querySelector( 'form.checkout #customer_details' ) ) {
+			event.preventDefault();
+			event.stopPropagation();
+			openCheckoutSurface( { returnToPage: true, editDetails: true } );
 			return;
 		}
 
