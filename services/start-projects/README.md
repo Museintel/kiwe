@@ -40,11 +40,23 @@ After consent, Start reads the site's identity and runtime versions, saves the c
 
 The first release targets single-site WordPress at the root of the saved HTTPS domain. The site needs signed Kiwe MCP App 1.2.0-rc.3 or a later release that advertises the connection scope. Start follows the native authorization metadata on the selected domain and pins outbound requests to verified public addresses.
 
-When the Shared or Cloud adapter marks a managed installation ready, Start can run the same owner-consent flow after the signed Kiwe packages are installed. Its connection and subsequent actions use the provider-assigned temporary address. The custom domain stays a requested domain until it has its own verified hostname, TLS and migration. Production Agency provisioning, automatic signed installation and domain registration need their provider integration.
+When the Shared or Cloud adapter marks the managed stack ready, Start can run the same owner-consent flow on the provider-assigned temporary address. The custom domain stays a requested domain until its own verified hostname, TLS and migration. The registrar purchase and domain attachment integrations remain pending.
+
+## Managed WordPress package
+
+The managed Start route and `kiwe_start_provision_site` use the same preparation step after the exact Hostinger WordPress site responds. The co-hosted worker checks the on-disk site root and native WordPress origin. It installs the verified WordPress.org releases of Razorpay for WooCommerce and Shiprocket as inactive plugins. The store owner can set up their merchant account and shipping channel in WooCommerce. [Razorpay setup](https://razorpay.com/app-store/woocommerce/) · [Shiprocket setup](https://www.shiprocket.in/woocommerce-shipping/)
+
+For managed Client purchases, set `KIWE_START_KIWE_RELEASE_DIRECTORY` to the private directory holding the approved Core `manifest.json` and `kiwe-mu-plugin.zip`, and App `release.json` and `kiwe-mcp.zip`. Start uses the fleet verifier for the Core signature and archive hash, checks the Core inventory in private staging, and places the matched MU loader last. The MCP App uses Kiwe’s native signed installer verification and initial owner setup. A matching installation can resume after interruption. Different installed Core or App files require an approved upgrade.
+
+Set `KIWE_START_BRICKS_ARCHIVE`, `KIWE_START_BRICKS_SHA256` and `KIWE_START_BRICKS_VERSION` for the latest qualified stable Bricks ZIP. The worker checks the archive hash, installs the exact version and verifies the site's native license. The isolated Hostinger fixture used the official Bricks 2.4.6 ZIP and its existing authorised staging license. Its signed Core RC498 and MCP 1.2.0-rc.4 booted and passed a second install. Production requires the license in the site's protected WordPress configuration. [Bricks stable release](https://bricksbuilder.io/release/bricks-2-4-6/) · [Native license configuration](https://academy.bricksbuilder.io/builder/license/license-and-updates/)
+
+Set `KIWE_START_KEY_MANAGED_TOKEN` to the dedicated managed setup credential configured on Key. The first setup binds the paid project’s reserved origin to Key’s configured primary account. WordPress redeems the short-lived setup code through its native Kiwe Auth handler and proves its own encrypted site credential. The existing Key sender serves the site until the selected client number completes verification. The initial live Key configuration admits Evergreen Basin’s exact origin. Temporary addresses require the qualified hosting worker and Key’s temporary-origin setting.
+
+The client can choose **Use your own WhatsApp number** in the connected project or call `kiwe_start_pair_whatsapp` with the project revision, phone and explicit selection. Key pairs that verified number for this site’s WhatsApp login, campaigns and automated messages. The link only starts the pairing step. The same site credential remains bound to the original site.
 
 ## Connect Key
 
-Set `KIWE_START_KEY_ORIGIN` to the Key HTTPS origin and `KIWE_START_KEY_TOKEN` to a dedicated random service credential. Configure the matching credential and Start origin on Key. Start only requests Key setup for a verified WordPress project.
+Set `KIWE_START_KEY_ORIGIN` to the Key HTTPS origin and `KIWE_START_KEY_TOKEN` to a dedicated random service credential. Configure the matching credential and Start origin on Key. For existing sites using native account approval, Start requests setup after verification.
 
 1. Open **Connect Key** in the project or call `kiwe_start_connect_key`. Open the returned Key link.
 2. In Key, sign in or pair a new account, then approve the website. An agency uses its Key account across its sites and can invite one client to pair a separate number.

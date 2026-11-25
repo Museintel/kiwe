@@ -1054,6 +1054,18 @@ export function openProjects(filename, { now = Date.now, launchWebsite = 'https:
       });
     },
 
+    managedKeyRequest(accountId, details, connected = false) {
+      const row = owned.get(details.projectId, accountId);
+      if (!row || row.revision !== details.revision) throw missingProject();
+      if (!/^launch:[a-f0-9]{32}$/.test(accountId) || row.account_type !== 'client'
+          || row.plan_id !== clientPlan.id || row.hosting !== 'included' || !row.setup_domain) return null;
+      const origin = 'https://' + row.setup_domain;
+      if (connected && (row.managed_status !== 'ready' || row.site_url !== origin)) return null;
+      ensureKeyWorkspace.run(accountId, randomUUID());
+      addKeyLink.run(row.id);
+      return { projectId: row.id, workspaceId: keyWorkspace.get(accountId).workspace_id, origin, accountType: 'client' };
+    },
+
     prepareKeyRequest(accountId, details) {
       return transaction(() => {
         const row = requireKeyTarget(accountId, details);

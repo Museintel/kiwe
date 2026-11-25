@@ -1,12 +1,16 @@
 import { mkdirSync } from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { createRemoteJWKSet } from 'jose';
 import { createStartServer } from './app.mjs';
 import { createMcpAuthorization } from './auth.mjs';
 import { createBrowserLogin } from './browser-login.mjs';
 import { createKeyPilotLogin } from './key-pilot-login.mjs';
-import { openProjects } from './projects.mjs';
+import { openProjects, StartError } from './projects.mjs';
 import { createHostingerProvider } from './managed-hosting.mjs';
+import { createManagedCommerceInstaller, createManagedWordPressCommands } from './managed-commerce.mjs';
+import { createManagedBricksInstaller } from './managed-bricks.mjs';
+import { createManagedKiweInstaller } from './managed-kiwe.mjs';
 import { createKeyProvider } from './key-connection.mjs';
 import { createHomepageProvider } from './homepage.mjs';
 import { createBricksCompiler } from './bricks-compiler.mjs';
@@ -39,7 +43,35 @@ function managedProvider() {
       || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(adminEmail)) {
     throw new Error('Set a valid managed hosting order, account and operator email.');
   }
-  return createHostingerProvider({ token, orderId, username, adminEmail });
+  const locations = { domainsDirectory: process.env.KIWE_START_HOSTINGER_DOMAINS_DIRECTORY || '/home/' + username + '/domains' };
+  const installCommerce = createManagedCommerceInstaller(locations);
+  const resolveSite = createManagedWordPressCommands(locations);
+  const bricksArchive = process.env.KIWE_START_BRICKS_ARCHIVE;
+  const installBricks = bricksArchive && createManagedBricksInstaller({
+    resolveSite, archive: bricksArchive, sha256: required('KIWE_START_BRICKS_SHA256'), version: required('KIWE_START_BRICKS_VERSION'),
+  });
+  const kiweRelease = process.env.KIWE_START_KIWE_RELEASE_DIRECTORY;
+  const installKiwe = kiweRelease && createManagedKiweInstaller({ directory: kiweRelease, resolveSite });
+  const prepareWordPress = async (domain, retail) => {
+    if (retail && (!installBricks || !installKiwe || !managedKeyToken)) {
+      throw new StartError(503, 'managed_stack_unavailable', 'The managed site package needs its Bricks, signed Kiwe and Key configuration.');
+    }
+    await installCommerce(domain);
+    if (retail) {
+      await installKiwe(domain);
+      return installBricks(domain);
+    }
+    return true;
+  };
+  const setup = fileURLToPath(new URL('./managed-key-setup.php', import.meta.url));
+  const connectKey = async (domain, code) => {
+    const command = await resolveSite(domain);
+    const response = await command(['eval-file', setup], {
+      KIWE_MANAGED_KEY_CODE: code ?? '', KIWE_MANAGED_SITE_ORIGIN: 'https://' + domain, KIWE_MANAGED_ENABLE_AUTH: 'yes',
+    });
+    if (response !== 'verified') throw new Error('The site could not confirm its Key connection.');
+  };
+  return createHostingerProvider({ token, orderId, username, adminEmail, prepareWordPress, connectKey });
 }
 
 const startOrigin = configuredUrl('KIWE_START_ORIGIN', true);
@@ -52,7 +84,11 @@ if (keyToken && (keyToken === purchaseToken || !/^[A-Za-z0-9_-]{43,128}$/.test(k
   throw new Error('Use a separate random service credential for Key.');
 }
 const keyOrigin = keyToken ? configuredUrl('KIWE_START_KEY_ORIGIN', true) : undefined;
-const key = keyToken ? createKeyProvider({ token: keyToken, origin: keyOrigin }) : undefined;
+const managedKeyToken = process.env.KIWE_START_KEY_MANAGED_TOKEN;
+if (managedKeyToken && (!keyToken || [keyToken, purchaseToken].includes(managedKeyToken) || !/^[A-Za-z0-9_-]{43,128}$/.test(managedKeyToken))) {
+  throw new Error('Configure a separate credential for managed Key setup.');
+}
+const key = keyToken ? createKeyProvider({ token: keyToken, origin: keyOrigin, managedToken: managedKeyToken }) : undefined;
 const loginSettings = ['KIWE_START_LOGIN_CLIENT_ID', 'KIWE_START_LOGIN_CLIENT_SECRET', 'KIWE_START_LOGIN_AUTHORIZATION_URL', 'KIWE_START_LOGIN_TOKEN_URL'];
 let browserLogin;
 let issuer;

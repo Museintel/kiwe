@@ -1,40 +1,18 @@
 import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
-import { createHash, createPublicKey, randomUUID, verify } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
+import { readCoreRelease as readRelease } from '../../services/start-projects/src/core-release.mjs';
+
+export { readRelease };
 
 const run = promisify(execFile);
 const codeDirectory = fileURLToPath(new URL('.', import.meta.url));
 const digest = bytes => createHash('sha256').update(bytes).digest('hex');
-const signedFields = ['schema', 'version', 'channel', 'publishedAt', 'packageUrl', 'sha256', 'bytes',
-  'requiresPhp', 'requiresWp', 'packageManifestSha256', 'keyId'];
-
-export async function readRelease(directory) {
-  const descriptor = JSON.parse(await readFile(path.join(directory, 'manifest.json'), 'utf8'));
-  const trust = JSON.parse(await readFile(path.join(codeDirectory, 'kiwe-update-public-key.json'), 'utf8'));
-  assert.equal(descriptor.schema, 'kiwe.mu-release.v1');
-  assert.equal(descriptor.keyId, trust.keyId);
-  assert.match(descriptor.version, /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/);
-  assert.ok(['stable', 'candidate'].includes(descriptor.channel));
-  assert.equal(descriptor.packageUrl,
-    'https://app.kiwelaunch.com/updates/kiwe/v1/releases/' + descriptor.version + '/kiwe-mu-plugin.zip');
-  const key = createPublicKey({
-    key: Buffer.concat([Buffer.from('302a300506032b6570032100', 'hex'), Buffer.from(trust.publicKey, 'base64')]),
-    format: 'der',
-    type: 'spki',
-  });
-  const message = Buffer.from(signedFields.map(field => descriptor[field]).join('\n') + '\n');
-  assert.ok(verify(null, message, key, Buffer.from(descriptor.signature, 'base64')), 'Kiwe release signature failed');
-  const archive = await readFile(path.join(directory, 'kiwe-mu-plugin.zip'));
-  assert.equal(archive.length, descriptor.bytes);
-  assert.equal(digest(archive), descriptor.sha256);
-  return descriptor;
-}
-
 export function publicVersion(html) {
   return html.match(/window\.DSA\.boot\s*=\s*\{version:\s*"(\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?)"/)?.[1] ??
     html.match(/<!-- DSA Surface (\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?) -->/)?.[1] ?? null;

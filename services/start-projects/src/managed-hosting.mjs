@@ -9,7 +9,7 @@ function providerUnavailable() {
   return new StartError(502, 'hosting_unavailable', 'The hosting provider is temporarily unavailable. Check this project again to resume.');
 }
 
-export function createHostingerProvider({ token, orderId, username, adminEmail, http = fetch, probe = requestSite }) {
+export function createHostingerProvider({ token, orderId, username, adminEmail, prepareWordPress, connectKey, http = fetch, probe = requestSite }) {
   async function call(endpoint, init = {}) {
     const response = await http(api + endpoint, {
       ...init, redirect: 'error', signal: AbortSignal.timeout(10000),
@@ -28,6 +28,7 @@ export function createHostingerProvider({ token, orderId, username, adminEmail, 
   }
 
   return {
+    prepareWordPress, connectKey,
     async reserve() {
       const reserved = await call('/domains/free-subdomains', { method: 'POST' });
       if (!freeDomain.test(reserved?.domain ?? '')) throw providerUnavailable();
@@ -77,7 +78,7 @@ export function createHostingerProvider({ token, orderId, username, adminEmail, 
   };
 }
 
-export function createManagedHosting(projects, provider) {
+export function createManagedHosting(projects, provider, keyConnections) {
   const inFlight = new Map();
 
   async function advance(accountId, details, job) {
@@ -89,7 +90,11 @@ export function createManagedHosting(projects, provider) {
     const current = await provider.status(domain);
     if (current === 'failed') return projects.saveManagedStatus(accountId, details, 'needs_attention');
     if (current === 'completed') {
-      const ready = await provider.wordpressReady(domain);
+      let ready = await provider.wordpressReady(domain);
+      if (ready && provider.prepareWordPress) ready = await provider.prepareWordPress(domain, /^launch:[a-f0-9]{32}$/.test(accountId)) !== false;
+      if (ready && provider.connectKey && keyConnections?.managed) {
+        ready = await keyConnections.provision(accountId, details, provider.connectKey);
+      }
       return projects.saveManagedStatus(accountId, details, ready ? 'ready' : 'provisioning');
     }
     if (current === 'running') return projects.saveManagedStatus(accountId, details, 'provisioning');

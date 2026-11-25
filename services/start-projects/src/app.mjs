@@ -12,7 +12,7 @@ import { browserLoginInput, browserLoginLifetime, browserLoginPath, browserLogin
 import { agencyPage, homepagePage, websitePage, clientProjectPage, pilotMcpPage, projectPage, projectsPage, signInPage, siteAuthorizationPage, siteReturnPage, stylesheet } from './web.mjs';
 import { createSiteConnections, siteCallbackPath } from './wordpress-link.mjs';
 import { createManagedHosting } from './managed-hosting.mjs';
-import { createKeyConnections } from './key-connection.mjs';
+import { createKeyConnections, keyPairingInput } from './key-connection.mjs';
 import { createAgencySpaces } from './agency-space.mjs';
 import {
   createHomepageWorkflow, homeRequestInput, homeRevisionInput, homeSubmitInput, homepageReturn,
@@ -156,9 +156,17 @@ function mcpTools(projects, siteConnections, managedHosting, keyConnections, age
     server.registerTool('kiwe_start_connect_key', {
       description: 'Resume Key setup for a verified WordPress site. The approved Key account owns the sender. Open the returned Key link for native approval or pairing.',
       inputSchema: siteLinkInput,
-      outputSchema: singleProjectOutput.extend({ approvalUrl: z.url() }),
+      outputSchema: singleProjectOutput.extend({ approvalUrl: z.url().nullable() }),
       annotations: { destructiveHint: false, idempotentHint: true, openWorldHint: true },
     }, (input) => run(async () => result('Key connection status', await keyConnections.resume(accountId, input))));
+  }
+  if (keyConnections.managed) {
+    server.registerTool('kiwe_start_pair_whatsapp', {
+      description: 'Open Key pairing for the connected managed website after the client chooses this number for site login and WhatsApp messages. The current sender remains active while the client verifies the new number.',
+      inputSchema: keyPairingInput,
+      outputSchema: z.object({ pairingUrl: z.url() }),
+      annotations: { destructiveHint: false, idempotentHint: false, openWorldHint: true },
+    }, (input) => run(async () => result('Open Key to verify your WhatsApp number', await keyConnections.pair(accountId, input))));
   }
   server.registerTool('kiwe_start_agency_workspace', {
     description: 'Read the purchaser’s agency workspace and any pending proof for its own home website.',
@@ -322,7 +330,7 @@ export function createStartServer({ projects, startOrigin, checkoutOrigin, issue
       return { ...native, items, homepage: home?.draft ?? null, conversion, publication: published };
     },
   };
-  const managedHosting = createManagedHosting(projects, hostingProvider);
+  const managedHosting = createManagedHosting(projects, hostingProvider, keyConnections);
   const siteConnections = createSiteConnections(projects, startOrigin, wordpressLink);
   const secure = new URL(startOrigin).protocol === 'https:';
   const cookieName = secure ? '__Host-kiwe-start' : 'kiwe-start-lab';
@@ -692,7 +700,7 @@ export function createStartServer({ projects, startOrigin, checkoutOrigin, issue
         return send(response, error.status, projectsPage(projects.listProjects(accountId), projects.agencySites(accountId), error.message, pilot));
       }
     }
-    const match = pathname.match(/^\/projects\/([a-f0-9-]{36})(?:\/(domain|connect|hosting|key|invite-client|revoke-client))?$/);
+    const match = pathname.match(/^\/projects\/([a-f0-9-]{36})(?:\/(domain|connect|hosting|key|key-pair|invite-client|revoke-client))?$/);
     const listRoute = endpoint === 'GET /projects' || endpoint === 'GET /projects/';
     if (listRoute || match) {
       const accountId = accountForBrowser(request);
@@ -711,7 +719,9 @@ export function createStartServer({ projects, startOrigin, checkoutOrigin, issue
         }
         const clientAccess = !pilot && project.accountType === 'agency' && project.site
           ? projects.clientAccess(accountId, ref) : null;
-        return projectPage(project, { managed: managedHosting.available, keyEnabled: keyConnections.available, clientAccess, ...options });
+        const managedKey = keyConnections.managed && /^launch:[a-f0-9]{32}$/.test(accountId) && project.accountType === 'client'
+          && project.managedSite?.url === project.site?.url;
+        return projectPage(project, { managed: managedHosting.available, keyEnabled: keyConnections.available, managedKey, clientAccess, ...options });
       }
       const project = projects.getProject(accountId, ref);
       if (method === 'POST' && action) {
@@ -735,7 +745,13 @@ export function createStartServer({ projects, startOrigin, checkoutOrigin, issue
           }
           if (action === 'key') {
             const key = await keyConnections.resume(accountId, input);
-            return redirect(response, key.project.key.state === 'awaiting_approval' ? key.approvalUrl : '/projects/' + projectId);
+            return redirect(response, key.project.key.state === 'awaiting_approval' && key.approvalUrl ? key.approvalUrl : '/projects/' + projectId);
+          }
+          if (action === 'key-pair') {
+            const pairing = await keyConnections.pair(accountId, { projectId, revision: Number(revision),
+              phone: form.phone, useForMessages: form.useForMessages === 'yes' });
+            response.setHeader('Referrer-Policy', 'no-referrer');
+            return redirect(response, pairing.pairingUrl);
           }
           if (action === 'hosting') await managedHosting.step(accountId, input);
           else projects.setDomain(accountId, input);

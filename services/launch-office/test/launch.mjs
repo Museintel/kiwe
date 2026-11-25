@@ -72,8 +72,8 @@ try {
   assert.equal((await submit({ ...sample, email: 'bad' })).status, 422);
 
   browser = await chromium.launch({ executablePath: process.env.KIWE_LAUNCH_CHROME, headless: true });
-  for (const width of [320, 390, 768, 1440]) {
-    const page = await browser.newPage({ viewport: { width, height: 900 }, reducedMotion: 'reduce' });
+  for (const [width, height] of [[320, 480], [320, 568], [390, 844], [768, 1024], [844, 390], [1024, 600], [1280, 720], [1440, 900]]) {
+    const page = await browser.newPage({ viewport: { width, height }, reducedMotion: 'reduce' });
     const errors = [];
     page.on('pageerror', error => errors.push(error.message));
     await page.goto(origin, { waitUntil: 'load' });
@@ -92,7 +92,16 @@ try {
       const logo = item.getBoundingClientRect();
       return logo.left >= viewport.left - 1 && logo.right <= viewport.right + 1;
     }));
-    assert.ok(fit, 'All four static logos are visible at ' + width);
+    assert.equal(await page.locator('.logo-set:not(.loop-copy) li').count(), 5);
+    assert.ok(fit, 'All five static logos are visible at ' + width);
+    const loaded = await page.evaluate(() => {
+      const powered = document.querySelector('.powered').getBoundingClientRect();
+      const headline = document.querySelector('#hero-title').getBoundingClientRect();
+      return { scroll: window.scrollY, railTop: powered.top, railBottom: powered.bottom, headlineBottom: headline.bottom };
+    });
+    assert.equal(loaded.scroll, 0);
+    assert.ok(loaded.railTop >= 0 && loaded.railBottom <= height && loaded.headlineBottom <= height,
+      'The hero headline and full powered-by rail fit at ' + width + '×' + height + ': ' + JSON.stringify(loaded));
     assert.equal(errors.length, 0);
     if (proofDir && (width === 390 || width === 1440)) {
       await page.screenshot({ path: path.join(proofDir, 'home-' + width + '.png'), fullPage: true });

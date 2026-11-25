@@ -2,7 +2,7 @@
 
 The public source lives in [public/kiwelaunch.com](../../public/kiwelaunch.com). It uses static HTML and a small same-origin PHP form endpoint. The homepage has one Client offer matching the [Start plan](../start-projects/src/client-plan.mjs). The existing `/plans/` address opens that offer. Partner applications at this stage register interest for later enrolment.
 
-The featured screenshots show the public Dharwad Pedha, National Chikki and Ascendants sites. The dashboard image is the Kiwe workspace preview with sample data. The moving proof rail describes those sites' observable features. Replace the examples with approved Kiwe testimonials when available. The provider rail identifies planned Razorpay billing.
+The featured screenshots show the public Dharwad Pedha, National Chikki and Ascendants sites. The dashboard image is the Kiwe workspace preview with sample data. The moving proof rail describes those sites' observable features. Replace the examples with approved Kiwe testimonials when available. The powered-by rail includes Shiprocket’s first-party mark and sits in the hero. It moves ahead of the longer hero content in short viewports. [Shiprocket brand asset](https://sr-website.shiprocket.in/wp-content/uploads/2025/09/srFavicon-96x96.png)
 
 ## Private inbox
 
@@ -21,3 +21,5 @@ Run `node services/launch-office/test/launch.mjs` from the repository root with 
 Use a scoped release of these files within Kiwe Launch's document root. Keep the other served applications in the current hosting configuration, including Seam. Preserve the current public routes and private inbox before a replacement. Verify the public page and form response after publishing and retain the previous page files for recovery. The separate checkout candidate adds verified buyer accounts, private referral links and registrar quotes. [Checkout operation](../launch-checkout/README.md)
 
 The 25 November 2026 release passed PHP 8.2 on Hostinger and the private inbox's MCP transport on Node 22. Synthetic demo and partner deliveries passed through the two public site addresses, and the inbox returned each once. The two known records were then retired. The static and reduced-motion layouts passed Chrome at 320, 390, 768 and 1440 CSS pixels. The scoped recovery retains the two original HTML files and their previous URLs. New served asset and form directories use 0755. Private office and inbox directories use 0700.
+
+The subsequent powered-by patch changes only the homepage, shared stylesheet and Shiprocket mark. Chrome checked the headline and full static rail at scroll position zero at 320×480, 320×568, 390×844, 768×1024, 844×390, 1024×600, 1280×720 and 1440×900. The motion control and both sample forms passed in the isolated test. Production HTML and CSS matched the scoped package. The public image optimizer returned all 9,216 pixels exactly. For recovery use the two backed-up files in the scoped private archive and retire the newly added logo.

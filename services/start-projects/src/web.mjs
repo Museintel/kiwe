@@ -115,22 +115,30 @@ function hostingStep(project, available) {
 </form>`;
 }
 
-function keyStep(project, available) {
+function keyStep(project, available, managedKey) {
   if (!available || !project.site) return '';
   const messages = {
     awaiting_approval: 'Approve the website in Key to choose its account.',
     sender_ready: project.key?.siteAuthenticated
       ? 'WhatsApp is connected to this WordPress site.'
       : 'The Key sender is ready. Open Key for the one-time WordPress setup code.',
-    sender_offline: 'Open Key to reconnect the WhatsApp sender.',
+    sender_offline: managedKey ? 'The WhatsApp sender is temporarily offline.' : 'Open Key to reconnect the WhatsApp sender.',
     inactive: 'This Key website or account is inactive.',
   };
   const status = project.key ? `<p class="status">${escape(messages[project.key.state])}</p>` : '';
   const pairing = project.key?.pairingPending ? '<p>The client number is waiting for a WhatsApp scan.</p>' : '';
   const label = project.key ? 'Check Key connection' : 'Connect Key';
-  const manage = project.key?.manageUrl && project.key.state !== 'awaiting_approval'
+  const manage = !managedKey && project.key?.manageUrl && project.key.state !== 'awaiting_approval'
     ? `<p><a href="${escape(project.key.manageUrl)}">Open Key</a></p>` : '';
-  return `${status}${pairing}${manage}<form method="post" action="/projects/${project.id}/key">
+  const ownNumber = managedKey && project.key?.siteAuthenticated && project.key.sender === 'account_primary'
+    ? `<details><summary>Use your own WhatsApp number</summary>
+<form method="post" action="/projects/${project.id}/key-pair">
+<input type="hidden" name="revision" value="${project.revision}">
+<label for="key-phone">WhatsApp number</label><input id="key-phone" name="phone" type="tel" autocomplete="tel" required>
+<label><input name="useForMessages" value="yes" type="checkbox" required> Use this number for website login and WhatsApp messages, including campaigns and automations.</label>
+<button class="button">Verify number in Key</button>
+</form></details>` : '';
+  return `${status}${pairing}${manage}${ownNumber}<form method="post" action="/projects/${project.id}/key">
 <input type="hidden" name="revision" value="${project.revision}">
 <button class="button">${label}</button>
 </form>`;
@@ -163,7 +171,7 @@ function clientAccessPanel(project, state, invitation) {
 ${notice}${invite}${revoke}</section>`;
 }
 
-export function projectPage(project, { error, managed = false, keyEnabled = false, clientAccess = null, invitation = null } = {}) {
+export function projectPage(project, { error, managed = false, keyEnabled = false, managedKey = false, clientAccess = null, invitation = null } = {}) {
   const alert = error ? `<p class="error" role="alert">${escape(error)}</p>` : '';
   const purchased = project.planId === clientPlan.id;
   const status = project.site
@@ -194,7 +202,7 @@ ${selection}
 </form>`;
   return page(purchased ? project.domain : 'Choose your domain', `<p><a href="/projects">All projects</a>${project.workspace.type === 'agency' ? ` · <a href="/projects/agency">${escape(project.workspace.name)}</a>` : ' · Kiwe Launch'}</p>
 ${alert}${status}${domainForm}
-${project.site ? '' : hostingStep(project, managed)}${connect}${keyStep(project, keyEnabled)}
+${project.site ? '' : hostingStep(project, managed)}${connect}${keyStep(project, keyEnabled, managedKey)}
 ${clientAccessPanel(project, clientAccess, invitation)}
 ${project.site ? `<p>${designContextButton(project.site)} <a class="button" href="/projects/${project.id}/pages">Pages &amp; Templates</a></p>` : ''}
 ${project.key?.siteAuthenticated && project.key.state !== 'inactive' ? `<p><a class="button" href="/projects/${project.id}/homepage">Homepage draft</a></p>` : ''}`, true);
