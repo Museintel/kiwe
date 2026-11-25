@@ -5010,7 +5010,7 @@
     },
     {
       "source": "wp-content/mu-plugins/dsa/includes/Commerce/MCP_Store_Provider.php",
-      "sha256": "30a47e77961e5488b2697f72e4075b75d8f12dcf70d78f59a88537318328907e",
+      "sha256": "4fad6d630fb374d84d583de0f8955dd70be2b72b91eb26d6c8ac46803508269f",
       "symbols": [
         {
           "kind": "method",
@@ -5044,13 +5044,64 @@
         },
         {
           "kind": "method",
+          "name": "subscription_pilot_operations",
+          "line": 94
+        },
+        {
+          "kind": "method",
           "name": "group",
-          "line": 84
+          "line": 125
         },
         {
           "kind": "method",
           "name": "change_group",
-          "line": 87
+          "line": 128
+        }
+      ]
+    },
+    {
+      "source": "wp-content/mu-plugins/dsa/includes/Commerce/Membership_Directory.php",
+      "sha256": "d62c38b2afb12a1fb415b35c9c79bc7caeaf234ff2dee4778377bf92ffc31cd2",
+      "symbols": [
+        {
+          "kind": "method",
+          "name": "register",
+          "line": 13
+        },
+        {
+          "kind": "method",
+          "name": "can_list",
+          "line": 17
+        },
+        {
+          "kind": "method",
+          "name": "can_review",
+          "line": 24
+        },
+        {
+          "kind": "method",
+          "name": "notification_visible",
+          "line": 29
+        },
+        {
+          "kind": "method",
+          "name": "summary",
+          "line": 37
+        },
+        {
+          "kind": "method",
+          "name": "record_payment",
+          "line": 56
+        },
+        {
+          "kind": "method",
+          "name": "notify_expiration",
+          "line": 80
+        },
+        {
+          "kind": "method",
+          "name": "notify",
+          "line": 88
         }
       ]
     },
@@ -5296,6 +5347,72 @@
           "kind": "method",
           "name": "display_config",
           "line": 68
+        }
+      ]
+    },
+    {
+      "source": "wp-content/mu-plugins/dsa/includes/Commerce/Razorpay_Subscription_Provider.php",
+      "sha256": "d95c662c0d567c5eb045d1e01d8db6b4a71c9317963865fb6125801f342613f6",
+      "symbols": [
+        {
+          "kind": "method",
+          "name": "available",
+          "line": 10
+        },
+        {
+          "kind": "method",
+          "name": "settings",
+          "line": 21
+        },
+        {
+          "kind": "method",
+          "name": "id",
+          "line": 26
+        },
+        {
+          "kind": "method",
+          "name": "verified_event",
+          "line": 30
+        },
+        {
+          "kind": "method",
+          "name": "plan",
+          "line": 45
+        },
+        {
+          "kind": "method",
+          "name": "subscription",
+          "line": 49
+        },
+        {
+          "kind": "method",
+          "name": "invoice",
+          "line": 53
+        },
+        {
+          "kind": "method",
+          "name": "payment",
+          "line": 57
+        },
+        {
+          "kind": "method",
+          "name": "create",
+          "line": 61
+        },
+        {
+          "kind": "method",
+          "name": "authorization_url",
+          "line": 74
+        },
+        {
+          "kind": "method",
+          "name": "entity",
+          "line": 79
+        },
+        {
+          "kind": "method",
+          "name": "request",
+          "line": 86
         }
       ]
     },
@@ -6434,6 +6551,147 @@
       ]
     },
     {
+      "source": "wp-content/mu-plugins/dsa/includes/Commerce/Subscription_Billing_Service.php",
+      "sha256": "cce28c014f541183654566126ad693a026c56cf3076a9e7298977ff8bc4636e1",
+      "symbols": [
+        {
+          "kind": "method",
+          "name": "available",
+          "line": 14
+        },
+        {
+          "kind": "method",
+          "name": "register",
+          "line": 18
+        },
+        {
+          "kind": "hook",
+          "name": "woocommerce_order_details_after_order_table",
+          "line": 19
+        },
+        {
+          "kind": "hook",
+          "name": "woocommerce_order_needs_payment",
+          "line": 21
+        },
+        {
+          "kind": "hook",
+          "name": "rest_api_init",
+          "line": 23
+        },
+        {
+          "kind": "method",
+          "name": "ordinary_payment_allowed",
+          "line": 32
+        },
+        {
+          "kind": "method",
+          "name": "can_manage",
+          "line": 37
+        },
+        {
+          "kind": "method",
+          "name": "can_manage_order",
+          "line": 41
+        },
+        {
+          "kind": "method",
+          "name": "enrollment_plan",
+          "line": 45
+        },
+        {
+          "kind": "method",
+          "name": "enroll",
+          "line": 65
+        },
+        {
+          "kind": "method",
+          "name": "enrollment",
+          "line": 99
+        },
+        {
+          "kind": "method",
+          "name": "recover",
+          "line": 105
+        },
+        {
+          "kind": "method",
+          "name": "sync_payment",
+          "line": 117
+        },
+        {
+          "kind": "method",
+          "name": "require_review",
+          "line": 123
+        },
+        {
+          "kind": "method",
+          "name": "review_reconciliation",
+          "line": 129
+        },
+        {
+          "kind": "method",
+          "name": "managed_order",
+          "line": 145
+        },
+        {
+          "kind": "method",
+          "name": "public_state",
+          "line": 152
+        },
+        {
+          "kind": "method",
+          "name": "eligible_snapshot",
+          "line": 170
+        },
+        {
+          "kind": "method",
+          "name": "order_fingerprint",
+          "line": 190
+        },
+        {
+          "kind": "method",
+          "name": "add_months",
+          "line": 199
+        },
+        {
+          "kind": "method",
+          "name": "synchronized",
+          "line": 206
+        },
+        {
+          "kind": "method",
+          "name": "bind",
+          "line": 216
+        },
+        {
+          "kind": "method",
+          "name": "webhook",
+          "line": 239
+        },
+        {
+          "kind": "method",
+          "name": "cancelled",
+          "line": 264
+        },
+        {
+          "kind": "method",
+          "name": "native_order_id",
+          "line": 279
+        },
+        {
+          "kind": "method",
+          "name": "reconcile",
+          "line": 284
+        },
+        {
+          "kind": "method",
+          "name": "charge",
+          "line": 318
+        }
+      ]
+    },
+    {
       "source": "wp-content/mu-plugins/dsa/includes/Commerce/Subscription_Product_Service.php",
       "sha256": "31b77d758c359a8e8e0b2fe0ce77f9e6e2018b754bb2783dc8f4f05b43ce8620",
       "symbols": [
@@ -6496,7 +6754,7 @@
     },
     {
       "source": "wp-content/mu-plugins/dsa/includes/Commerce/Subscription_Quote_Service.php",
-      "sha256": "d1abdac91e2bd736f22bd14663614434bb0433e9f777f745d7dc30a197848516",
+      "sha256": "3e69336fa09096460de3faddf9907194f8db7f067d9dd669b7626a9524da7250",
       "symbols": [
         {
           "kind": "method",
@@ -6515,13 +6773,84 @@
         },
         {
           "kind": "method",
-          "name": "quote",
-          "line": 28
+          "name": "snapshot",
+          "line": 30
         },
         {
           "kind": "method",
           "name": "minor",
-          "line": 76
+          "line": 87
+        }
+      ]
+    },
+    {
+      "source": "wp-content/mu-plugins/dsa/includes/Commerce/Subscription_Renewal_Orders.php",
+      "sha256": "266f9a99124698d563c5c31472ae7633fd838718e3b4d62df744fff4cdf662a2",
+      "symbols": [
+        {
+          "kind": "metadata",
+          "name": "_kiwe_subscription_agreement_v1",
+          "line": 8
+        },
+        {
+          "kind": "metadata",
+          "name": "_kiwe_subscription_charge_v1",
+          "line": 9
+        },
+        {
+          "kind": "metadata",
+          "name": "_kiwe_membership_joined_v1",
+          "line": 11
+        },
+        {
+          "kind": "method",
+          "name": "children",
+          "line": 14
+        },
+        {
+          "kind": "method",
+          "name": "apply",
+          "line": 25
+        },
+        {
+          "kind": "method",
+          "name": "record_refund",
+          "line": 71
+        },
+        {
+          "kind": "method",
+          "name": "identity",
+          "line": 81
+        },
+        {
+          "kind": "method",
+          "name": "renewal_order",
+          "line": 86
+        },
+        {
+          "kind": "method",
+          "name": "decimal",
+          "line": 127
+        },
+        {
+          "kind": "method",
+          "name": "membership",
+          "line": 132
+        },
+        {
+          "kind": "method",
+          "name": "owned_by",
+          "line": 136
+        },
+        {
+          "kind": "method",
+          "name": "paid_period",
+          "line": 144
+        },
+        {
+          "kind": "method",
+          "name": "render_membership",
+          "line": 167
         }
       ]
     },
@@ -6624,7 +6953,7 @@
     },
     {
       "source": "wp-content/mu-plugins/dsa/includes/Notifications/Notification_Preference_Service.php",
-      "sha256": "b2d225ba9c956fd3bdfbf4773ec32cbee83c9f73be186d19b13deebe14786ed1",
+      "sha256": "cc34c7afdf6e538d7e4cb7e47b534c08621ac1a22de602aceb41fa054a224144",
       "symbols": [
         {
           "kind": "method",
@@ -6774,167 +7103,167 @@
         {
           "kind": "method",
           "name": "inbox_accepts",
-          "line": 433
+          "line": 435
         },
         {
           "kind": "method",
           "name": "inbox_user_ids_for_topic",
-          "line": 436
+          "line": 438
         },
         {
           "kind": "method",
           "name": "contact_for_user",
-          "line": 446
+          "line": 453
         },
         {
           "kind": "method",
           "name": "user_accepts",
-          "line": 458
+          "line": 465
         },
         {
           "kind": "method",
           "name": "campaign_visitors",
-          "line": 474
+          "line": 481
         },
         {
           "kind": "method",
           "name": "campaign_visitor_accepts",
-          "line": 483
+          "line": 490
         },
         {
           "kind": "method",
           "name": "decline_campaign",
-          "line": 492
+          "line": 499
         },
         {
           "kind": "method",
           "name": "delivery_channels",
-          "line": 501
+          "line": 508
         },
         {
           "kind": "method",
           "name": "loop_button_text",
-          "line": 507
+          "line": 514
         },
         {
           "kind": "method",
           "name": "loop_button_args",
-          "line": 512
+          "line": 519
         },
         {
           "kind": "method",
           "name": "render_single_notify_button",
-          "line": 529
+          "line": 536
         },
         {
           "kind": "method",
           "name": "retain_store_choices",
-          "line": 549
+          "line": 556
         },
         {
           "kind": "method",
           "name": "sanitize_preferences",
-          "line": 558
+          "line": 565
         },
         {
           "kind": "method",
           "name": "upsert_audience_record",
-          "line": 585
+          "line": 592
         },
         {
           "kind": "method",
           "name": "record_app_activity",
-          "line": 616
+          "line": 623
         },
         {
           "kind": "method",
           "name": "audience_table",
-          "line": 650
-        },
-        {
-          "kind": "method",
-          "name": "decode_list",
-          "line": 652
-        },
-        {
-          "kind": "method",
-          "name": "decode_ids",
           "line": 657
         },
         {
           "kind": "method",
+          "name": "decode_list",
+          "line": 659
+        },
+        {
+          "kind": "method",
+          "name": "decode_ids",
+          "line": 664
+        },
+        {
+          "kind": "method",
           "name": "visitor_hash",
-          "line": 662
+          "line": 669
         },
         {
           "kind": "method",
           "name": "table",
-          "line": 667
+          "line": 674
         },
         {
           "kind": "method",
           "name": "sanitize_ids",
-          "line": 671
+          "line": 678
         },
         {
           "kind": "method",
           "name": "transient_key",
-          "line": 675
+          "line": 682
         },
         {
           "kind": "method",
           "name": "client_anchor",
-          "line": 680
+          "line": 687
         },
         {
           "kind": "method",
           "name": "channels",
-          "line": 686
+          "line": 693
         },
         {
           "kind": "method",
           "name": "channel_ready",
-          "line": 701
+          "line": 708
         },
         {
           "kind": "method",
           "name": "topics",
-          "line": 705
+          "line": 712
         },
         {
           "kind": "method",
           "name": "categories",
-          "line": 769
+          "line": 783
         },
         {
           "kind": "method",
           "name": "current_product",
-          "line": 787
+          "line": 801
         },
         {
           "kind": "method",
           "name": "product_notification_context",
-          "line": 796
+          "line": 810
         },
         {
           "kind": "method",
           "name": "public_config_without_product",
-          "line": 823
+          "line": 837
         },
         {
           "kind": "method",
           "name": "cta_label",
-          "line": 828
+          "line": 842
         },
         {
           "kind": "method",
           "name": "cta_color",
-          "line": 833
+          "line": 847
         },
         {
           "kind": "method",
           "name": "woo_available",
-          "line": 838
+          "line": 852
         }
       ]
     },
@@ -7392,7 +7721,7 @@
     },
     {
       "source": "wp-content/mu-plugins/dsa/includes/Plugin.php",
-      "sha256": "87ef76b8ce73cfe13d6b6b859385315f3a49c823c2c016edcc48b6368273fc19",
+      "sha256": "fbe387e73ee9c590d3c681d9a1186876bb76e40dcd5abf0ab38ca9f4abed8c03",
       "symbols": [
         {
           "kind": "method",
@@ -7607,42 +7936,42 @@
         {
           "kind": "hook",
           "name": "after_setup_theme",
-          "line": 427
+          "line": 428
         },
         {
           "kind": "method",
           "name": "cart_payload",
-          "line": 434
+          "line": 435
         },
         {
           "kind": "method",
           "name": "linked_products",
-          "line": 437
+          "line": 438
         },
         {
           "kind": "method",
           "name": "store_analytics",
-          "line": 440
+          "line": 441
         },
         {
           "kind": "method",
           "name": "abandoned_carts",
-          "line": 443
+          "line": 444
         },
         {
           "kind": "method",
           "name": "ai_broker",
-          "line": 452
+          "line": 453
         },
         {
           "kind": "method",
           "name": "modules",
-          "line": 456
+          "line": 457
         },
         {
           "kind": "method",
           "name": "registry",
-          "line": 460
+          "line": 461
         }
       ]
     },
