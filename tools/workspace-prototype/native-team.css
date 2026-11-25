@@ -19,5 +19,6 @@
 
 .native-person.native-person--app{background:color-mix(in srgb,var(--kiwe-color-info) 15%,var(--kiwe-color-surface))}
 .native-app-label{font-weight:700;border-bottom:1px solid currentColor;padding-block:var(--seam-space-sm);margin:0 0 var(--seam-space-md);overflow-wrap:anywhere}
+.native-membership{display:flex;align-items:center;gap:var(--kiwe-space-xs,10px);flex-wrap:wrap}
 
 .native-person-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:var(--kiwe-space-md);flex-wrap:wrap}.native-user-timeline .native-person{padding:var(--kiwe-space-md)}.native-user-timeline .native-person h2{margin:var(--kiwe-space-xs) 0}.native-user-timeline .native-role{font-size:var(--kiwe-type-sm)}.native-user-timeline .native-user-facts{padding:var(--kiwe-space-sm) 0;margin:var(--kiwe-space-sm) 0}.native-user-timeline .native-app-label{border:0;margin:var(--kiwe-space-xs) 0;padding:0}.native-user-timeline .native-person-footer{margin:0;padding-top:var(--kiwe-space-xs)}.native-user-timeline .native-person>p:empty{display:none}

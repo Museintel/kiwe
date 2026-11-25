@@ -6,7 +6,8 @@ const carts={active:['neutral','Active'],abandoned:['waiting','Abandoned'],conve
 const stock={instock:['success','In stock'],outofstock:['danger','Out of stock'],onbackorder:['hold','On backorder']};
 const app={ready:['success','App alerts ready'],known:['info','Known app user'],unknown:['waiting','Contact unknown']};
 const users={verified:['success','Fully verified'],partial:['waiting','Partly verified'],unverified:['danger','Not verified'],unavailable:['neutral','Verification unavailable']};
+const memberships={active:['success','Active member'],cancelled:['danger','Membership cancelled'],expired:['danger','Membership expired']};
 export function statusPresentation(domain,status,nativeLabel=''){
- const entry=({order:orders,cart:carts,campaign:campaigns,feedback,stock,app,user:users}[domain]||{})[status];
+ const entry=({order:orders,cart:carts,campaign:campaigns,feedback,stock,app,user:users,membership:memberships}[domain]||{})[status];
  return {tone:entry?.[0]||'neutral',label:nativeLabel||entry?.[1]||String(status||'Status unavailable').replace(/[-_]/g,' ')};
 }

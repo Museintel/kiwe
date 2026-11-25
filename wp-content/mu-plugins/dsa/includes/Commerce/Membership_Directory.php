@@ -1,0 +1,112 @@
+<?php
+namespace DSA\Commerce;
+
+use DSA\Access\Team_Workspace_Service as Users;
+use DSA\Apps\Store_App_Service;
+
+if ( ! defined( 'ABSPATH' ) ) exit;
+
+/** Private account and notification projections over WooCommerce's verified receipts. */
+final class Membership_Directory {
+	private const EXPIRATION = 'kiwe_membership_term_ended';
+
+	public function register(): void {
+		add_action( self::EXPIRATION, [ self::class, 'notify_expiration' ], 10, 2 );
+	}
+
+	public static function can_list( int $actor ): bool {
+		return $actor > 0 && Store_App_Service::enabled() && ! Store_Recovery_Gate_Service::is_paused()
+			&& ! Users::suspended( $actor ) && user_can( $actor, 'read' ) && user_can( $actor, 'kiwe_manage_team' )
+			&& ( ! is_multisite() || is_user_member_of_blog( $actor ) )
+			&& user_can( $actor, 'list_users' ) && user_can( $actor, 'edit_users' ) && user_can( $actor, 'edit_shop_orders' );
+	}
+
+	public static function can_review( int $actor, \WC_Order $order ): bool {
+		return self::can_list( $actor ) && Users::can_review_account_for( $actor, $order->get_customer_id() )
+			&& user_can( $actor, 'edit_shop_order', $order->get_id() );
+	}
+
+	public static function notification_visible( int $actor, string $topic, int $order_id ): bool {
+		if ( $actor < 1 || ! user_can( $actor, 'kiwe_use_notifications' ) || ! Store_App_Service::enabled()
+			|| ! function_exists( 'wc_get_order' ) || Store_Recovery_Gate_Service::is_paused() ) return false;
+		$order = $order_id > 0 ? wc_get_order( $order_id ) : false;
+		if ( ! $order || ! is_array( $order->get_meta( Subscription_Renewal_Orders::AGREEMENT ) ) ) return false;
+		return 'admin_membership' === $topic ? self::can_review( $actor, $order ) : Subscription_Renewal_Orders::owned_by( $actor, $order );
+	}
+
+	public static function summary( int $user_id ): array {
+		$actor = get_current_user_id();
+		if ( ! self::can_list( $actor ) || ! Users::can_review_account_for( $actor, $user_id ) || ! get_user_meta( $user_id, Subscription_Renewal_Orders::JOINED, true ) ) return [];
+
+		$orders = wc_get_orders( [
+			'type'=>'shop_order', 'customer_id'=>$user_id, 'parent'=>0, 'payment_method'=>Subscription_Renewal_Orders::GATEWAY,
+			'orderby'=>'date', 'order'=>'DESC', 'limit'=>20,
+			'status'=>array_keys( wc_get_order_statuses() ),
+		] );
+		$best = [];
+		foreach ( $orders as $order ) {
+			if ( ! self::can_review( $actor, $order ) || ! ( $membership = Subscription_Renewal_Orders::paid_period( $order ) ) ) continue;
+			// Prefer a currently renewing membership when this customer has more than one.
+			if ( ! $best || [ 'active' === $membership['status'], $membership['active'], $membership['paidThrough'] ]
+				> [ 'active' === $best['status'], $best['active'], $best['paidThrough'] ] ) $best = $membership;
+		}
+		return $best ? array_intersect_key( $best, [ 'status'=>true, 'active'=>true, 'paidThrough'=>true ] ) : [];
+	}
+
+	public static function record_payment( \WC_Order $original, \WC_Order $receipt, array $charge ): void {
+		$customer_id = $original->get_customer_id();
+		if ( ! $customer_id ) return;
+		if ( $receipt->is_paid() && $charge['refundedMinor'] < $charge['amountMinor'] ) {
+			if ( $original->get_date_paid() && ! get_user_meta( $customer_id, Subscription_Renewal_Orders::JOINED, true ) ) {
+				Subscription_Billing_Service::synchronized( 'customer', $customer_id, static function () use ( $customer_id ): void {
+					if ( ! get_user_meta( $customer_id, Subscription_Renewal_Orders::JOINED, true )
+						&& ! add_user_meta( $customer_id, Subscription_Renewal_Orders::JOINED, time(), true ) ) {
+						throw new \RuntimeException( 'The new member could not be added to the directory.' );
+					}
+				} );
+			}
+			$kind = $charge['initial'] ? 'started' : 'renewed';
+			self::notify( $original, $kind, (string) $receipt->get_id() );
+			$args = [ $original->get_id(), $charge['endsAt'] ];
+			if ( $charge['endsAt'] > time() && function_exists( 'as_has_scheduled_action' )
+				&& ! as_has_scheduled_action( self::EXPIRATION, $args, 'kiwe-membership' ) ) {
+				as_schedule_single_action( $charge['endsAt'], self::EXPIRATION, $args, 'kiwe-membership', true );
+			}
+		} elseif ( $receipt->get_date_paid() && $charge['refundedMinor'] >= $charge['amountMinor'] ) {
+			self::notify( $original, 'refunded', (string) $receipt->get_id() );
+		}
+	}
+
+	public static function notify_expiration( int $order_id, int $end ): void {
+		if ( Store_Recovery_Gate_Service::is_paused() || ! Store_App_Service::enabled() || $end > time() ) return;
+		$order = wc_get_order( $order_id );
+		if ( ! $order || ! $order->get_meta( Subscription_Renewal_Orders::AGREEMENT ) ) return;
+		$membership = Subscription_Renewal_Orders::paid_period( $order );
+		if ( $membership && ! $membership['active'] && $membership['paidThrough'] === $end ) self::notify( $order, 'expired', (string) $end );
+	}
+
+	public static function notify( \WC_Order $order, string $kind, string $source ): void {
+		if ( ! $order->get_date_paid() ) return;
+		$label = match ( $kind ) {
+			'started'=>__( 'Membership started', 'dsa' ),
+			'renewed'=>__( 'Membership renewed', 'dsa' ),
+			'cancelled'=>__( 'Membership cancelled', 'dsa' ),
+			'expired'=>__( 'Membership expired', 'dsa' ),
+			'refunded'=>__( 'Membership payment refunded', 'dsa' ),
+			default=>'',
+		};
+		if ( ! $label ) return;
+		$id = 'membership-' . $order->get_id() . '-' . $kind . '-' . $source;
+		$base = [
+			'objectId'=>$order->get_id(), 'kicker'=>__( 'Membership', 'dsa' ), 'title'=>$label, 'inboxOnly'=>true,
+		];
+		do_action( 'kiwe_notification_event', 'membership_update', $base + [
+			'id'=>$id, 'userIds'=>[ $order->get_customer_id() ], 'url'=>$order->get_view_order_url(),
+			'message'=>__( 'Open your membership to see the current paid access dates.', 'dsa' ), 'actionLabel'=>__( 'View membership', 'dsa' ),
+		] );
+		do_action( 'kiwe_notification_event', 'admin_membership', $base + [
+			'id'=>$id . '-staff', 'url'=>Users::url( [ 'team_view'=>'subscriptions', 'team_account'=>$order->get_customer_id() ] ),
+			'message'=>__( 'Review this account’s membership in Daily → Users.', 'dsa' ), 'actionLabel'=>__( 'Review membership', 'dsa' ),
+		] );
+	}
+}

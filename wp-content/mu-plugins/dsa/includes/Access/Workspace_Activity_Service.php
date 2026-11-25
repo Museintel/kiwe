@@ -42,7 +42,7 @@ final class Workspace_Activity_Service {
 		parse_str( (string) wp_parse_url( $url, PHP_URL_QUERY ), $q );
 		$page = is_string( $q['page'] ?? null ) ? $q['page'] : '';
 		if ( 'kiwe-store' === $page ) return ( $q['task'] ?? '' ) === 'saved-carts' ? 'saved-carts' : ( in_array( $q['area'] ?? '', [ 'orders', 'products', 'saved-carts' ], true ) ? $q['area'] : '' );
-		if ( 'kiwe-team' === $page ) return 'accounts' === ( $q['team_view'] ?? '' ) ? 'users' : '';
+		if ( 'kiwe-team' === $page ) return in_array( $q['team_view'] ?? '', [ 'accounts','subscriptions' ], true ) ? 'users' : '';
 		if ( 'kiwe-guests' === $page ) return 'daily' === ( $q['area'] ?? '' ) || ! isset( $q['area'] ) ? 'guests' : '';
 		if ( 'kiwe-notifications' === $page && 'campaigns' === ( $q['view'] ?? '' ) ) return 'campaigns';
 		if ( 'kiwe-app-settings' === $page && 'activity' === ( $q['app_view'] ?? '' ) ) return 'app';

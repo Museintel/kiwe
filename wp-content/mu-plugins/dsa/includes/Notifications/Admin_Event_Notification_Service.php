@@ -104,6 +104,12 @@ final class Admin_Event_Notification_Service {
 			$native = array_values( array_filter( $native, $can_review ) );
 			$eligible = array_values( array_filter( $eligible, $can_review ) );
 		}
+		if ( in_array( $topic, [ 'admin_membership', 'membership_update' ], true ) ) {
+			$object = absint( $event['objectId'] ?? 0 );
+			$admit = static fn( $actor ) => self::membership_visible( (int) $actor, $topic, $object );
+			$native = array_values( array_filter( $native, $admit ) );
+			$eligible = array_values( array_filter( $eligible, $admit ) );
+		}
 		if ( in_array( $topic, [ 'admin_new_comment','admin_comment_report','discussion_update' ], true ) ) {
 			$admit = static fn( $actor ) => \DSA\Discussion\Feedback_Access::notification_visible_for( (int) $actor, [ 'type'=>$topic, 'objectId'=>absint( $event['objectId'] ?? 0 ) ] );
 			$native = array_values( array_filter( $native, $admit ) ); $eligible = array_values( array_filter( $eligible, $admit ) );
@@ -416,7 +422,7 @@ final class Admin_Event_Notification_Service {
 		if ( ! function_exists( 'wc_get_orders' ) || ! $this->preferences->inbox_accepts( $id, 'admin_new_order' ) ) return;
 		$orders = get_transient( 'kiwe_notification_recent_orders' );
 		if ( ! is_array( $orders ) ) {
-			$orders = []; $rows = wc_get_orders( [ 'limit'=>10,'date_created'=>'>=' . ( time()-7*DAY_IN_SECONDS ),'status'=>array_values( array_diff( array_keys( wc_get_order_statuses() ), [ 'wc-checkout-draft' ] ) ),'orderby'=>'date','order'=>'DESC','return'=>'objects' ] );
+			$orders = []; $rows = wc_get_orders( [ 'type'=>'shop_order','limit'=>10,'date_created'=>'>=' . ( time()-7*DAY_IN_SECONDS ),'status'=>array_values( array_diff( array_keys( wc_get_order_statuses() ), [ 'wc-checkout-draft' ] ) ),'orderby'=>'date','order'=>'DESC','return'=>'objects' ] );
 			foreach ( $rows as $order ) $orders[] = [ 'id'=>$order->get_id(),'number'=>sanitize_text_field( (string) $order->get_order_number() ),'createdAt'=>$order->get_date_created() ? $order->get_date_created()->getTimestamp() : time() ];
 			set_transient( 'kiwe_notification_recent_orders', $orders, 5*MINUTE_IN_SECONDS );
 		}
@@ -431,6 +437,7 @@ final class Admin_Event_Notification_Service {
 		if ( ! $this->preferences->topic_allowed_for_user( $id, $topic ) ) return false;
 		$object = absint( $item['objectId'] ?? 0 );
 		if ( 'admin_new_account' === $topic ) return \DSA\Access\Team_Workspace_Service::can_review_account_for( $id, $object );
+		if ( in_array( $topic, [ 'admin_membership', 'membership_update' ], true ) ) return self::membership_visible( $id, $topic, $object );
 		if ( 'admin_app_activity' === $topic ) return \DSA\PWA\App_Activity_Service::notification_visible_for( $id, $object );
 		if ( in_array( $topic, [ 'admin_new_comment','admin_comment_report','discussion_update' ], true ) ) return \DSA\Discussion\Feedback_Access::notification_visible_for( $id, $item );
 		if ( ! $object && in_array( $topic, [ 'admin_new_order','order_status' ], true ) && preg_match( '/^order-(\d+)(?:-|$)/', (string) ( $item['id'] ?? '' ), $match ) ) $object = (int) $match[1];
@@ -438,6 +445,11 @@ final class Admin_Event_Notification_Service {
 		if ( 'order_status' === $topic ) { $order = $object && function_exists( 'wc_get_order' ) ? wc_get_order( $object ) : false; return $order && (int) $order->get_user_id() === $id; }
 		if ( 'new_post' === $topic && $object ) { $post = get_post( $object ); return $post && 'publish' === $post->post_status && '' === $post->post_password; }
 		return true;
+	}
+
+	private static function membership_visible( int $user_id, string $topic, int $object ): bool {
+		return class_exists( \DSA\Commerce\Membership_Directory::class )
+			&& \DSA\Commerce\Membership_Directory::notification_visible( $user_id, $topic, $object );
 	}
 
 	/** Shared private chrome reads only the existing bounded authorized metadata. */
@@ -448,6 +460,7 @@ final class Admin_Event_Notification_Service {
 		foreach ( array_slice( is_array( $items ) ? $items : [], 0, 40 ) as $item ) {
 			if ( ! is_array( $item ) || ! empty( $item['acknowledgedAt'] ) || ! $preferences->topic_allowed_for_user( get_current_user_id(), sanitize_key( (string) ( $item['type'] ?? '' ) ) ) ) continue;
 			if ( 'admin_new_account' === ( $item['type'] ?? '' ) && ! \DSA\Access\Team_Workspace_Service::can_review_account_for( get_current_user_id(), absint( $item['objectId'] ?? 0 ) ) ) continue;
+			if ( in_array( $item['type'] ?? '', [ 'admin_membership', 'membership_update' ], true ) && ! self::membership_visible( get_current_user_id(), $item['type'], absint( $item['objectId'] ?? 0 ) ) ) continue;
 			if ( 'admin_app_activity' === ( $item['type'] ?? '' ) && ! \DSA\PWA\App_Activity_Service::notification_visible_for( get_current_user_id(), absint( $item['objectId'] ?? 0 ) ) ) continue;
 			if ( in_array( $item['type'] ?? '', [ 'admin_new_comment','admin_comment_report','discussion_update' ], true ) && ! \DSA\Discussion\Feedback_Access::notification_visible_for( get_current_user_id(), $item ) ) continue;
 			$count++;

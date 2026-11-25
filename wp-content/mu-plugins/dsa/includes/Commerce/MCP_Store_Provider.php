@@ -21,7 +21,7 @@ final class MCP_Store_Provider {
   $input=self::object(['area'=>self::choice(MCP_Store_Authoring::AREAS),'id'=>self::integer(),'parentId'=>self::integer(),'relatedId'=>self::integer(),'page'=>['type'=>'integer','minimum'=>1,'maximum'=>1000],'search'=>self::text(100),'country'=>self::text(2),'locationKind'=>self::choice(['city','postcode'])],['area']);
   $read=self::object(['area'=>self::text(100),'page'=>self::integer(1),'hasMore'=>['type'=>'boolean'],'dataJson'=>self::text(24000),'guidance'=>self::text(1500)],['area','page','hasMore','dataJson','guidance']);
   $ops=['store.authoring.read'=>['scope'=>'store.authoring.read','label'=>'Read applicable native product and Store setup records','effect'=>'read','approval'=>'none','accessVersion'=>1,'inputSchema'=>$input,'outputSchema'=>$read,'permission'=>$allowed,'discoverPermission'=>$allowed,'execute'=>static fn($a)=>$service->read($a)]];
-  $gatewayFields=array_fill_keys(['storeEnabled','gatewayInstalled','gatewayActive','gatewayEnabled','checkoutExperienceEnabled','standardMethodChoices','kiweSubscriptionQuotes'],['type'=>'boolean']);
+  $gatewayFields=array_fill_keys(['storeEnabled','gatewayInstalled','gatewayActive','gatewayEnabled','checkoutExperienceEnabled','standardMethodChoices','kiweSubscriptionQuotes','kiweSubscriptionPilot'],['type'=>'boolean']);
   $gatewayFields['mode']=self::choice(['unconfigured','test','live']);
   $gatewayAllowed=static fn()=>class_exists(Razorpay_App_Service::class)&&Razorpay_App_Service::allowed();
   $ops['store.razorpay.status']=[
@@ -40,6 +40,16 @@ final class MCP_Store_Provider {
    'discoverPermission'=>static fn()=>class_exists(Subscription_Quote_Service::class)&&Subscription_Quote_Service::can_review(),
    'execute'=>static fn($a)=>Subscription_Quote_Service::review_order($a['orderId']),
   ];
+  $membersAllowed=static fn()=>class_exists(Membership_Directory::class)&&\DSA\Access\Team_Workspace_Service::can_list_memberships();
+  $ops['store.members.list']=[
+   'scope'=>'store.members.read','label'=>'Read permitted accounts and their verified membership status',
+   'effect'=>'read','approval'=>'none','accessVersion'=>1,
+   'inputSchema'=>self::object(['page'=>self::integer(1),'search'=>self::text(80)]),
+   'outputSchema'=>self::object(['resultJson'=>self::text(6000)],['resultJson']),
+   'permission'=>$membersAllowed,'discoverPermission'=>$membersAllowed,
+   'execute'=>static fn($a)=>['resultJson'=>Native::json((new \DSA\Access\Team_Workspace_Service())->membership_listing($a['page']??1,$a['search']??''))],
+  ];
+  $ops+=self::subscription_pilot_operations();
   $definitions=[
    'store.product.create'=>['create',[],[]],
    'store.product.save'=>['save',['id'],[]],
@@ -81,6 +91,37 @@ final class MCP_Store_Provider {
   $ops['store.tag-group.change']=['scope'=>'store.authoring.write','label'=>'Change native Store tag groups and exact selected members','effect'=>'write','approval'=>'required','accessVersion'=>1,'inputSchema'=>$tagFields,'outputSchema'=>$out,'permission'=>$allowed,'discoverPermission'=>$allowed,'prepare'=>static fn($a)=>\DSA\MCP\Tag_Group_Authoring::prepare($args($a)),'current'=>static fn($a)=>\DSA\MCP\Tag_Group_Authoring::prepare($args($a))['nativeExpected'],'execute'=>static fn($a,$expected)=>['resultJson'=>Native::json(\DSA\MCP\Tag_Group_Authoring::apply($args($a),$expected))]];
   return$ops;
  }
+ private static function subscription_pilot_operations(): array {
+  $discover=static fn()=>class_exists(Subscription_Billing_Service::class)&&Subscription_Billing_Service::can_manage();
+  $allowed=static fn($a)=>$discover()&&Subscription_Billing_Service::can_manage_order($a['orderId']);
+  $result=self::object([
+   'orderId'=>self::integer(1),'state'=>self::text(40),'firstRenewalAt'=>self::integer(),'authorizationUrl'=>self::text(512),
+  ],['orderId','state','firstRenewalAt','authorizationUrl']);
+  $order=['orderId'=>self::integer(1)];
+  $status=[
+   'scope'=>'store.subscription.read','label'=>'Read the Razorpay Test Mode approval status for this order','effect'=>'read','approval'=>'none',
+   'accessVersion'=>1,'inputSchema'=>self::object($order,['orderId']),'outputSchema'=>$result,
+   'permission'=>$allowed,'discoverPermission'=>$discover,'execute'=>static fn($a)=>Subscription_Billing_Service::enrollment($a['orderId']),
+  ];
+  $prepare=static fn($a)=>'enroll'===$a['action']
+   ? Subscription_Billing_Service::enrollment_plan($a['orderId'],$a['recordId'])
+   : Subscription_Billing_Service::review_reconciliation($a['orderId'],$a['recordId'],'sync-payment'===$a['action']);
+  $change=[
+   'scope'=>'store.subscription.write','label'=>'Prepare or reconcile a Razorpay Test Mode subscription','effect'=>'write','approval'=>'required','accessVersion'=>1,
+   'inputSchema'=>self::object($order+[
+    'action'=>self::choice(['enroll','recover','sync-payment']),
+    'recordId'=>self::text(56)+['description'=>'Use the Razorpay plan ID to enroll, subscription ID to recover, or payment ID to sync the verified invoice.'],
+   ],['orderId','action','recordId']),'outputSchema'=>$result,
+   'permission'=>$allowed,'discoverPermission'=>$discover,'prepare'=>$prepare,'current'=>static fn($a)=>$prepare($a)['nativeExpected'],
+   'execute'=>static fn($a,$expected)=>match($a['action']) {
+    'enroll'=>Subscription_Billing_Service::enroll($a['orderId'],$a['recordId'],$expected),
+    'recover'=>Subscription_Billing_Service::recover($a['orderId'],$a['recordId'],$expected),
+    'sync-payment'=>Subscription_Billing_Service::sync_payment($a['orderId'],$a['recordId'],$expected),
+   },
+  ];
+  return ['store.subscription.status'=>$status,'store.subscription.change'=>$change];
+ }
+
  private static function group(array $a): array{
   if(!MCP_Store_Authoring::allowed())throw new \RuntimeException('Store authoring is unavailable.');if($a['id']&&isset($a['parent']))throw new \RuntimeException('This native rename changes only its label.');$before=Native::native((new \DSA\Access\Taxonomy_App_Service())->authoring_terms($a['kind']==='tags'?'product_tag':'product_cat',$a['id']));return Native::plan('Review a native Store content group',$a['id']?$before['expected']:Native::digest($before),$a['id']?$before:[],$a,true);
  }

@@ -410,6 +410,7 @@ final class Plugin {
 		( new \DSA\Commerce\Weight_Shipping_Service() )->register();
 		( new Order_Notification_Service( $this->notification_preferences, $this->channels, $this->push ) )->register();
 		if ( class_exists( \DSA\Commerce\Subscription_Product_Service::class ) ) ( new \DSA\Commerce\Subscription_Product_Service() )->register();
+		if ( class_exists( \DSA\Commerce\Subscription_Billing_Service::class ) ) ( new \DSA\Commerce\Subscription_Billing_Service() )->register();
 		if ( $paused ) return;
 		if ( class_exists( \DSA\Commerce\Checkout_Experience_Service::class ) && \DSA\Commerce\Checkout_Experience_Service::enabled() ) {
 			( new \DSA\Commerce\Checkout_Experience_Service() )->register();

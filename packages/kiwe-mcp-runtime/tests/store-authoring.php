@@ -17,11 +17,11 @@ namespace {
  require $root.'Commerce/MCP_Store_Authoring.php';require $root.'Commerce/MCP_Store_Provider.php';
  use DSA\Commerce\{MCP_Store_Authoring as Store,MCP_Store_Provider as Provider};
  use DSA\MCP\{Schema,Operation_Registry as Registry};
- $ops=Provider::operations();check(count($ops)<=32&&count($ops)>20,'Store supplies its own bounded provider contract');
- foreach($ops as$id=>$op){check(Schema::contract($op['inputSchema'])&&Schema::contract($op['outputSchema']),'Closed Store schema '.$id);check(str_starts_with($op['scope'],'store.authoring.'),'Store-specific scope '.$id);if($op['effect']==='write'&&!in_array($id,['store.product.create','store.product.save'],true))check($op['approval']==='required','Consequential Store action requires native review '.$id);}
+ $ops=Provider::operations();check(count($ops)<=64&&count($ops)>20,'Store stays within the native registry provider budget');
+ foreach($ops as$id=>$op){check(Schema::contract($op['inputSchema'])&&Schema::contract($op['outputSchema']),'Closed Store schema '.$id);check(str_starts_with($op['scope'],'store.authoring.')||in_array($op['scope'],['store.members.read','store.subscription.read','store.subscription.write'],true),'Explicit Store scope '.$id);if($op['effect']==='write'&&!in_array($id,['store.product.create','store.product.save'],true))check($op['approval']==='required','Consequential Store action requires native review '.$id);}
  $r=new Registry();Provider::register($r,1);$scope=$r->scopes();$pins=$r->freeze($scope);
- check(array_values(array_diff(array_keys($ops),array_keys($pins)))===['store.razorpay.status','store.subscription.quote'],
-  'A product author grant excludes merchant settings and renewal quotes without their native authorities');
+ check(array_values(array_diff(array_keys($ops),array_keys($pins)))===['store.razorpay.status','store.subscription.quote','store.members.list','store.subscription.status','store.subscription.change'],
+  'A product author grant excludes merchant settings, private membership and renewal operations without their native authorities');
  check($r->describe(['mcp.setup.read','mcp.setup.write','mcp.apps.manage'])===[],'Old MCP setup/software scopes gain no Store access');
  $s=new Store();$args=['id'=>10,'fieldsJson'=>json_encode(['name'=>'New draft title'])];$plan=$s->prepare('save',$args);check(!$plan['needsApproval']&&$writes===0,'Routine Store draft editing prepares without financial publication or writes');
  $data=json_decode($s->read(['area'=>'product','id'=>10])['dataJson'],true);check($data['price']==='50.00'&&$data['weight']==='200'&&!isset($data['controls']),'Native prices/weights are preserved while browser nonces are excluded');

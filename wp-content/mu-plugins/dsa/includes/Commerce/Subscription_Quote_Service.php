@@ -22,10 +22,12 @@ final class Subscription_Quote_Service {
 		if ( ! $order || 'shop_order' !== $order->get_type() || ! $order->has_status( [ 'checkout-draft', 'pending' ] ) ) {
 			throw new \RuntimeException( 'Use an unpaid WooCommerce order to review current subscription terms.' );
 		}
-		return self::quote( $order );
+		$quote = self::snapshot( $order );
+		unset( $quote['lines'] );
+		return $quote;
 	}
 
-	private static function quote( \WC_Order $order ): array {
+	public static function snapshot( \WC_Order $order ): array {
 		if ( 'INR' !== $order->get_currency() ) throw new \RuntimeException( 'The initial Razorpay subscription pilot supports INR.' );
 		$first_charge = self::minor( (string) $order->get_total() );
 		$recurring = 0;
@@ -33,6 +35,7 @@ final class Subscription_Quote_Service {
 		$renewal = 0;
 		$interval = 0;
 		$first_term = 0;
+		$lines = [];
 		foreach ( $order->get_items( 'line_item' ) as $item ) {
 			$product = $item->get_product();
 			if ( ! $product ) throw new \RuntimeException( 'Review this order because a product is no longer available.' );
@@ -60,6 +63,13 @@ final class Subscription_Quote_Service {
 			$first_term = $covered;
 			$renewal += $price * $quantity;
 			++$recurring;
+			$lines[] = [
+				'productId' => $item->get_product_id(),
+				'variationId' => $item->get_variation_id(),
+				'name' => $item->get_name(),
+				'quantity' => $quantity,
+				'unitMinor' => $price,
+			];
 		}
 		if ( ! $recurring ) throw new \RuntimeException( 'This order has no Kiwe subscription products.' );
 		return [
@@ -70,10 +80,11 @@ final class Subscription_Quote_Service {
 			'intervalMonths' => $interval,
 			'recurringLines' => $recurring,
 			'oneTimeLines' => $one_time,
+			'lines' => $lines,
 		];
 	}
 
-	private static function minor( string $total ): int {
+	public static function minor( string $total ): int {
 		if ( ! preg_match( '/^(\d{1,11})(?:\.(\d{1,2})0*)?$/D', $total, $parts ) ) {
 			throw new \RuntimeException( 'Review the native WooCommerce total before quoting this order.' );
 		}

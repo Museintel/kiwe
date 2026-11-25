@@ -2,7 +2,7 @@
   "schema": 1,
   "version": "8.0.0-rc.499",
   "algorithm": "sha256",
-  "file_count": 1046,
+  "file_count": 1050,
   "files": {
     "assets/css/admin.css": {
       "bytes": 19334,
@@ -137,12 +137,12 @@
       "sha256": "b2e2987a451a0184cfaac534fe0baf6566fde48948c22ed6c76facc762dfe832"
     },
     "assets/css/team-app.css": {
-      "bytes": 33720,
-      "sha256": "9e52c2be787cf6a7816de24011ef85615b98c5b7542d163765419d131e6ab6c5"
+      "bytes": 33816,
+      "sha256": "0f072d93e2c578f8e5207c024e73f5e46090638cf46aa8519fedfa66b11986f3"
     },
     "assets/css/team-workspace.css": {
-      "bytes": 4265,
-      "sha256": "f981a305c5ef55ef3faab22b963b3c8e9f1b4f8f92c1abb65460b8c272b3c480"
+      "bytes": 4433,
+      "sha256": "27d3be9a2fecd6583c42b23151f884b1a66ca3f1bbe4c8d96bb1c152c93c0f68"
     },
     "assets/css/templates-app.css": {
       "bytes": 17490,
@@ -277,8 +277,8 @@
       "sha256": "c64a2f4feedbe592da5aa78a2684605183182190d003b20c8f599c121c8dbe62"
     },
     "assets/js/app-app.js": {
-      "bytes": 47199,
-      "sha256": "7f8471beeb08f9acb84bbc6f06b79873c44bec0ac146e5775a91629b69c16718"
+      "bytes": 47337,
+      "sha256": "d91a542b31c281ec6f6ae43ed1b2cd0a0f78408abbbd034888cc9261026d4f4b"
     },
     "assets/js/app-island.js": {
       "bytes": 1747,
@@ -301,8 +301,8 @@
       "sha256": "212ccc77cb2ff42a14a2602d25ad8ace7402810d51e084c5c6302b36706a5d45"
     },
     "assets/js/commerce-app.js": {
-      "bytes": 302704,
-      "sha256": "f377d57919283ffe3acebe8cf9a06fba0ede9aea30536a3bd27f1bcd379635aa"
+      "bytes": 302842,
+      "sha256": "863ea22de0f49d20a03dfba6ea6f61a160a6b9fc7de4c1309379c1d3c8f23ca7"
     },
     "assets/js/compiler-import.js": {
       "bytes": 7230,
@@ -333,8 +333,8 @@
       "sha256": "0a6fc6512e9dd36e7ab6b0ca1f4ce6349afddfce5a500fba7dd16104f7fc14c7"
     },
     "assets/js/feedback-app.js": {
-      "bytes": 19642,
-      "sha256": "7a6fe7529f1af73931512bca120052ac97070e6b4e5433404bc28da88e2a582e"
+      "bytes": 19779,
+      "sha256": "1f7536210849b172bd5f54ca269bd7b543da4eb435e82240df7930504fba0205"
     },
     "assets/js/forms-app.js": {
       "bytes": 16429,
@@ -342,7 +342,7 @@
     },
     "assets/js/guest-app.js": {
       "bytes": 25635,
-      "sha256": "42b325eb7deecb28c34b0a9c137467797b9c2c98af379af32d4929ebb1d5e772"
+      "sha256": "1913145facc859b984ac7997bc656142a172657e32fdb22f68c22690c21926e4"
     },
     "assets/js/identity-app.js": {
       "bytes": 18122,
@@ -409,8 +409,8 @@
       "sha256": "422d0a33b934b1960245b29ff0488fce2ae0d18720720149661922019eadc36d"
     },
     "assets/js/notification-app.js": {
-      "bytes": 70082,
-      "sha256": "a97767c5a6bcb1eee5fbbfbeebfcb3dba82af9cadc961eca0e1d880258d08ede"
+      "bytes": 70220,
+      "sha256": "7201a8ce0528c164e1e2ee15783f7664e6e9ab9ffccdb442ceb2d1bce2908fe8"
     },
     "assets/js/onboarding.js": {
       "bytes": 11348,
@@ -473,8 +473,8 @@
       "sha256": "7b96757fd95a6b9271020ceb0c8e23943cf68ba8e939a581e0054cf77d8bcab6"
     },
     "assets/js/team-app.js": {
-      "bytes": 59968,
-      "sha256": "1d94fd02cae348c4e2807c27f7e0a98a796643c689f3ae7ed3514d696e34b790"
+      "bytes": 61032,
+      "sha256": "7c33da44ba7a45fda96c65ccb3e11825e96f650d857d53ee91d804176660cc6a"
     },
     "assets/js/templates-app.js": {
       "bytes": 35968,
@@ -1057,12 +1057,12 @@
       "sha256": "04eca55b15f32a1e75a46908db44f0558063fe40ba180e21ca7a3885bac62109"
     },
     "includes/Access/Team_App_Service.php": {
-      "bytes": 9793,
-      "sha256": "9952a5171192eae3d5c1c6ad789521c17f705612a5a4ce5ca809b8bf144e54ba"
+      "bytes": 10125,
+      "sha256": "4fdb911822e2794b5fd8c50e9e1db8299a93d56b3a1c6334b9110d64a81c848e"
     },
     "includes/Access/Team_Workspace_Service.php": {
-      "bytes": 54057,
-      "sha256": "d3d6014b1d3c6544bdf7e42f4afb154b5aa54cd06c08c2e9950dce15ef1edcb8"
+      "bytes": 59624,
+      "sha256": "5518ecbeded513cc29ae408953ea8545c206fad6dccb9db8b61c421c6fd77ae4"
     },
     "includes/Access/Template_Workspace_Service.php": {
       "bytes": 9824,
@@ -1085,8 +1085,8 @@
       "sha256": "50cd1a5d7e38a7899d885c59d749c2341a147be6ab4d9deafd516a805fbe25ba"
     },
     "includes/Access/Workspace_Activity_Service.php": {
-      "bytes": 18521,
-      "sha256": "d7bb05ac4c9548defcc1ba9313256e073701a50d4947c85ff4a4ebf93fc50fad"
+      "bytes": 18552,
+      "sha256": "4b1fb0512aae43570c466fb795ebb549aefb1baf3875c6cc52993b4e16c4d4e8"
     },
     "includes/Access/Workspace_Admin_Service.php": {
       "bytes": 38795,
@@ -1225,16 +1225,16 @@
       "sha256": "dee715e6b99e14938d13cc380a119864aa054d0a2e85e74751e57158d2cc3471"
     },
     "includes/Apps/Package_Layout.php": {
-      "bytes": 29225,
-      "sha256": "16ecac707c0ddf10debf6eca73a6af556bac0b6d21890624741f5c2d386b0de5"
+      "bytes": 29442,
+      "sha256": "ac7baa11ad76522d70d215c178b653b95e4dedf6cd2b90bd6e79f24b99cad709"
     },
     "includes/Apps/Package_Verifier.php": {
       "bytes": 6864,
       "sha256": "c32d12fa23a9b5344c89baeb54d7c7398990c0dce798dcf2ab282abdf0178a36"
     },
     "includes/Apps/Razorpay_App_Service.php": {
-      "bytes": 3709,
-      "sha256": "942320d54904fcbca86f62bd8a8d43183c34c177aa336846f77bdf115a17bdf2"
+      "bytes": 3865,
+      "sha256": "292df676540affa985e3641190f76ec9399e40620f5a263bb66da0a9eaf14a47"
     },
     "includes/Apps/Release_Coordinator.php": {
       "bytes": 729,
@@ -1577,8 +1577,12 @@
       "sha256": "ec632e2ebf1d4ffeeb9b0f51640b4edf7b7f74cc09a95894c09a6e398f5eed5f"
     },
     "includes/Commerce/MCP_Store_Provider.php": {
-      "bytes": 11598,
-      "sha256": "30a47e77961e5488b2697f72e4075b75d8f12dcf70d78f59a88537318328907e"
+      "bytes": 14679,
+      "sha256": "4fad6d630fb374d84d583de0f8955dd70be2b72b91eb26d6c8ac46803508269f"
+    },
+    "includes/Commerce/Membership_Directory.php": {
+      "bytes": 6126,
+      "sha256": "d62c38b2afb12a1fb415b35c9c79bc7caeaf234ff2dee4778377bf92ffc31cd2"
     },
     "includes/Commerce/Paid_Customer_Query.php": {
       "bytes": 2213,
@@ -1600,6 +1604,10 @@
       "bytes": 3202,
       "sha256": "7ef451feb488dcdcea8dfcd894451b899d41b05b20d9d1b4188787559899f7ae"
     },
+    "includes/Commerce/Razorpay_Subscription_Provider.php": {
+      "bytes": 5156,
+      "sha256": "d95c662c0d567c5eb045d1e01d8db6b4a71c9317963865fb6125801f342613f6"
+    },
     "includes/Commerce/Store_Analytics_Service.php": {
       "bytes": 33308,
       "sha256": "766f8bb3d2b1292aaf4074e519d933e4ea6ee3d777c9a6ae8eb2173a4050708f"
@@ -1616,13 +1624,21 @@
       "bytes": 1108,
       "sha256": "4013968e4340c51a48ece22cabde23e4cb45bfb3c131749061a4023e9e007d85"
     },
+    "includes/Commerce/Subscription_Billing_Service.php": {
+      "bytes": 19681,
+      "sha256": "cce28c014f541183654566126ad693a026c56cf3076a9e7298977ff8bc4636e1"
+    },
     "includes/Commerce/Subscription_Product_Service.php": {
       "bytes": 2686,
       "sha256": "31b77d758c359a8e8e0b2fe0ce77f9e6e2018b754bb2783dc8f4f05b43ce8620"
     },
     "includes/Commerce/Subscription_Quote_Service.php": {
-      "bytes": 3462,
-      "sha256": "d1abdac91e2bd736f22bd14663614434bb0433e9f777f745d7dc30a197848516"
+      "bytes": 3753,
+      "sha256": "3e69336fa09096460de3faddf9907194f8db7f067d9dd669b7626a9524da7250"
+    },
+    "includes/Commerce/Subscription_Renewal_Orders.php": {
+      "bytes": 8896,
+      "sha256": "266f9a99124698d563c5c31472ae7633fd838718e3b4d62df744fff4cdf662a2"
     },
     "includes/Commerce/Weight_Shipping_Service.php": {
       "bytes": 2523,
@@ -1957,8 +1973,8 @@
       "sha256": "e6f728f6cc44851d8bdf184cd69c090d07966bac3b1c1c963683abd8837282e3"
     },
     "includes/Notifications/Admin_Event_Notification_Service.php": {
-      "bytes": 51586,
-      "sha256": "6f771c4ab9dd85fecf57e04da5e6bc80457eb4cb9fda3b1372655111bd914e30"
+      "bytes": 52565,
+      "sha256": "93325f8354b0941f0536b8a3ec9deed72afec3dc1935bfed35e6d8aa0935c064"
     },
     "includes/Notifications/Campaign_Unsubscribe_Service.php": {
       "bytes": 3586,
@@ -1977,8 +1993,8 @@
       "sha256": "7e006c879d983a16b536950b28a6c23a7bfdcb0d7a0ed4b4eabd003b57530ec0"
     },
     "includes/Notifications/Notification_Preference_Service.php": {
-      "bytes": 53898,
-      "sha256": "b2d225ba9c956fd3bdfbf4773ec32cbee83c9f73be186d19b13deebe14786ed1"
+      "bytes": 55143,
+      "sha256": "cc34c7afdf6e538d7e4cb7e47b534c08621ac1a22de602aceb41fa054a224144"
     },
     "includes/Notifications/Order_Notification_Service.php": {
       "bytes": 6872,
@@ -2101,8 +2117,8 @@
       "sha256": "15ad2a94a5e8c6b0aced13ea100c3a30fc6329d29bbd83dc5f8b7e7582bc0714"
     },
     "includes/Plugin.php": {
-      "bytes": 25141,
-      "sha256": "87ef76b8ce73cfe13d6b6b859385315f3a49c823c2c016edcc48b6368273fc19"
+      "bytes": 25282,
+      "sha256": "fbe387e73ee9c590d3c681d9a1186876bb76e40dcd5abf0ab38ca9f4abed8c03"
     },
     "includes/Protected_Flow/Flow_Context.php": {
       "bytes": 489,

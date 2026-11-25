@@ -1,0 +1,235 @@
+<?php
+
+declare(strict_types=1);
+
+// Native Woo records, REST dispatch, and documented Razorpay responses in the isolated checkout lab.
+if (PHP_SAPI !== 'cli' || !($root = getenv('KIWE_CHECKOUT_LAB')) || !is_file($root . '/lab.json')) exit(1);
+define('KIWE_RAZORPAY_SUBSCRIPTIONS_TEST', true);
+define('KIWE_RAZORPAY_SUBSCRIPTIONS_ACCOUNT', 'acc_KiweLocalMembership');
+define('KIWE_RAZORPAY_SUBSCRIPTIONS_WEBHOOK_SECRET', str_repeat('membership-fixture-only-', 2));
+if ('1' === getenv('KIWE_MEMBERSHIP_CPT_FIXTURE')) {
+    $GLOBALS['wp_filter']['pre_option_woocommerce_custom_orders_table_enabled'][10][] = ['function'=>static fn ()=>'no','accepted_args'=>0];
+}
+require $root . '/site/wp-load.php';
+
+use DSA\Access\Team_Workspace_Service as Users;
+use DSA\Commerce\MCP_Store_Provider;
+use DSA\Commerce\Membership_Directory as Membership;
+use DSA\Commerce\Subscription_Billing_Service as Billing;
+use DSA\Commerce\Subscription_Product_Service as Products;
+use DSA\Commerce\Subscription_Renewal_Orders as Receipts;
+use DSA\Notifications\Admin_Event_Notification_Service as Inbox;
+use DSA\Notifications\Notification_Preference_Service as NoticeSettings;
+
+if (wp_get_environment_type() !== 'local' || DB_NAME !== 'kiwe_checkout_lab' || !str_starts_with(home_url('/'), 'http://127.0.0.1:')) exit(2);
+$hpos = \Automattic\WooCommerce\Utilities\OrderUtil::custom_orders_table_usage_is_enabled();
+$passed = [];
+$assert = static function (mixed $ok, string $description) use (&$passed): void {
+    if (!$ok) throw new RuntimeException($description);
+    $passed[] = $description;
+};
+add_filter('pre_wp_mail', '__return_true');
+$previous = get_option('woocommerce_razorpay_settings');
+update_option('woocommerce_razorpay_settings', ['key_id'=>'rzp_test_LocalFixture', 'key_secret'=>'fake-key-for-isolated-transport'], false);
+$service = new Billing();
+$service->register();
+$fixture = strtolower(wp_generate_password(8, false, false));
+$makeUser = static function (string $kind, string $role) use ($fixture): int {
+    $id = wp_insert_user([
+        'user_login'=>$kind . '_' . $fixture, 'user_pass'=>wp_generate_password(32),
+        'user_email'=>$kind . '.' . $fixture . '@example.invalid', 'display_name'=>ucfirst($kind) . ' ' . $fixture, 'role'=>$role,
+    ]);
+    if (is_wp_error($id)) throw new RuntimeException('The isolated WordPress user could not be created.');
+    return $id;
+};
+$member = $makeUser('member', 'customer');
+$other = $makeUser('other', 'customer');
+$staff = $makeUser('staff', 'administrator');
+$editor = $makeUser('editor', 'editor');
+foreach ([$staff, $editor] as $id) {
+    $user = new WP_User($id);
+    foreach (['kiwe_manage_team','list_users','edit_users','kiwe_use_notifications'] as $capability) $user->add_cap($capability);
+}
+foreach ([$member, $other] as $id) (new WP_User($id))->add_cap('kiwe_use_notifications');
+wp_set_current_user($staff);
+
+$product = new WC_Product_Simple();
+$product->set_name('Membership ' . $fixture);
+$product->set_virtual(true);
+$product->set_tax_status('none');
+$product->set_regular_price('8400');
+$product->set_status('draft');
+Products::write($product, ['renewalMinor'=>70000, 'intervalMonths'=>1, 'firstTermMonths'=>12]);
+$product->save();
+$ordinary = new WC_Product_Simple();
+$ordinary->set_name('One-time item ' . $fixture);
+$ordinary->set_virtual(true);
+$ordinary->set_regular_price('338');
+$ordinary->set_status('draft');
+$ordinary->save();
+$order = wc_create_order(['status'=>'pending', 'customer_id'=>$member, 'created_via'=>'kiwe-billing-fixture']);
+$id = $order->get_id();
+$order->set_currency('INR');
+$order->add_product($product, 1);
+$order->add_product($ordinary, 1);
+$order->calculate_totals();
+$order->save();
+
+$planId = 'plan_MemberFixture';
+$subscriptionId = 'sub_MemberFixture' . $id;
+$provider = ['plans/'.$planId=>['id'=>$planId,'period'=>'monthly','interval'=>1,'item'=>['amount'=>70000,'currency'=>'INR']]];
+$accepted = [];
+$networkWrites = 0;
+$uncertain = true;
+add_filter('pre_http_request', static function ($reply, $args, $url) use (&$provider, &$accepted, &$networkWrites, &$uncertain, $subscriptionId) {
+    if (!str_starts_with($url, 'https://api.razorpay.com/v1/')) return new WP_Error('isolated_fixture', 'The membership fixture allows only its simulated provider.');
+    $key = parse_url($url, PHP_URL_PATH);
+    $resource = substr($key, 4);
+    if ('subscriptions' === $resource && 'POST' === $args['method']) {
+        ++$networkWrites;
+        $accepted = json_decode($args['body'], true, flags: JSON_THROW_ON_ERROR);
+        $provider['subscriptions/'.$subscriptionId] = $accepted + ['id'=>$subscriptionId, 'status'=>'created','short_url'=>'https://rzp.io/i/kiwefixture'];
+        if ($uncertain) return new WP_Error('lost_fixture_response', 'Provider accepted the request before the response was lost.');
+        $resource .= '/' . $subscriptionId;
+    }
+    return isset($provider[$resource])
+        ? ['response'=>['code'=>200], 'body'=>wp_json_encode($provider[$resource])]
+        : ['response'=>['code'=>404], 'body'=>'{}'];
+}, 10, 3);
+
+try {
+    $ops = MCP_Store_Provider::operations();
+    $change = $ops['store.subscription.change'];
+    $members = $ops['store.members.list'];
+    $write = static function (array $op, array $input) {
+        if (!$op['permission']($input)) throw new RuntimeException('The fixture operation was not authorized.');
+        return $op['execute']($input, $op['prepare']($input)['nativeExpected']);
+    };
+    $input = ['orderId'=>$id, 'action'=>'enroll', 'recordId'=>$planId];
+    $assert($change['discoverPermission']() && 'required' === $change['approval'], 'Only configured, authorized MCP enrollment is available and it requires review.');
+    try {
+        $write($change, $input);
+        throw new LogicException('The lost response was not simulated.');
+    } catch (RuntimeException $error) {
+        $assert($error->getMessage() !== '', 'An uncertain create leaves the order reviewable.');
+    }
+    $assert($write($change, $input)['state'] === 'provider-review' && $networkWrites === 1, 'Retry after a lost response sends no second provider request.');
+    $agreement = wc_get_order($id)->get_meta(Receipts::AGREEMENT);
+    $assert($accepted['addons'][0]['item']['amount'] === 873800 && $accepted['customer_notify'] === false
+        && $accepted['start_at'] === $agreement['firstRenewalAt'] && $accepted['total_count'] === 12,
+        'The combined native Woo total is charged upfront and the approval contains twelve scheduled renewal cycles.');
+    $assert($write($change, ['orderId'=>$id, 'action'=>'recover','recordId'=>$subscriptionId])['state'] === 'awaiting-approval', 'Provider readback recovers the exact recorded approval.');
+    $assert(!$service->ordinary_payment_allowed(true, wc_get_order($id)), 'An enrolled Woo order rejects the ordinary order-pay path.');
+    $assert(!(new Users())->membership_listing(1, $fixture)['people'], 'An authorization request alone never creates a member.');
+    $product->set_name('Current catalog name');
+    Products::write($product, ['renewalMinor'=>90000, 'intervalMonths'=>1, 'firstTermMonths'=>12]);
+    $product->save();
+
+    $webhook = static function (string $event, array $payload, string $account = KIWE_RAZORPAY_SUBSCRIPTIONS_ACCOUNT, bool $valid = true): WP_REST_Response {
+        $raw = wp_json_encode(['event'=>$event, 'account_id'=>$account,'payload'=>$payload]);
+        $request = new WP_REST_Request('POST', '/dsa/v1' . Billing::ROUTE);
+        $request->set_body($raw);
+        $request->set_header('content-type','application/json');
+        $request->set_header('x-razorpay-signature', $valid ? hash_hmac('sha256',$raw,KIWE_RAZORPAY_SUBSCRIPTIONS_WEBHOOK_SECRET) : str_repeat('0', 64));
+        return rest_do_request($request);
+    };
+    $furnish = static function (string $suffix, int $amount, ?int $start, ?int $end) use (&$provider, $subscriptionId, $agreement): string {
+        $pay = 'pay_' . $suffix;
+        $invoice = 'inv_' . $suffix;
+        $provider['payments/'.$pay] = [
+            'id'=>$pay, 'invoice_id'=>$invoice, 'order_id'=>'order_'.$suffix, 'currency'=>'INR',
+            'status'=>'captured','amount'=>$amount,'amount_refunded'=>0,
+        ];
+        $provider['invoices/'.$invoice] = [
+            'id'=>$invoice,'payment_id'=>$pay,'subscription_id'=>$subscriptionId,'order_id'=>'order_'.$suffix,
+            'status'=>'paid','currency'=>'INR','amount'=>$amount,'amount_paid'=>$amount,
+            'billing_start'=>$start,'billing_end'=>$end,'paid_at'=>$agreement['createdAt'],
+        ];
+        return $pay;
+    };
+    $payload = static fn (string $payment): array => ['payment'=>['entity'=>['id'=>$payment]]];
+    $first = $furnish('first'.$id, 873800, null, null);
+    wp_set_current_user(0);
+    $assert($webhook('payment.captured', $payload($first), KIWE_RAZORPAY_SUBSCRIPTIONS_ACCOUNT, false)->get_status() === 401, 'An unsigned callback cannot change the order.');
+    $assert($webhook('payment.captured', $payload($first), 'acc_AnotherStore')->get_status() === 403, 'A different merchant cannot update this site.');
+    $assert($webhook('subscription.authenticated', ['payment'=>['entity'=>['id'=>$first]]])->get_status() === 200
+        && !wc_get_order($id)->is_paid(), 'Mandate authentication alone does not grant paid access.');
+    $assert($webhook('payment.captured',$payload($first))->get_status() === 200 && wc_get_order($id)->get_transaction_id() === $first, 'A provider-confirmed first charge pays the existing native order.');
+    $assert($webhook('subscription.charged',$payload($first))->get_status() === 200, 'Overlapping provider events safely replay the initial charge.');
+
+    $start = $agreement['firstRenewalAt'];
+    $end = $start + 28 * DAY_IN_SECONDS;
+    $late = $furnish('late'.$id, 70000, $end, $end + 30 * DAY_IN_SECONDS);
+    $renewal = $furnish('renewal'.$id, 70000, $start, $end);
+    $wrong = $furnish('wrong'.$id, 90000, $start, $end);
+    $assert($webhook('subscription.charged',$payload($wrong))->get_status() === 409, 'An invoice for the current catalog price cannot replace the consented renewal price.');
+    $assert($webhook('subscription.charged',$payload($late))->get_status() === 200
+        && $webhook('subscription.charged',$payload($renewal))->get_status() === 200
+        && $webhook('payment.captured',$payload($renewal))->get_status() === 200, 'Out-of-order payments and duplicate events each record the correct verified period.');
+    $orders = wc_get_orders(['parent'=>$id,'created_via'=>'kiwe-subscription','limit'=>5]);
+    $assert(count($orders) === 2, 'WooCommerce stores exactly one renewal order per paid invoice.');
+    foreach ($orders as $receipt) {
+        $items = array_values($receipt->get_items());
+        $assert($receipt->is_paid() && $receipt->get_total() === '700.00' && count($items) === 1 && $items[0]->get_name() === 'Membership '.$fixture,
+            'Renewals keep the original member line and exclude the one-time purchase.');
+    }
+    $overlap = $furnish('overlap'.$id, 70000, $start + DAY_IN_SECONDS, $end);
+    $assert($webhook('subscription.charged',$payload($overlap))->get_status() === 409, 'A different invoice cannot cover an already paid period.');
+    $assert(Receipts::paid_period(wc_get_order($id), $start)['active'], 'The verified renewal covers its own service window.');
+    $assert(Receipts::paid_period(wc_get_order($id), $end + 31 * DAY_IN_SECONDS)['status'] === 'expired', 'Expired access is derived from paid dates without depending on scheduled jobs.');
+
+    $inbox = static function (int $user) use ($id): array {
+        wp_set_current_user($user);
+        $p = new NoticeSettings(new DSA\Settings(), new DSA\Trust\Trust_Service());
+        $service = new Inbox($p, new DSA\Notifications\Push_Service(new DSA\Settings()));
+        $filter = static fn ($item)=>str_starts_with($item['id'] ?? '', 'membership-'.$id.'-');
+        $front = array_values(array_filter($service->pull_current_user(), $filter));
+        $back = array_values(array_filter($service->workspace_inbox(array_column($p->workspace_snapshot()['config']['topics'],'id')), $filter));
+        if (array_column($front,'id') !== array_column($back,'id')) throw new RuntimeException('Frontend DSA and the dashboard disagree on visible membership notifications.');
+        return $front;
+    };
+    $customerNotices = $inbox($member);
+    $staffNotices = $inbox($staff);
+    $assert(count($customerNotices) === 3 && count($staffNotices) === 3 && !$inbox($other) && !$inbox($editor),
+        'Each paid period generates one inbox update for the member and permitted staff only.');
+    wp_set_current_user($member);
+    $assert(Receipts::membership(wc_get_order($id))['status'] === 'active' && !$members['discoverPermission'](), 'A customer can read their own membership and cannot discover the staff directory.');
+    wp_set_current_user($other);
+    $assert(!Receipts::membership(wc_get_order($id)) && !$members['permission']([]), 'Another customer cannot read that membership or the staff roster.');
+    wp_set_current_user($staff);
+    $list = json_decode($members['execute'](['search'=>$fixture])['resultJson'], true);
+    $assert(count($list['people']) === 1 && $list['people'][0]['id'] === $member && $list['people'][0]['status'] === 'active',
+        'The Members view and MCP show the same active purchaser while leaving ordinary customers out.');
+    $userCard = (new Users())->member($member);
+    $assert(($userCard['membership']['status'] ?? '') === 'active', 'The ordinary Daily Users card shows the same verified membership badge.');
+
+    wp_set_current_user(0);
+    $provider['subscriptions/'.$subscriptionId]['status'] = 'cancelled';
+    $cancelEvent = ['subscription'=>['entity'=>['id'=>$subscriptionId]]];
+    $assert($webhook('subscription.cancelled',$cancelEvent)->get_status() === 200
+        && $webhook('subscription.cancelled',$cancelEvent)->get_status() === 200, 'A confirmed cancellation is safe to reconcile twice.');
+    $assert(Receipts::paid_period(wc_get_order($id))['status'] === 'cancelled' && Receipts::paid_period(wc_get_order($id))['active'],
+        'The cancelled membership is marked red while its existing paid term remains usable.');
+    $assert(count($inbox($member)) === 4 && count($inbox($staff)) === 4, 'Cancellation is announced once to each authorized inbox.');
+    $staffUser = new WP_User($staff);
+    $staffUser->add_cap('edit_users', false);
+    wp_set_current_user(0);
+    wp_set_current_user($staff);
+    $assert(!$members['discoverPermission']() && !$inbox($staff), 'Removing staff access immediately hides both the Members view and previously stored private notices.');
+    $staffUser->add_cap('edit_users');
+    wp_set_current_user(0);
+    $provider['payments/'.$first]['amount_refunded'] = 873800;
+    $provider['payments/'.$first]['status'] = 'refunded';
+    $refund = ['refund'=>['entity'=>['payment_id'=>$first]]];
+    $assert($webhook('refund.processed',$refund)->get_status() === 200 && $webhook('refund.processed',$refund)->get_status() === 200,
+        'The provider refund can be delivered repeatedly.');
+    $refunded = wc_get_order($id);
+    $assert(count($refunded->get_refunds()) === 1 && (float) $refunded->get_total_refunded() === 8738.0
+        && !Receipts::paid_period($refunded)['active'], 'One native refund removes access for that refunded period without charging the provider.');
+
+    echo wp_json_encode(['verified'=>true,'hpos'=>$hpos,'checks'=>count($passed),'fixtureSearch'=>$fixture,'members'=>count($list['people']),
+        'staffId'=>$staff,'editorId'=>$editor,'memberId'=>$member,'orderId'=>$id]), PHP_EOL;
+} finally {
+    if (false === $previous) delete_option('woocommerce_razorpay_settings');
+    else update_option('woocommerce_razorpay_settings', $previous, false);
+}

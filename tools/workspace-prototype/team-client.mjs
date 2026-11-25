@@ -27,7 +27,7 @@ export function teamClient(config, fetcher = globalThis.fetch, origin = globalTh
       if (!response.headers.get('Content-Type')?.includes('application/json')) throw new Error('The website returned an unreadable response. Reload this person to review their current details.');
       const value = await response.json();
       if (!response.ok) throw new Error(value.message || 'The request could not be confirmed. Reload and review.');
-      publishContextProgress(response,query?.team_view==='accounts'?'users':''); return value;
+      publishContextProgress(response,['accounts','subscriptions'].includes(query?.team_view)?'users':''); return value;
     } finally { clearTimeout(timeout); signal?.removeEventListener('abort', abort); }
   }
   function person(value,id) {
@@ -36,6 +36,8 @@ export function teamClient(config, fetcher = globalThis.fetch, origin = globalTh
     const profile=value?.profile,commerce=profile?.woocommerce,account=value?.account;
     if(!value||!Number.isSafeInteger(value.id)||value.id<1||(id&&value.id!==id)||typeof value.name!=='string'||typeof value.title!=='string'||typeof value.selected!=='boolean'||!Number.isInteger(value.order)||value.order<0||value.order>9999||!/^[a-f0-9]{64}$/.test(value.expected)||!Array.isArray(value.roles)||value.roles.some(role=>!role||['id','label','source'].some(key=>typeof role[key]!=='string'))||!account||typeof account.canChangeRole!=='boolean'||typeof account.canChangeEmail!=='boolean'||typeof account.canSendReset!=='boolean'||typeof account.canRemove!=='boolean'||(account.canSetPassword!==undefined&&typeof account.canSetPassword!=='boolean')||(account.canVerify!==undefined&&typeof account.canVerify!=='boolean')||(account.canSuspend!==undefined&&typeof account.canSuspend!=='boolean')||!['single_site','network_owner'].includes(account.removalMode)||typeof account.role!=='string'||!/^[a-f0-9]{64}$/.test(account.expected)||!/^[a-f0-9]{64}$/.test(account.identityExpected)||!profile||Object.keys(profile).sort().join(',')!=='kiwe,woocommerce,wordpress'||!section(profile.wordpress,wordpressKeys)||!profile.kiwe||Object.keys(profile.kiwe).sort().join(',')!==kiweKeys.slice().sort().join(',')||typeof profile.kiwe.teamMember!=='boolean'||!Number.isInteger(profile.kiwe.teamOrder)||!section(commerce?.billing,addressKeys)||!section(commerce?.shipping,addressKeys))throw new Error('The team response was incomplete. Reload and review this person before saving.');
     if(value.security&&(!['verified','partial','unverified','unavailable'].includes(value.security.verification)||typeof value.security.joinSource!=='string'||typeof value.security.suspended!=='boolean'||typeof value.security.lastActivity!=='string'))throw new Error('The account security state could not be read.');
+    if (value.membership && (!['active','cancelled','expired'].includes(value.membership.status) || typeof value.membership.active !== 'boolean'
+      || !Number.isSafeInteger(value.membership.paidThrough) || value.membership.paidThrough < 0)) throw new Error('The membership status could not be read.');
     return value;
   }
   return {

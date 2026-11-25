@@ -399,7 +399,7 @@ final class Notification_Preference_Service {
 	}
 
 	public function personal_topic( string $topic ): bool {
-		return in_array( $topic, [ 'account_update','guest_post_status','guest_product_status','editorial_post_status','order_status','cart_reminder','discussion_update' ], true );
+		return in_array( $topic, [ 'account_update','guest_post_status','guest_product_status','editorial_post_status','order_status','cart_reminder','discussion_update','membership_update' ], true );
 	}
 
 	/** Inbox entitlement is distinct from consent to send to a gateway. */
@@ -411,6 +411,8 @@ final class Notification_Preference_Service {
 		if ( ! $user || ! user_can( $user, 'read' ) || \DSA\Access\Team_Workspace_Service::suspended( $id ) || ( is_multisite() && ! is_user_member_of_blog( $id ) ) ) return false;
 		switch ( $topic ) {
 			case 'admin_new_account': return user_can( $user, 'kiwe_manage_team' ) && user_can( $user, 'list_users' ) && user_can( $user, 'edit_users' );
+			case 'admin_membership': return class_exists( \DSA\Commerce\Membership_Directory::class ) && \DSA\Commerce\Membership_Directory::can_list( $id );
+			case 'membership_update': return $this->woo_available() && class_exists( \DSA\Commerce\Membership_Directory::class );
 			case 'admin_form_submission': return \DSA\Access\Form_Workspace_Service::allowed_for( $id );
 			case 'admin_app_activity': return user_can( $user, \DSA\Access\App_Workspace_Service::CAPABILITY ) && user_can( $user, 'list_users' ) && user_can( $user, 'edit_users' );
 			case 'admin_campaign_status': return user_can( $user, 'kiwe_manage_notification_policy' );
@@ -436,6 +438,11 @@ final class Notification_Preference_Service {
 	public function inbox_user_ids_for_topic( string $topic, array $explicit = [] ): array {
 		if ( $this->personal_topic( $topic ) && ! $explicit ) return [];
 		if ( $explicit ) $candidates = array_slice( array_values( array_unique( array_filter( array_map( 'absint', $explicit ) ) ) ), 0, 100 );
+		elseif ( 'admin_membership' === $topic ) {
+			$candidates = get_users( [ 'capability'=>'kiwe_manage_team','number'=>100,'fields'=>'ID','orderby'=>'ID','order'=>'ASC' ] );
+			$owner = \DSA\Access\Site_Owner_Service::owner_id();
+			if ( $owner ) array_unshift( $candidates, $owner );
+		}
 		elseif ( str_starts_with( $topic, 'admin_' ) || 'securetrack_incident' === $topic ) {
 			$candidates = get_users( [ 'role__in'=>[ 'administrator','kiwe_super_admin','shop_manager','editor' ], 'number'=>100,'fields'=>'ID','orderby'=>'ID','order'=>'ASC' ] );
 			$owner = \DSA\Access\Site_Owner_Service::owner_id(); if ( $owner ) array_unshift( $candidates, $owner );
@@ -726,6 +733,13 @@ final class Notification_Preference_Service {
 			$admin_topics[] = [ 'id' => 'editorial_post_status', 'label' => __( 'Article status', 'dsa' ), 'description' => __( 'Editorial status changes to your articles.', 'dsa' ) ];
 		}
 		if ( $user_id && $this->topic_allowed_for_user( $user_id, 'admin_new_account' ) ) $admin_topics[] = [ 'id'=>'admin_new_account', 'label'=>__( 'New users', 'dsa' ), 'description'=>__( 'New accounts arrive in Daily → Users. Verification and account access stay private.', 'dsa' ), 'audience'=>'admin' ];
+		if ( $user_id && $this->topic_allowed_for_user( $user_id, 'admin_membership' ) ) {
+			$admin_topics[] = [ 'id'=>'admin_membership', 'label'=>__( 'Membership activity', 'dsa' ), 'description'=>__( 'Membership changes for accounts and orders you may review.', 'dsa' ), 'audience'=>'admin' ];
+		}
+		if ( $user_id && $this->topic_allowed_for_user( $user_id, 'membership_update' )
+			&& get_user_meta( $user_id, \DSA\Commerce\Subscription_Renewal_Orders::JOINED, true ) ) {
+			$admin_topics[] = [ 'id'=>'membership_update', 'label'=>__( 'Your membership', 'dsa' ), 'description'=>__( 'Payments, cancellations and paid access dates for your memberships.', 'dsa' ) ];
+		}
 		if ( $user_id && $this->topic_allowed_for_user( $user_id, 'admin_form_submission' ) ) $admin_topics[] = [ 'id'=>'admin_form_submission', 'label'=>__( 'Form enquiries', 'dsa' ), 'description'=>__( 'A saved message arrived in Daily → Forms. Enquiry answers remain in the private Forms inbox.', 'dsa' ), 'audience'=>'admin' ];
 		if ( $user_id && $this->topic_allowed_for_user( $user_id, 'admin_app_activity' ) ) $admin_topics[] = [ 'id'=>'admin_app_activity', 'label'=>__( 'App activity', 'dsa' ), 'description'=>__( 'A device first reports an app installation or opening.', 'dsa' ), 'audience'=>'admin' ];
 		if ( $user_id && $this->topic_allowed_for_user( $user_id, 'admin_campaign_status' ) ) $admin_topics[] = [ 'id'=>'admin_campaign_status', 'label'=>__( 'Campaign results', 'dsa' ), 'description'=>__( 'A campaign finishes or is cancelled. Review its recorded outcomes.', 'dsa' ), 'audience'=>'admin' ];

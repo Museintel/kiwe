@@ -4,6 +4,8 @@ namespace DSA\Access;
 
 use DSA\Onboarding\Design_Context_Profile_Service;
 use DSA\Onboarding\User_Profile_Service;
+use DSA\Commerce\Membership_Directory;
+use DSA\Commerce\Subscription_Renewal_Orders;
 use DSA\PhoneKey\PhoneKey_Bridge;
 use DSA\Secure\SecureTrack_Event_Service;
 
@@ -85,9 +87,9 @@ final class Team_Workspace_Service {
 		$search = is_string( $input['team_search'] ?? null ) ? sanitize_text_field( $input['team_search'] ) : '';
 		$search = wp_html_excerpt( str_replace( '*', '', $search ), 80, '' );
 		$page = is_scalar( $input['team_page'] ?? null ) ? (int) $input['team_page'] : 1;
-		$sort = in_array( $input['team_sort'] ?? '', [ 'name_asc','name_desc','joined_desc','joined_asc' ], true ) ? $input['team_sort'] : ( in_array( $input['team_view'] ?? '', [ 'accounts','customers' ], true ) ? 'joined_desc' : 'name_asc' );
+		$sort = in_array( $input['team_sort'] ?? '', [ 'name_asc','name_desc','joined_desc','joined_asc' ], true ) ? $input['team_sort'] : ( in_array( $input['team_view'] ?? '', [ 'accounts','customers','subscriptions' ], true ) ? 'joined_desc' : 'name_asc' );
 		return [
-			'team_view' => in_array( $input['team_view'] ?? '', [ 'members','accounts','customers' ], true ) ? $input['team_view'] : 'all',
+			'team_view' => in_array( $input['team_view'] ?? '', [ 'members','accounts','customers','subscriptions' ], true ) ? $input['team_view'] : 'all',
 			'team_search' => $search,
 			'team_page' => max( 1, min( self::MAX_PAGE, $page ) ),
 			'team_sort' => $sort,
@@ -111,13 +113,21 @@ final class Team_Workspace_Service {
 			'blog_id' => get_current_blog_id(),
 		];
 		if ( Site_Owner_Service::owner_id() && ! Site_Owner_Service::is_owner() ) $args['exclude'] = [ Site_Owner_Service::owner_id() ];
-		$accounts = in_array( $nav['team_view'], [ 'accounts','customers' ], true );
+		$accounts = in_array( $nav['team_view'], [ 'accounts','customers','subscriptions' ], true );
 		if ( $accounts ) {
 			if ( ! current_user_can( 'list_users' ) || ! current_user_can( 'edit_users' ) || ( 'customers' === $nav['team_view'] && ! ( \DSA\Apps\Store_App_Service::enabled() && class_exists( 'WC_Customer' ) ) ) ) return $result;
 			unset( $args['capability__in'] );
 			if ( 'customers' === $nav['team_view'] && ! class_exists( '\\DSA\\Commerce\\Paid_Customer_Query' ) ) return $result;
 			if ( $nav['team_role'] ) $args['role'] = $nav['team_role'];
 			if ( $nav['team_app'] ) $args['meta_query'] = [ [ 'key'=>\DSA\PWA\App_Activity_Service::meta_key(\DSA\PWA\App_Activity_Service::FIRST_USE_META), 'compare'=>'EXISTS' ] ];
+		}
+		if ( 'subscriptions' === $nav['team_view'] ) {
+			if ( ! self::can_list_memberships() ) return $result;
+			$args['meta_query']['membership_joined'] = [ 'key'=>Subscription_Renewal_Orders::JOINED, 'compare'=>'EXISTS', 'type'=>'UNSIGNED' ];
+			if ( str_starts_with( $nav['team_sort'], 'joined_' ) ) {
+				$order = str_ends_with( $nav['team_sort'], '_asc' ) ? 'ASC' : 'DESC';
+				$args['orderby'] = [ 'membership_joined'=>$order, 'ID'=>$order ];
+			}
 		}
 		if ( '' !== $nav['team_search'] ) {
 			$args['search'] = '*' . $nav['team_search'] . '*';
@@ -132,9 +142,31 @@ final class Team_Workspace_Service {
 		foreach ( array_slice( $users, 0, self::PAGE_SIZE ) as $user ) {
 			if ( ! $user instanceof \WP_User || ! ( $accounts ? $this->can_manage_account( (int) $user->ID ) : $this->can_manage_member( (int) $user->ID ) ) ) continue;
 			if ( 'members' === $nav['team_view'] && ! User_Profile_Service::is_team_member( (int) $user->ID ) ) continue;
+			if ( 'subscriptions' === $nav['team_view'] && ! $this->membership_summary( (int) $user->ID ) ) continue;
 			$result['users'][] = $user;
 		}
 		return $result;
+	}
+
+	public static function can_list_memberships(): bool {
+		return class_exists( Membership_Directory::class ) && Membership_Directory::can_list( get_current_user_id() );
+	}
+
+	private array $membership_cards = [];
+
+	private function membership_summary( int $id ): array {
+		$actor = get_current_user_id();
+		if ( ! self::can_list_memberships() || ! self::can_review_account_for( $actor, $id ) ) return [];
+		return $this->membership_cards[$actor][$id] ??= Membership_Directory::summary( $id );
+	}
+
+	public function membership_listing( int $page, string $search ): array {
+		if ( ! self::can_list_memberships() ) throw new \RuntimeException( 'Reviewing members requires user and store order access.' );
+		$list = $this->listing( [ 'team_view'=>'subscriptions', 'team_page'=>$page, 'team_search'=>$search ] );
+		return [
+			'page'=>$list['navigation']['team_page'], 'hasNext'=>$list['has_next'],
+			'people'=>array_map( fn( $user )=>[ 'id'=>$user->ID, 'name'=>$user->display_name ] + $this->membership_summary( (int) $user->ID ), $list['users'] ),
+		];
 	}
 
 	public static function fingerprint( int $id ): string {
@@ -183,6 +215,7 @@ final class Team_Workspace_Service {
 			],
 		];
 		$result = [ 'id'=>$id, 'name'=>$user->display_name, 'roles'=>$roles, 'selected'=>'1' === $state[1], 'title'=>$state[2], 'order'=>max( 0, min( 9999, (int) $state[3] ) ), 'profile'=>$profile, 'account'=>$this->account_control( $id ), 'expected'=>hash( 'sha256', wp_json_encode( $state ) ) ];
+		if ( $membership = $this->membership_summary( $id ) ) $result['membership'] = $membership;
 		if ( $this->can_manage_account( $id ) ) { $result['security'] = $this->security_summary( $id ); if(class_exists(\DSA\PWA\App_Activity_Service::class))$result['app'] = \DSA\PWA\App_Activity_Service::user_summary($id); }
 		if ( ! User_Profile_Service::eligible( $id ) ) { $result['canTeam'] = false; $result['selected'] = false; }
 		return $result;
@@ -635,6 +668,13 @@ final class Team_Workspace_Service {
 		$input = (array) wp_unslash( $_GET );
 		$listing = $this->listing( $input );
 		$nav = $listing['navigation'];
+		if ( 'subscriptions' === $nav['team_view'] && ! self::can_list_memberships() ) {
+			wp_die( esc_html__( 'Memberships require account and order access.', 'dsa' ), '', [ 'response'=>403 ] );
+		}
+		if ( 'subscriptions' === $nav['team_view'] ) {
+			$this->render_user_directory( $listing );
+			return;
+		}
 		?>
 		<div class="wrap kiwe-team-workspace kiwe-tasks kiwe-native-workspace">
 			<header class="kiwe-team-workspace__intro"><p class="kiwe-team-workspace__eyebrow"><?php esc_html_e( 'Your people', 'dsa' ); ?></p><h1><?php esc_html_e( 'Teams', 'dsa' ); ?></h1><p><?php esc_html_e( 'Choose who appears on your website and describe what they do. Team titles are public job titles; account access stays in Users.', 'dsa' ); ?></p></header>
@@ -642,6 +682,7 @@ final class Team_Workspace_Service {
 			<section class="kiwe-app-card kiwe-team-workspace__toolbar" aria-label="<?php esc_attr_e( 'Find people', 'dsa' ); ?>">
 				<nav class="kiwe-team-workspace__views" aria-label="<?php esc_attr_e( 'Team views', 'dsa' ); ?>">
 					<?php foreach ( [ 'all'=>__( 'All eligible people', 'dsa' ), 'members'=>__( 'On the team', 'dsa' ) ] as $view => $label ) : ?><a href="<?php echo esc_url( self::url( [ 'team_view'=>$view, 'team_search'=>$nav['team_search'] ] ) ); ?>" <?php if ( $view === $nav['team_view'] ) echo 'aria-current="page"'; ?>><?php echo esc_html( $label ); ?></a><?php endforeach; ?>
+					<?php if ( self::can_list_memberships() && in_array( $nav['team_view'], [ 'accounts','customers' ], true ) ) : ?><a href="<?php echo esc_url( self::url( [ 'team_view'=>'subscriptions' ] ) ); ?>"><?php esc_html_e( 'Members', 'dsa' ); ?></a><?php endif; ?>
 				</nav>
 				<form method="get" action="<?php echo esc_url( admin_url( 'admin.php' ) ); ?>" class="kiwe-team-workspace__search" role="search"><input type="hidden" name="page" value="<?php echo esc_attr( self::PAGE ); ?>"><input type="hidden" name="team_view" value="<?php echo esc_attr( $nav['team_view'] ); ?>"><label for="kiwe-team-search"><?php esc_html_e( 'Find by public name', 'dsa' ); ?></label><div><input id="kiwe-team-search" name="team_search" type="search" maxlength="80" value="<?php echo esc_attr( $nav['team_search'] ); ?>"><button class="button" type="submit"><?php esc_html_e( 'Search', 'dsa' ); ?></button></div></form>
 			</section>
@@ -656,6 +697,51 @@ final class Team_Workspace_Service {
 			</nav>
 		</div>
 		<?php
+	}
+
+	private function render_user_directory( array $listing ): void {
+		$nav = $listing['navigation'];
+		$tabs = [ 'accounts'=>__( 'Users', 'dsa' ), 'customers'=>__( 'Customers', 'dsa' ), 'subscriptions'=>__( 'Members', 'dsa' ) ];
+		?>
+		<div class="wrap kiwe-team-workspace kiwe-tasks">
+			<h1><?php echo esc_html( $tabs[$nav['team_view']] ); ?></h1>
+			<nav class="kiwe-team-workspace__views" aria-label="<?php esc_attr_e( 'People views', 'dsa' ); ?>">
+				<?php foreach ( $tabs as $view => $label ) : ?>
+					<a href="<?php echo esc_url( self::url( [ 'team_view'=>$view ] ) ); ?>" <?php if ( $view === $nav['team_view'] ) echo 'aria-current="page"'; ?>><?php echo esc_html( $label ); ?></a>
+				<?php endforeach; ?>
+			</nav>
+			<form method="get" action="<?php echo esc_url( admin_url( 'admin.php' ) ); ?>" role="search">
+				<input type="hidden" name="page" value="<?php echo esc_attr( self::PAGE ); ?>">
+				<input type="hidden" name="team_view" value="<?php echo esc_attr( $nav['team_view'] ); ?>">
+				<label><?php esc_html_e( 'Find by public name', 'dsa' ); ?> <input name="team_search" type="search" maxlength="80" value="<?php echo esc_attr( $nav['team_search'] ); ?>"></label>
+				<button class="button"><?php esc_html_e( 'Search', 'dsa' ); ?></button>
+			</form>
+			<?php if ( ! $listing['users'] ) : ?><p><?php esc_html_e( 'No eligible people in this view.', 'dsa' ); ?></p><?php endif; ?>
+			<ul class="kiwe-team-workspace__grid">
+				<?php foreach ( $listing['users'] as $person ) : ?>
+					<li class="kiwe-app-card kiwe-team-workspace__card">
+						<h2><?php echo esc_html( $person->display_name ); ?></h2>
+						<?php $this->render_membership_badge( (int) $person->ID ); ?>
+					</li>
+				<?php endforeach; ?>
+			</ul>
+			<nav class="kiwe-team-workspace__pagination" aria-label="<?php esc_attr_e( 'People pages', 'dsa' ); ?>">
+				<?php if ( $nav['team_page'] > 1 ) : ?><a class="button" href="<?php echo esc_url( self::url( array_replace( $nav, [ 'team_page'=>$nav['team_page'] - 1 ] ) ) ); ?>"><?php esc_html_e( 'Previous', 'dsa' ); ?></a><?php endif; ?>
+				<?php if ( $listing['has_next'] ) : ?><a class="button" href="<?php echo esc_url( self::url( array_replace( $nav, [ 'team_page'=>$nav['team_page'] + 1 ] ) ) ); ?>"><?php esc_html_e( 'Next', 'dsa' ); ?></a><?php endif; ?>
+			</nav>
+		</div>
+		<?php
+	}
+
+	private function render_membership_badge( int $id ): void {
+		$membership = $this->membership_summary( $id );
+		if ( ! $membership ) return;
+		$status = match ( $membership['status'] ) {
+			'active'=>__( 'Active member', 'dsa' ), 'cancelled'=>__( 'Membership cancelled', 'dsa' ), default=>__( 'Membership expired', 'dsa' ),
+		};
+		?>
+		<span class="kiwe-team-workspace__badge <?php echo 'active' === $membership['status'] ? 'is-active-membership' : 'is-ended'; ?>"><?php echo esc_html( $status ); ?></span>
+		<?php if ( $membership['paidThrough'] ) : ?><p><?php echo esc_html( sprintf( __( 'Paid through %s', 'dsa' ), wp_date( get_option( 'date_format' ), $membership['paidThrough'] ) ) ); ?></p><?php endif;
 	}
 
 	private function saved_receipt( $value ): bool {
@@ -675,6 +761,7 @@ final class Team_Workspace_Service {
 		?>
 		<article class="kiwe-app-card kiwe-team-workspace__card" aria-labelledby="<?php echo esc_attr( $prefix . '-name' ); ?>">
 			<header><span class="kiwe-team-workspace__initial" aria-hidden="true"><?php echo esc_html( wp_html_excerpt( $user->display_name, 1, '' ) ); ?></span><div><h2 id="<?php echo esc_attr( $prefix . '-name' ); ?>"><?php echo esc_html( $user->display_name ); ?></h2><span class="kiwe-team-workspace__badge<?php echo $member ? ' is-member' : ''; ?>"><?php echo esc_html( $member ? __( 'On the team', 'dsa' ) : __( 'Available to add', 'dsa' ) ); ?></span></div></header>
+			<?php if ( in_array( $nav['team_view'], [ 'accounts','customers' ], true ) ) $this->render_membership_badge( $id ); ?>
 			<form method="post" data-kiwe-native-form action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" aria-label="<?php echo esc_attr( sprintf( __( 'Team details for %s', 'dsa' ), $user->display_name ) ); ?>">
 				<input type="hidden" name="expected" value="<?php echo esc_attr( self::fingerprint( $id ) ); ?>">
 				<input type="hidden" name="action" value="<?php echo esc_attr( self::ACTION ); ?>"><input type="hidden" name="user_id" value="<?php echo esc_attr( (string) $id ); ?>"><?php wp_nonce_field( self::ACTION . '_' . $id, 'kiwe_team_nonce' ); ?>

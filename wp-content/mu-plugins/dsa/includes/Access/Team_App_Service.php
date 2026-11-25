@@ -39,8 +39,11 @@ final class Team_App_Service {
 	}
 	public function listing( \WP_REST_Request $request ): \WP_REST_Response {
 		if ( 'GET' !== $request->get_method() || ! $this->permission( $request ) ) return $this->denied();
+		$can_memberships = Team_Workspace_Service::can_list_memberships();
+		$query = $request->get_query_params();
+		if ( 'subscriptions' === ( $query['team_view'] ?? '' ) && ! $can_memberships ) return $this->denied();
 		$service = new Team_Workspace_Service();
-		$list = $service->listing( $request->get_query_params() );
+		$list = $service->listing( $query );
 		$people = [];
 		foreach ( $list['users'] as $user ) {
 			$person = $service->member( (int) $user->ID );
@@ -51,7 +54,7 @@ final class Team_App_Service {
 		unset( $person );
 		$account_policy = $service->account_policy();
 		$roles = Team_Workspace_Service::role_catalog();
-		return $this->response( [ 'people'=>$people, 'navigation'=>$list['navigation'], 'hasNext'=>$list['has_next'], 'canAccounts'=>current_user_can( 'list_users' ) && current_user_can( 'edit_users' ), 'accountPolicy'=>$account_policy, 'roleChoices'=>$roles, 'commerce'=>\DSA\Apps\Store_App_Service::enabled() && class_exists( 'WC_Customer' ) ] );
+		return $this->response( [ 'people'=>$people, 'navigation'=>$list['navigation'], 'hasNext'=>$list['has_next'], 'canAccounts'=>current_user_can( 'list_users' ) && current_user_can( 'edit_users' ), 'canMemberships'=>$can_memberships, 'accountPolicy'=>$account_policy, 'roleChoices'=>$roles, 'commerce'=>\DSA\Apps\Store_App_Service::enabled() && class_exists( 'WC_Customer' ) ] );
 	}
 	public function create( \WP_REST_Request $request ): \WP_REST_Response {
 		if ( 'POST' !== $request->get_method() || ! $this->permission( $request ) ) return $this->denied();
@@ -108,7 +111,9 @@ final class Team_App_Service {
 		if ( 'HEAD' === $_SERVER['REQUEST_METHOD'] ) exit;
 		wp_enqueue_style( 'kiwe-team-app', DSA_URL . 'assets/css/team-app.css', \DSA\Access\Workspace_Design_Service::app_dependencies( [] ), DSA_VERSION );
 		wp_enqueue_script( 'kiwe-team-app', DSA_URL . 'assets/js/team-app.js', [ 'wp-element' ], DSA_VERSION, true );
-		wp_localize_script( 'kiwe-team-app', 'KIWE_TEAM_APP', [ 'endpoint'=>rest_url( 'dsa/v1/workspace/team' ), 'nonce'=>wp_create_nonce( 'wp_rest' ), 'userGroupsEndpoint'=>rest_url( 'dsa/v1/workspace/user-groups' ), 'home'=>Workspace_Admin_Service::url(), 'initialAppFilter'=>'app_users'===($_GET['team_app']??'')?'app_users':'', 'initialAccount'=>is_scalar($_GET['team_account']??null)?max(0,(int)$_GET['team_account']):0, 'initialView'=>in_array( $_GET['team_view'] ?? '', [ 'accounts','customers','all','members' ], true ) ? $_GET['team_view'] : 'all', ...Workspace_Chrome_Service::projection() ] );
+		$views = [ 'accounts','customers','all','members' ];
+		if ( Team_Workspace_Service::can_list_memberships() ) $views[] = 'subscriptions';
+		wp_localize_script( 'kiwe-team-app', 'KIWE_TEAM_APP', [ 'endpoint'=>rest_url( 'dsa/v1/workspace/team' ), 'nonce'=>wp_create_nonce( 'wp_rest' ), 'userGroupsEndpoint'=>rest_url( 'dsa/v1/workspace/user-groups' ), 'home'=>Workspace_Admin_Service::url(), 'initialAppFilter'=>'app_users'===($_GET['team_app']??'')?'app_users':'', 'initialAccount'=>is_scalar($_GET['team_account']??null)?max(0,(int)$_GET['team_account']):0, 'initialView'=>in_array( $_GET['team_view'] ?? '', $views, true ) ? $_GET['team_view'] : 'all', ...Workspace_Chrome_Service::projection() ] );
 		?><!doctype html><html <?php language_attributes(); ?>><head><meta charset="<?php bloginfo( 'charset' ); ?>"><meta name="viewport" content="width=device-width,initial-scale=1"><title><?php esc_html_e( 'Your team · Kiwe', 'dsa' ); ?></title><?php wp_print_styles( 'kiwe-team-app' ); ?></head><body class="kiwe-team-app"><div id="kiwe-team-app"><p><?php esc_html_e( 'Opening your team…', 'dsa' ); ?></p><noscript><?php esc_html_e( 'This experimental team screen needs JavaScript. Ask your site owner to switch off the experiment to restore the existing team editor.', 'dsa' ); ?></noscript></div><?php wp_print_scripts( [ 'wp-element', 'kiwe-team-app' ] ); ?></body></html><?php
 		exit;
 	}
