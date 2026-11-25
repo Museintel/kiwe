@@ -1,4 +1,4 @@
-## Version 1.x checkout candidate
+## 8.0.0-rc.500 (2026-11-26, candidate)
 
 - Show Razorpay setup status in Kiwe Apps and Store MCP.
 - Open the existing checkout sheet from the native WooCommerce checkout form and return saved details to the same page.
