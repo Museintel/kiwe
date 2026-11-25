@@ -28,7 +28,7 @@ return static function(array$c,string$phase,array$prior=[]):array{
     foreach(scandir($c['installedRoot'])as$n)if(is_file($c['installedRoot'].'/'.$n)&&($n==='index.php'||preg_match('/^wp-[a-z-]+\.php$/D',$n))&&!in_array($n,['wp-config.php','wp-config-sample.php'],true))$copy($c['installedRoot'].'/'.$n,$public.'/'.$n);
     foreach(['wp-admin','wp-includes']as$n)$copy($c['installedRoot'].'/'.$n,$public.'/'.$n);
     $mkdir($public.'/wp-content');foreach(['plugins','mu-plugins','themes','uploads']as$n)$mkdir($public.'/wp-content/'.$n);
-    $copy($c['installedRoot'].'/wp-content/themes/bricks',$public.'/wp-content/themes/bricks');
+    $copy($c['bricksRoot']??$c['installedRoot'].'/wp-content/themes/bricks',$public.'/wp-content/themes/bricks');
     if($side==='source'){$zip=new ZipArchive();if($zip->open($c['package'])!==true||hash_file('sha256',$c['package'])!==$c['packageSha256'])throw new RuntimeException('Frozen package refused');for($i=0;$i<$zip->numFiles;++$i){$n=$zip->getNameIndex($i);if(!preg_match('#^(?:dsa\.php|kiwe-incident-guard\.php|dsa/[a-zA-Z0-9_./-]+)$#D',$n)||str_contains($n,'..'))throw new RuntimeException('Frozen package path refused');$target=$public.'/wp-content/mu-plugins/'.$n;$cursor=dirname($target);$missing=[];while(!is_dir($cursor)){$missing[]=$cursor;$cursor=dirname($cursor);}foreach(array_reverse($missing)as$p)$mkdir($p);$write($target,$zip->getFromIndex($i));}$zip->close();}
     $write($public.'/wp-config.php',$config($side==='source'?$sourcePrefix:$destPrefix,$side==='source'?$state['sourceUrl']:$state['destinationUrl']));
     $packet=['action'=>'seed','root'=>$public,'source'=>$side==='source','login'=>$side==='source'?'source_owner':'destination_owner','email'=>$side==='source'?'source-owner@qualification.invalid':'destination-owner@qualification.invalid','password'=>$side==='source'?$state['sourcePassword']:$state['destinationPassword']];$r=$child($packet);
@@ -68,6 +68,9 @@ return static function(array$c,string$phase,array$prior=[]):array{
    $migration=['schema'=>DSA\Backup\Portable_Recovery_Migration::SCHEMA,'recoverySha256'=>$state['capture']['sha256'],'source'=>['home'=>$state['sourceUrl'],'siteurl'=>$state['sourceUrl'],'root'=>$state['source']],'destination'=>['home'=>$state['destinationUrl'],'siteurl'=>$state['destinationUrl'],'root'=>$public],'versions'=>['wordpress'=>$source['platform']['wordpress'],'kiwe'=>$source['platform']['kiwe']],'dependencies'=>['activePlugins'=>$source['dependencies']['activePlugins'],'mustUseEntries'=>$source['dependencies']['mustUseEntries'],'themes'=>$source['dependencies']['themes']],'tableSuffixes'=>array_map(static fn($t)=>substr($t['name'],strlen($state['sourcePrefix'])),$review['database']['tables']),'consistencyAcceptance'=>'observed-stable-not-atomic'];
    $ownership=['schema'=>DSA\Backup\Portable_Recovery_Ownership::SCHEMA,'recoverySha256'=>$state['capture']['sha256'],'destinationOwnerId'=>$state['destinationOwner'],'sourceOwnerId'=>null,'mode'=>'quarantine-copied-authority'];
    $r=$database::prepare($c['connection'],$state['stage'],$public,$phrase,$root.'/databases',null,$migration,$ownership,$state['destinationPassword']);$state['database']=$r['directory'];$owner=$r['ownerId'];
+   if(!preg_match('/^krd_[a-f0-9]{24}_$/D',$r['tablePrefix']))throw new RuntimeException('Staged private prefix did not authenticate');
+   $state['restoredPrefix']=$r['tablePrefix'];
+   $state['ownedNativeTables']=array_values(array_unique(array_merge($state['ownedNativeTables'],$catalog($state['restoredPrefix']))));
    $policy=$activation::reviewed_plan($c['connection'],$state['database'],$state['stage'],$public,$phrase);$policy['codeReview']='exact-captured-code-approved';$policy['destinationIsolation']='requests-writers-host-cron-paused';$policy['withheldStateReview']='original-private-review-complete';
    $r=$activation::activate($c['connection'],$state['database'],$state['stage'],$public,$phrase,$root.'/activations',$policy);$state['activation']=$r['directory'];
    $tokens=token_get_all(file_get_contents($public.'/wp-config.php'));$target=null;foreach($tokens as$i=>$t)if(is_array($t)&&$t[0]===T_VARIABLE&&$t[1]==='$table_prefix'){for($j=$i+1;$j<min($i+8,count($tokens));++$j)if(is_array($tokens[$j])&&$tokens[$j][0]===T_CONSTANT_ENCAPSED_STRING){$target=substr($tokens[$j][1],1,-1);break;}break;}
@@ -99,11 +102,17 @@ return static function(array$c,string$phase,array$prior=[]):array{
    $proof['postBootstrapReversal']='not attempted: legitimate native initialization is newer state; no automatic merge or erase';
    $proof['capture']=$state['capture'];$proof['passed']=true;
   }elseif($phase==='retire'){$proof['passed']=true;}else throw new RuntimeException('Unknown private qualification phase');
- }catch(Throwable$e){$proof['error']=$e->getMessage();}
+ }catch(Throwable$e){
+  $proof['error']=$e->getMessage();
+  $proof['failureSite']=['file'=>basename($e->getFile()),'line'=>$e->getLine(),'trace'=>array_map(
+   static fn(array $frame)=>[basename($frame['file']??''),$frame['line']??0,$frame['function']],
+   array_slice($e->getTrace(),0,5)
+  )];
+ }
  finally{
   if($phase==='retire'||$phase==='restore'||$phase==='acceptance'||!$proof['passed']){
    // This factory owns fresh, unserved namespaces and their exact registered names, not real accounts/content.
-   try{foreach(['sourcePrefix','destinationPrefix']as$k)if(isset($state[$k]))$state['ownedNativeTables']=array_values(array_unique(array_merge($state['ownedNativeTables'],$catalog($state[$k]))));
+   try{foreach(['sourcePrefix','destinationPrefix','restoredPrefix']as$k)if(isset($state[$k]))$state['ownedNativeTables']=array_values(array_unique(array_merge($state['ownedNativeTables'],$catalog($state[$k]))));
     foreach($state['ownedNativeTables']??[]as$name){if(!preg_match('/^(?:qrs_[a-f0-9]{24}_|qrd_[a-f0-9]{24}_|krd_[a-f0-9]{24}_)[a-zA-Z0-9_]+$/D',$name))throw new RuntimeException('Foreign table retirement refused');$query('DROP TABLE '.DSA\Backup\Portable_Table_Definition::identifier($name));}if(isset($state['root']))$remove($state['root']);$proof['cleanup']=!isset($state['root'])||!is_dir($state['root']);}catch(Throwable$e){$proof['cleanupFailure']=true;$proof['passed']=false;}
   }
   $db->close();
