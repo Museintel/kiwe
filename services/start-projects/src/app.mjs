@@ -12,6 +12,7 @@ import { browserLoginInput, browserLoginLifetime, browserLoginPath, browserLogin
 import { agencyPage, homepagePage, websitePage, clientProjectPage, pilotMcpPage, projectPage, projectsPage, signInPage, siteAuthorizationPage, siteReturnPage, stylesheet } from './web.mjs';
 import { createSiteConnections, siteCallbackPath } from './wordpress-link.mjs';
 import { createManagedHosting } from './managed-hosting.mjs';
+import { checkDomainProof, domainProofInput } from './domain-setup.mjs';
 import { createKeyConnections, keyPairingInput } from './key-connection.mjs';
 import { createAgencySpaces } from './agency-space.mjs';
 import {
@@ -92,7 +93,7 @@ function checkOrigin(request, expected) {
   }
 }
 
-function mcpTools(projects, siteConnections, managedHosting, keyConnections, agencySpaces, homepage, bricks, publication, website, accountId, pilot) {
+function mcpTools(projects, siteConnections, managedHosting, domainProof, keyConnections, agencySpaces, homepage, bricks, publication, website, accountId, pilot) {
   const server = new McpServer({ name: 'Kiwe Start', version: '0.1.0' });
   const result = (label, structuredContent) => ({
     content: [{ type: 'text', text: label }],
@@ -139,6 +140,14 @@ function mcpTools(projects, siteConnections, managedHosting, keyConnections, age
     outputSchema: singleProjectOutput,
     annotations: { destructiveHint: false, idempotentHint: true },
   }, (input) => run(() => result('Domain saved', { project: projects.setDomain(accountId, input) })));
+  if (projects.canVerifyDomain(accountId)) {
+    server.registerTool('kiwe_start_domain_dns', {
+      description: 'Prepare or verify the TXT record for the domain a client already owns. Share the record with the owner so they can add it to their DNS.',
+      inputSchema: domainProofInput,
+      outputSchema: singleProjectOutput,
+      annotations: { destructiveHint: false, idempotentHint: true },
+    }, (input) => run(async () => result('Domain verification', { project: await domainProof(accountId, input) })));
+  }
   server.registerTool('kiwe_start_connect_site', {
     description: 'Open native authorization for the selected existing or ready managed WordPress site with Kiwe MCP installed. The website owner approves the link.',
     inputSchema: siteLinkInput,
@@ -289,7 +298,7 @@ function mcpTools(projects, siteConnections, managedHosting, keyConnections, age
   return server;
 }
 
-export function createStartServer({ projects, startOrigin, checkoutOrigin, issuer, purchaseToken, pilotPurchaseToken, authorizeMcp, browserLogin, publicGuide, wordpressLink, hostingProvider, keyProvider, agencyReader, workflowClock, homepageWordPress, homepageProvider, inventoryWordPress, bricksWordPress, bricksCompiler, publicationWordPress }) {
+export function createStartServer({ projects, startOrigin, checkoutOrigin, issuer, purchaseToken, pilotPurchaseToken, authorizeMcp, browserLogin, publicGuide, wordpressLink, hostingProvider, resolveDomainTxt, keyProvider, agencyReader, workflowClock, homepageWordPress, homepageProvider, inventoryWordPress, bricksWordPress, bricksCompiler, publicationWordPress }) {
   const pilotAccount = browserLogin?.pilotAccount;
   const pilot = Boolean(pilotAccount);
   const launchBuyers = pilot && Boolean(pilotPurchaseToken);
@@ -331,6 +340,7 @@ export function createStartServer({ projects, startOrigin, checkoutOrigin, issue
     },
   };
   const managedHosting = createManagedHosting(projects, hostingProvider, keyConnections);
+  const domainProof = (accountId, input) => checkDomainProof(projects, accountId, input, resolveDomainTxt);
   const siteConnections = createSiteConnections(projects, startOrigin, wordpressLink);
   const secure = new URL(startOrigin).protocol === 'https:';
   const cookieName = secure ? '__Host-kiwe-start' : 'kiwe-start-lab';
@@ -449,6 +459,14 @@ export function createStartServer({ projects, startOrigin, checkoutOrigin, issue
       }
       return json(response, 200, projects.purchaseDelivery(input));
     }
+    if ((!pilot || launchBuyers) && endpoint === 'POST /projects/api/domain-registration') {
+      purchaseWrite(request);
+      const input = await readBody(request, jsonType);
+      if (typeof input?.accountId !== 'string' || !/^launch:[a-f0-9]{32}$/.test(input.accountId)) {
+        throw new StartError(403, 'launch_buyer_required', 'This connection accepts confirmed Kiwe Launch domain registrations.');
+      }
+      return json(response, 200, projects.confirmDomainRegistration(input));
+    }
     if (!pilot && endpoint === 'POST /projects/api/client-handoffs') {
       purchaseWrite(request);
       const handoff = projects.issueClientHandoff(await readBody(request, jsonType));
@@ -473,7 +491,7 @@ export function createStartServer({ projects, startOrigin, checkoutOrigin, issue
         return json(response, 405, { error: 'method_not_allowed' });
       }
       const payload = await readBody(request, jsonType);
-      const server = mcpTools(projects, siteConnections, managedHosting, keyConnections, agencySpaces, homepage, bricks, publication, website, accountId, pilot);
+      const server = mcpTools(projects, siteConnections, managedHosting, domainProof, keyConnections, agencySpaces, homepage, bricks, publication, website, accountId, pilot);
       const transport = new StreamableHTTPServerTransport({
         sessionIdGenerator: undefined, enableJsonResponse: true,
       });
@@ -700,7 +718,7 @@ export function createStartServer({ projects, startOrigin, checkoutOrigin, issue
         return send(response, error.status, projectsPage(projects.listProjects(accountId), projects.agencySites(accountId), error.message, pilot));
       }
     }
-    const match = pathname.match(/^\/projects\/([a-f0-9-]{36})(?:\/(domain|connect|hosting|key|key-pair|invite-client|revoke-client))?$/);
+    const match = pathname.match(/^\/projects\/([a-f0-9-]{36})(?:\/(domain|domain-dns|connect|hosting|key|key-pair|invite-client|revoke-client))?$/);
     const listRoute = endpoint === 'GET /projects' || endpoint === 'GET /projects/';
     if (listRoute || match) {
       const accountId = accountForBrowser(request);
@@ -753,7 +771,8 @@ export function createStartServer({ projects, startOrigin, checkoutOrigin, issue
             response.setHeader('Referrer-Policy', 'no-referrer');
             return redirect(response, pairing.pairingUrl);
           }
-          if (action === 'hosting') await managedHosting.step(accountId, input);
+          if (action === 'domain-dns') await domainProof(accountId, input);
+          else if (action === 'hosting') await managedHosting.step(accountId, input);
           else projects.setDomain(accountId, input);
           return redirect(response, '/projects/' + projectId);
         } catch (error) {

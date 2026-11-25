@@ -113,7 +113,7 @@ On a site with an assigned static homepage, WordPress updates its native page la
 
 ## Included Kiwe hosting
 
-An eligible buyer can set up hosting from the project form or `kiwe_start_provision_site`. Both surface the same durable request. The Hostinger adapter reserves a free temporary address before it requests WordPress. Subsequent calls look up the same address and check the provider status. The project shows the temporary address after the provider reports completion and the WordPress REST API answers for that site. An interrupted request reconciles the original address. The project keeps its requested custom domain for a later domain connection step.
+An eligible buyer can set up hosting from the project form or `kiwe_start_provision_site`. Both use the same durable request. An owned domain starts at a free temporary address. For a new included `.in`, Start waits for the trusted Launch registration receipt, then asks Hostinger to create WordPress on the exact domain. A pre-existing site or setup requires hosting review. The assigned URL appears when Hostinger reports completion and the WordPress REST API answers from that HTTPS origin. An interrupted request reconciles the saved address.
 
 This adapter targets an existing Hostinger Web or Cloud order. Configure the four variables below together to enable the managed form and tool. Store the API credential in the deployment's native secret store. WordPress receives a generated initial administrator at the configured operator email. The hosting operator can access the installation through Hostinger and complete the site's separate ownership handover. The project stores the assigned address and setup state.
 
@@ -124,7 +124,15 @@ This adapter targets an existing Hostinger Web or Cloud order. Configure the fou
 | `KIWE_START_HOSTINGER_ACCOUNT` | Hosting username that must match setup records |
 | `KIWE_START_HOSTINGER_ADMIN_EMAIL` | Authorized initial WordPress operator mailbox |
 
-On a request with a lost response, Start checks the stored address before resubmitting to the same destination. An assigned address stays bound to the project. A failed setup goes to operator review. The first release qualifies WordPress at a temporary address. Kiwe activation, custom DNS and the purchaser's ongoing native authorization follow their own workflows. [Hostinger website setup API](https://github.com/hostinger/api-php-sdk/blob/main/docs/Api/HostingWebsitesApi.md)
+On a request with a lost response, Start checks the stored address before resubmitting to the same destination. An assigned address stays bound to the project. A failed setup goes to operator review. Projects with an assigned temporary address from an earlier build keep that address. The purchaser authorizes the native WordPress connection on the assigned origin. [Hostinger website setup API](https://github.com/hostinger/api-php-sdk/blob/main/docs/Api/HostingWebsitesApi.md)
+
+### Domain setup
+
+Launch uses its purchase credential at `POST /projects/api/domain-registration` after confirming the active registration in Hostinger. The request has `entitlementId`, `purchaseId`, `accountId` and `domain`. All four values must match the original confirmed order. Start locks each registered domain to one project. The buyer sees the registration status without the registrant or billing details. [Private registration operations](../launch-checkout/README.md#included-domain-registration)
+
+For an owned domain, the buyer can create and verify a project-specific TXT record from Start or use `kiwe_start_domain_dns`. Repeated preparation reuses the record for 48 hours. On expiry, Start creates a fresh value. Verification records DNS control while the website keeps its temporary URL. Preserve existing email, verification and website records during this step.
+
+Shared and Cloud hosting require a reviewed WordPress move to change the primary domain. The operator needs a recoverable copy, the exact provider web records and final HTTPS and WordPress verification. Start and Key must be authorized for the final origin before retiring the temporary address. Confirm DNS ownership again at cutover. This move and registrar renewals still require provider rehearsal. [Hostinger's primary-domain change instructions](https://www.hostinger.com/support/6807580-connecting-a-different-domain-to-your-existing-website-at-hostinger/)
 
 ## Checkout handoff
 
@@ -180,6 +188,7 @@ The protected resource is `/projects/mcp`, with resource metadata at `/.well-kno
 - `kiwe_start_projects` lists the buyer's projects.
 - `kiwe_start_project` reads the specified project and reports its verified WordPress Design Context link in `project.site.designContextUrl`.
 - `kiwe_start_set_domain` saves a human-confirmed domain and hosting choice at the current revision.
+- `kiwe_start_domain_dns` prepares or confirms the TXT verification record for an owned domain on the signed-in buyer's paid project.
 
 - `kiwe_start_connect_site` prepares the same native WordPress approval link for the saved existing site. After approval, the project reports its verified site and the next Key step.
 

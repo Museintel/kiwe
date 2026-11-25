@@ -326,6 +326,82 @@ final class KiweBilling
         return ['ticket' => $reply['ticket'], 'action' => $action];
     }
 
+    private function domainPurchase(string $purchaseId, string $domain): array
+    {
+        if (!preg_match('/^kiwe_[a-f0-9]{32}$/D', $purchaseId)) {
+            throw new KiweCheckoutError('Enter a confirmed Kiwe purchase ID.');
+        }
+        $purchase = $this->purchase($purchaseId);
+        $quote = $purchase ? $this->quote($purchase) : [];
+        if (!$purchase || $purchase['retired_at'] || !$purchase['confirmed_at'] || !$purchase['start_project_id']
+            || $purchase['first_term_end'] <= time() || ($quote['planId'] ?? null) !== $this->checkout->plan['id']
+            || ($quote['domain'] ?? null) !== ['mode' => 'register', 'name' => $domain, 'category' => 'standard']) {
+            throw new KiweCheckoutError('Use the exact included domain and an active first-year purchase already delivered to Start.', 409);
+        }
+        $dispute = $this->row('SELECT COALESCE(SUM(deducted + held), 0) AS withheld FROM launch_disputes WHERE payment_id = ?',
+            [$purchase['payment_id']]);
+        if ($this->refunded($purchase['payment_id'], $purchase['payment_refunded']) > 0 || $dispute['withheld'] > 0) {
+            throw new KiweCheckoutError('Registration is on hold while Launch reviews the payment.', 409);
+        }
+        return $purchase;
+    }
+
+    public function registerDomain(KiweRegistration $registrar, string $purchaseId, string $domain, int $contact): array
+    {
+        $purchase = $this->domainPurchase($purchaseId, $domain);
+        $attempt = $this->row('SELECT contact_id FROM launch_domain_orders WHERE purchase_id = ?', [$purchaseId]);
+        if ($attempt) {
+            if ($attempt['contact_id'] !== $contact) throw new KiweCheckoutError('Review the original registrar contact in hPanel.', 409);
+            return $this->reconcileDomain($registrar, $purchaseId, $domain);
+        }
+        $account = $this->row('SELECT email FROM checkout_accounts WHERE id = ?', [$purchase['account_id']]);
+        $item = $registrar->prepare($domain, $contact, $account['email']);
+        if (($this->checkout->domainAvailability($domain)['status'] ?? null) !== 'eligible') {
+            throw new KiweCheckoutError('Hostinger must confirm the domain is still available and eligible before purchase.', 409);
+        }
+        $payment = ($this->razorpay)('GET', '/payments/' . $purchase['payment_id']);
+        $quote = $this->quote($purchase);
+        if (($payment['id'] ?? null) !== $purchase['payment_id'] || ($payment['status'] ?? null) !== 'captured'
+            || !$this->validPayment($payment, $quote['upfrontMinor'], $quote['currency'])
+            || ($payment['amount_refunded'] ?? 0) !== 0) {
+            throw new KiweCheckoutError('Razorpay must confirm the original captured payment before registration.', 409);
+        }
+        $claimed = $this->transaction(function () use ($purchaseId, $domain, $contact): bool {
+            $this->domainPurchase($purchaseId, $domain);
+            return $this->query('INSERT INTO launch_domain_orders(purchase_id, domain, contact_id, requested_at)
+                VALUES (?, ?, ?, ?) ON CONFLICT DO NOTHING', [$purchaseId, $domain, $contact, time()])->rowCount() === 1;
+        });
+        if (!$claimed) {
+            throw new KiweCheckoutError('A request already exists for this domain. Review or reconcile the original request.', 409);
+        }
+        try {
+            $registrar->purchase($domain, $contact, $item);
+        } catch (Throwable) {
+            throw new KiweCheckoutError('The registrar response was inconclusive. Check hPanel and reconcile this order before any further purchase.', 503);
+        }
+        return $this->reconcileDomain($registrar, $purchaseId, $domain);
+    }
+
+    public function reconcileDomain(KiweRegistration $registrar, string $purchaseId, string $domain): array
+    {
+        $purchase = $this->domainPurchase($purchaseId, $domain);
+        $attempt = $this->row('SELECT * FROM launch_domain_orders WHERE purchase_id = ? AND domain = ?', [$purchaseId, $domain]);
+        if (!$attempt) throw new KiweCheckoutError('This purchase has no saved registration request.', 404);
+        $result = ['domain' => $domain, 'state' => 'awaiting_registration'];
+        if ($attempt['completed_at']) return [...$result, 'state' => 'registered'];
+        if (!$registrar->active($domain, $attempt['contact_id'], $attempt['requested_at'])) return $result;
+        $this->domainPurchase($purchaseId, $domain);
+        $receipt = ($this->start)('domain-registration', [
+            'entitlementId' => $purchaseId, 'accountId' => $purchase['account_id'], 'purchaseId' => $purchase['payment_id'],
+            'domain' => $domain,
+        ]);
+        if (($receipt['projectId'] ?? null) !== $purchase['start_project_id']) {
+            throw new KiweCheckoutError('Start did not confirm this registration. Reconcile the saved request again.', 503);
+        }
+        $this->query('UPDATE launch_domain_orders SET completed_at = ? WHERE purchase_id = ? AND completed_at IS NULL', [time(), $purchaseId]);
+        return [...$result, 'state' => 'registered'];
+    }
+
     public function renew(string $accountId, string $network, int $quotedAmount, int $quotedStart, int $quotedCycles): string
     {
         $this->checkout->limit('renewal-network', $network, 30, 3600);

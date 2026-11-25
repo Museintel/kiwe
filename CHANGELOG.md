@@ -7,6 +7,7 @@
 
 ## Version 1.x (Start project candidate)
 
+- Require verified `.in` registration before provisioning on a new custom address. Add private Launch registrar reconciliation and client-owned DNS verification through Start and MCP.
 - Add Shiprocket to the live Launch hero’s Powered by rail. Keep its full height in view on the supported first-load viewport checks.
 - Provision signed Kiwe Core and MCP, licensed stable Bricks, and inactive Razorpay and Shiprocket packages on managed WordPress. Set up the default Key sender and offer verified client pairing through Start and MCP.
 - Show enrolled referrals, commission balances and withdrawals in Launch. Accrue commission from paid billing periods after verified managed-site setup and reflect refunds and disputes. Add private MCP operations for delivery reconciliation, withdrawal review and confirmed payout records.

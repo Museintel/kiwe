@@ -4,6 +4,7 @@ import { requestSite } from './site-network.mjs';
 
 const api = 'https://developers.hostinger.com/api/hosting/v1';
 const freeDomain = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.hostingersite\.com$/;
+const registeredDomain = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.in$/;
 
 function providerUnavailable() {
   return new StartError(502, 'hosting_unavailable', 'The hosting provider is temporarily unavailable. Check this project again to resume.');
@@ -35,6 +36,13 @@ export function createHostingerProvider({ token, orderId, username, adminEmail, 
       return reserved.domain;
     },
 
+    async primaryAvailable(domain) {
+      if (!registeredDomain.test(domain)) throw providerUnavailable();
+      const records = await call('/websites?' + new URLSearchParams({ domain, per_page: '100' }));
+      if (!Array.isArray(records) || records.length >= 100) throw providerUnavailable();
+      return !records.some((record) => record.domain === domain) && !(await this.status(domain));
+    },
+
     async status(domain) {
       const records = await call('/onboardings?' + new URLSearchParams({ order_id: orderId, domain }));
       if (!Array.isArray(records)) throw providerUnavailable();
@@ -61,7 +69,7 @@ export function createHostingerProvider({ token, orderId, username, adminEmail, 
     },
 
     async wordpressReady(domain) {
-      if (!freeDomain.test(domain)) throw providerUnavailable();
+      if (!(freeDomain.test(domain) || registeredDomain.test(domain))) throw providerUnavailable();
       const origin = 'https://' + domain;
       for (const path of ['/wp-json/?_fields=home,namespaces', '/?rest_route=%2F&_fields=home,namespaces']) {
         try {
@@ -82,12 +90,21 @@ export function createManagedHosting(projects, provider, keyConnections) {
   const inFlight = new Map();
 
   async function advance(accountId, details, job) {
-    let { domain, status } = job;
+    let { domain, status, holdUntil } = job;
     if (!domain) {
-      const reserved = await provider.reserve();
-      ({ domain, status } = projects.reserveManagedSite(accountId, details, reserved));
+      let reserved = job.registeredDomain;
+      if (reserved) {
+        if (!provider.primaryAvailable || !(await provider.primaryAvailable(reserved))) {
+          throw new StartError(409, 'managed_domain_in_use', 'This domain needs a hosting review before Kiwe can set up WordPress.');
+        }
+      } else {
+        reserved = await provider.reserve();
+      }
+      ({ domain, status, holdUntil } = projects.reserveManagedSite(accountId, details, reserved));
     }
+    const primary = domain === job.registeredDomain;
     const current = await provider.status(domain);
+    if (primary && current && !holdUntil) return projects.saveManagedStatus(accountId, details, 'needs_attention');
     if (current === 'failed') return projects.saveManagedStatus(accountId, details, 'needs_attention');
     if (current === 'completed') {
       let ready = await provider.wordpressReady(domain);
@@ -103,6 +120,9 @@ export function createManagedHosting(projects, provider, keyConnections) {
     }
     if (status === 'provisioning') return projects.getProject(accountId, details);
     if (!projects.claimManagedStart(accountId, details)) return projects.getProject(accountId, details);
+    if (primary && !(await provider.primaryAvailable(domain))) {
+      return projects.saveManagedStatus(accountId, details, 'needs_attention');
+    }
 
     const accepted = await provider.start(domain);
     return projects.saveManagedStatus(accountId, details, accepted === 'failed' ? 'needs_attention' : 'provisioning');

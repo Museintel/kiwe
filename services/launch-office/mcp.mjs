@@ -17,7 +17,8 @@ const server = new McpServer({ name: 'kiwe-launch-office', version: '1.0.0' });
 async function callPhp(script, ...input) {
   const php = process.env.KIWE_LAUNCH_PHP ?? 'php';
   const args = process.env.KIWE_LAUNCH_PHP_CONFIG ? ['-c', path.resolve(process.env.KIWE_LAUNCH_PHP_CONFIG)] : [];
-  const timeout = input[0] === 'reconcile-billing' ? 55000 : input[0] === 'reconcile-partner-deliveries' ? 30000 : 12000;
+  const timeout = input[0] === 'reconcile-billing' ? 55000
+    : ['reconcile-partner-deliveries', 'reconcile-domain'].includes(input[0]) ? 30000 : 12000;
   const { stdout } = await run(php, [...args, script, ...input], { timeout, maxBuffer: 512 * 1024 });
   return JSON.parse(stdout);
 }
@@ -85,6 +86,11 @@ if (checkoutRoot) {
     description: 'Check pending Razorpay payments and deliver confirmed first-year purchases to Kiwe Start once.',
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
   }, () => operation('reconcile-billing'));
+  server.registerTool('kiwe_launch_reconcile_domain', {
+    description: 'Check an existing paid Kiwe registration request with Hostinger and deliver the verified domain to Start. This operation cannot buy a domain.',
+    inputSchema: { purchaseId: z.string().regex(/^kiwe_[a-f0-9]{32}$/), domain: z.string().min(1).max(253) },
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
+  }, ({ purchaseId, domain }) => operation('reconcile-domain', purchaseId, domain));
   server.registerTool('kiwe_launch_recover_renewal', {
     description: 'Reconcile a previously reserved Kiwe renewal to its verified Razorpay subscription ID.',
     inputSchema: { accountId: z.string().regex(/^launch:[a-f0-9]{32}$/), subscriptionId: z.string().regex(/^sub_[A-Za-z0-9]{4,80}$/) },

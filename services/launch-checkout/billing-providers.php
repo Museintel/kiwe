@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-function kiwe_billing_json_request(string $method, string $url, string $authorization, array $data = []): array
+function kiwe_billing_json_request(string $method, string $url, string $authorization, array $data = [], bool $allowMissing = false): array
 {
     $handle = curl_init($url);
     $body = '';
@@ -24,6 +24,7 @@ function kiwe_billing_json_request(string $method, string $url, string $authoriz
     try {
         $success = curl_exec($handle);
         $status = curl_getinfo($handle, CURLINFO_RESPONSE_CODE);
+        if ($success && $allowMissing && $status === 404) return [];
         if (!$success || $status < 200 || $status >= 300) {
             throw new KiweCheckoutError('The service could not confirm this step. Check the status and try again.', 503);
         }

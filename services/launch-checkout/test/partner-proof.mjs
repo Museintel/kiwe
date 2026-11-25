@@ -35,6 +35,15 @@ export async function verifyPartners({ origin, data, partner, anotherPartner, bu
   assert.deepEqual(await tools('reconcile_partner_deliveries'), { checked: 1, ready: 0, retry: 0 });
   assert.deepEqual(await tools('reconcile_partner_deliveries'), { checked: 0, ready: 0, retry: 0 });
 
+  const project = start.projects.getProject(buyerId, { projectId: paid.projectId });
+  if (project.domainSetup?.mode === 'register') {
+    const confirmation = await fetch(start.origin + '/projects/api/domain-registration', {
+      method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + start.purchaseToken },
+      body: JSON.stringify({ ...claimant, purchaseId: paid.payment.id, domain: project.domain }),
+    });
+    assert.equal(confirmation.status, 200, await confirmation.clone().text());
+  }
+
   // Age the payment in the disposable checkout database. Four billing months have elapsed.
   const first = new Date();
   first.setUTCDate(1);

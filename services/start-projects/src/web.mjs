@@ -100,10 +100,13 @@ ${alert}${current}
 }
 
 function hostingStep(project, available) {
-  if (!available || project.hosting !== 'included') return '';
+  if (!available || project.hosting !== 'included' || project.next === 'register_domain') return '';
   const hosted = project.managedSite;
   if (hosted?.status === 'ready') {
-    return `<p class="status">WordPress is ready on your <a href="${escape(hosted.url)}">temporary address</a>. Install Kiwe and its MCP App there before connecting it here.</p>`;
+    const address = new URL(hosted.url).hostname;
+    const link = address === project.domain ? escape(address) : 'temporary address';
+    const needsKiwe = project.planId === clientPlan.id ? '' : ' Install Kiwe and its MCP App there before connecting it here.';
+    return `<p class="status">WordPress is ready on your <a href="${escape(hosted.url)}">${link}</a>.${needsKiwe}</p>`;
   }
   if (hosted?.status === 'needs_attention') {
     return '<p class="error" role="alert">Hosting setup needs attention. Your project is saved.</p>';
@@ -113,6 +116,29 @@ function hostingStep(project, available) {
 <input type="hidden" name="revision" value="${project.revision}">
 <button class="button">${hosted ? 'Check hosting status' : 'Set up Kiwe hosting'}</button>
 </form>`;
+}
+
+function domainSetupStep(project) {
+  const setup = project.domainSetup;
+  if (!setup) return '';
+  if (setup.mode === 'register') {
+    return setup.status === 'awaiting_registration'
+      ? '<p class="status">Your order is saved. Hosting opens when Hostinger confirms registration. Follow any verification instructions from Hostinger, then check this project again.</p>'
+      : '';
+  }
+  if (setup.status === 'ownership_verified') {
+    return '<section><h2>Your domain</h2><p>Domain ownership verified. Kiwe needs to review the move to your domain. You can use your temporary site while the move is pending.</p></section>';
+  }
+  const record = setup.record;
+  const instructions = record ? `<p>Add this TXT record at your DNS provider. Keep your existing email, verification and website records.</p>
+<dl><dt>Record name</dt><dd><code>${escape(record.name)}</code></dd>
+<dt>TXT value</dt><dd><code>${escape(record.value)}</code></dd></dl>`
+    : '<p>Verify that you manage this domain. You can keep your current domain registrar and DNS provider.</p>';
+  return `<section><h2>Your domain</h2>${instructions}
+<form method="post" action="/projects/${project.id}/domain-dns">
+<input type="hidden" name="revision" value="${project.revision}">
+<button class="button" name="action" value="${record ? 'verify' : 'prepare'}">${record ? 'Check DNS record' : 'Create DNS verification record'}</button>
+</form></section>`;
 }
 
 function keyStep(project, available, managedKey) {
@@ -176,7 +202,7 @@ export function projectPage(project, { error, managed = false, keyEnabled = fals
   const purchased = project.planId === clientPlan.id;
   const status = project.site
     ? `<p class="status">Website verified at <a href="${escape(project.site.url)}">${escape(new URL(project.site.url).hostname)}</a>.${project.next === 'fill_design_context' ? ' Next, fill in Design Context in WordPress.' : ''}</p>`
-    : project.domain && !project.managedSite
+    : project.domain && !project.managedSite && project.next !== 'register_domain'
       ? `<p class="status">Domain saved. Next, ${project.hosting === 'included' ? 'set up Kiwe hosting' : 'connect your WordPress site'}.</p>`
       : '';
   const connect = project.next === 'connect_site' || project.next === 'activate_kiwe'
@@ -202,7 +228,7 @@ ${selection}
 </form>`;
   return page(purchased ? project.domain : 'Choose your domain', `<p><a href="/projects">All projects</a>${project.workspace.type === 'agency' ? ` · <a href="/projects/agency">${escape(project.workspace.name)}</a>` : ' · Kiwe Launch'}</p>
 ${alert}${status}${domainForm}
-${project.site ? '' : hostingStep(project, managed)}${connect}${keyStep(project, keyEnabled, managedKey)}
+${project.site ? '' : hostingStep(project, managed)}${domainSetupStep(project)}${connect}${keyStep(project, keyEnabled, managedKey)}
 ${clientAccessPanel(project, clientAccess, invitation)}
 ${project.site ? `<p>${designContextButton(project.site)} <a class="button" href="/projects/${project.id}/pages">Pages &amp; Templates</a></p>` : ''}
 ${project.key?.siteAuthenticated && project.key.state !== 'inactive' ? `<p><a class="button" href="/projects/${project.id}/homepage">Homepage draft</a></p>` : ''}`, true);

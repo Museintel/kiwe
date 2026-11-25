@@ -19,6 +19,7 @@ try {
         'quote' => kiwe_checkout_operator_quote($checkout, $value),
         'billing-status' => ['billing' => kiwe_checkout_operator_billing($billing, $value)],
         'reconcile-billing' => $billing?->deliverPending() ?? throw new KiweCheckoutError('Launch billing is unavailable.', 503),
+        'register-domain', 'reconcile-domain' => kiwe_checkout_operator_domain($state, $argv[1], $value, $argv[3] ?? '', $argv[4] ?? ''),
         'recover-renewal' => kiwe_checkout_operator_recover($billing, $value, $argv[3] ?? ''),
         'partner-summary' => ['balance' => kiwe_checkout_operator_partners($billing)->summary($value)],
         'reconcile-partner-deliveries' => kiwe_checkout_operator_partners($billing)->reconcileDeliveries(),
@@ -35,6 +36,18 @@ try {
 } catch (Throwable) {
     fwrite(STDERR, "Kiwe Launch checkout is unavailable.\n");
     exit(1);
+}
+
+function kiwe_checkout_operator_domain(array $state, string $action, string $purchase, string $domain, string $contact): array
+{
+    $billing = $state['billing'] ?? throw new KiweCheckoutError('Launch billing is unavailable.', 503);
+    $registrar = ($state['registrar'])()
+        ?? throw new KiweCheckoutError('Paid domain registration is disabled.', 503);
+    $domain = kiwe_checkout_domain($domain);
+    if ($action === 'reconcile-domain') return $billing->reconcileDomain($registrar, $purchase, $domain);
+    $id = filter_var($contact, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+    if ($id === false) throw new KiweCheckoutError('Provide the approved .in WHOIS profile ID for the buyer.');
+    return $billing->registerDomain($registrar, $purchase, $domain, $id);
 }
 
 function kiwe_checkout_operator_quote(KiweCheckout $checkout, string $accountId): array

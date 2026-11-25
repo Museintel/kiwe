@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/store.php';
 require_once __DIR__ . '/billing.php';
+require_once __DIR__ . '/registration.php';
 
 function kiwe_checkout_billing(mixed $config, KiweCheckout $checkout, string $database, string $origin, bool $test): ?KiweBilling
 {
@@ -84,5 +85,6 @@ function kiwe_checkout_boot(string $root): ?array
     return [
         'origin' => $origin, 'test' => $test, 'sessions' => $storage . '/sessions',
         'checkout' => $checkout, 'billing' => kiwe_checkout_billing($settings['billing'] ?? null, $checkout, $database, $origin, $test),
+        'registrar' => PHP_SAPI === 'cli' ? static fn (): ?KiweRegistration => kiwe_registration_provider($settings, $test) : null,
     ];
 }

@@ -89,7 +89,8 @@ async function operation(name, args) {
 try {
   await mkdir(path.join(data, 'sessions'), { recursive: true });
   for (const file of ['boot.php', 'store.php', 'providers.php', 'schema.sql', 'web.php', 'view.php', 'operator.php',
-    'billing.php', 'billing-providers.php', 'billing-schema.sql', 'billing-view.php', 'partners.php', 'partner-schema.sql', 'partner-view.php']) {
+    'billing.php', 'billing-providers.php', 'billing-schema.sql', 'billing-view.php', 'registration.php',
+    'partners.php', 'partner-schema.sql', 'partner-view.php']) {
     await cp(path.join(service, file), path.join(root, file));
   }
   await cp(path.join(service, 'test', 'settings-fixture.php'), path.join(root, 'settings.php'));
@@ -115,6 +116,10 @@ try {
     args: [fileURLToPath(new URL('../../launch-office/mcp.mjs', import.meta.url))],
     env,
   }));
+  const registration = await mcp.callTool({ name: 'kiwe_launch_reconcile_domain',
+    arguments: { purchaseId: 'kiwe_' + '1'.repeat(32), domain: 'eligible.in' } });
+  assert.ok(registration.isError);
+  assert.match(registration.content[0].text, /Paid domain registration is disabled/);
   assert.equal((await operation('kiwe_launch_check_domain', { domain: 'test.in' })).status, 'eligible');
   assert.equal((await operation('kiwe_launch_check_domain', { domain: 'Test.COM.' })).status, 'excluded');
   assert.equal((await operation('kiwe_launch_check_domain', { domain: 'restricted.in' })).status, 'restricted');

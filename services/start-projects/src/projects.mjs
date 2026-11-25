@@ -38,6 +38,7 @@ export const purchaseInput = z.strictObject({
   clientOrder: verifiedClientOrder.optional(),
 });
 export const handoffInput = z.strictObject({ entitlementId: id, accountId: id });
+export const domainRegistrationInput = handoffInput.extend({ purchaseId: id, domain: domainName });
 export const ticketInput = z.strictObject({ ticket: z.string().regex(/^[A-Za-z0-9_-]{43}$/) });
 export const claimInput = z.strictObject({ projectId: z.uuid() });
 const verifiedEmail = z.string().trim().toLowerCase().max(254).pipe(z.email());
@@ -84,6 +85,15 @@ const connectedSite = z.strictObject({
 const managedSite = z.strictObject({
   status: z.enum(['queued', 'provisioning', 'ready', 'needs_attention']), url: z.url().nullable(),
 });
+const domainSetup = z.discriminatedUnion('mode', [
+  z.strictObject({ mode: z.literal('register'), status: z.enum(['awaiting_registration', 'registered']) }),
+  z.strictObject({
+    mode: z.literal('owned'), status: z.enum(['verify_ownership', 'awaiting_dns', 'ownership_verified']),
+    record: z.strictObject({
+      type: z.literal('TXT'), name: z.string(), value: z.string(), expiresAt: z.string(),
+    }).optional(),
+  }),
+]);
 export const keyState = z.strictObject({
   state: z.enum(['awaiting_approval', 'sender_ready', 'sender_offline', 'inactive']),
   sender: z.enum(['account_primary', 'dedicated']).nullable(),
@@ -102,8 +112,9 @@ const projectOutput = z.strictObject({
   revision: z.number().int().positive(),
   site: connectedSite.nullable(),
   managedSite: managedSite.nullable(),
+  domainSetup: domainSetup.optional(),
   key: keyState.extend({ manageUrl: z.url().nullable() }).nullable(),
-  next: z.enum(['choose_domain', 'provision_site', 'activate_kiwe', 'connect_site', 'connect_key', 'fill_design_context']),
+  next: z.enum(['choose_domain', 'register_domain', 'provision_site', 'activate_kiwe', 'connect_site', 'connect_key', 'fill_design_context']),
 });
 export const singleProjectOutput = z.strictObject({ project: projectOutput });
 export const projectsOutput = z.strictObject({ projects: z.array(projectOutput) });
@@ -156,7 +167,23 @@ function workspaceView(accountType, agency, launchWebsite) {
   return { type: 'agency', name: agency?.name ?? 'Your agency', website: agency?.website ?? null };
 }
 
-function view(row, launchWebsite) {
+function domainView(row, time) {
+  if (row.domain_mode === 'register') {
+    return { mode: 'register', status: row.registered_domain ? 'registered' : 'awaiting_registration' };
+  }
+  if (row.domain_mode !== 'owned') return undefined;
+  if (row.owner_verified_at !== null) return { mode: 'owned', status: 'ownership_verified' };
+  if (row.dns_expires_at > time) {
+    return {
+      mode: 'owned', status: 'awaiting_dns',
+      record: { type: 'TXT', name: '_kiwe-site.' + row.domain, value: row.dns_challenge,
+        expiresAt: new Date(row.dns_expires_at).toISOString() },
+    };
+  }
+  return { mode: 'owned', status: 'verify_ownership' };
+}
+
+function view(row, launchWebsite, time) {
   const site = row.site_url ? {
     url: row.site_url, coreVersion: row.core_version, wordpressVersion: row.wordpress_version, verifiedAt: row.verified_at,
     designContextUrl: new URL('/wp-admin/admin.php?page=kiwe-design-context', row.site_url).href,
@@ -164,6 +191,7 @@ function view(row, launchWebsite) {
   const hosted = row.managed_status ? {
     status: row.managed_status, url: row.managed_status === 'ready' ? 'https://' + row.setup_domain : null,
   } : null;
+  const domainSetup = domainView(row, time);
   const key = row.key_state ? {
     state: row.key_state, sender: row.key_sender, siteAuthenticated: Boolean(row.key_site_authenticated), pairingPending: Boolean(row.key_pairing_pending),
     manageUrl: row.key_manage_url,
@@ -171,6 +199,7 @@ function view(row, launchWebsite) {
   let next = 'choose_domain';
   if (site) next = key?.siteAuthenticated && key.state === 'sender_ready' ? 'fill_design_context' : 'connect_key';
   else if (hosted?.status === 'ready') next = 'activate_kiwe';
+  else if (!row.setup_domain && domainSetup?.status === 'awaiting_registration') next = 'register_domain';
   else if (row.hosting === 'included') next = 'provision_site';
   else if (row.domain) next = 'connect_site';
   return {
@@ -184,6 +213,7 @@ function view(row, launchWebsite) {
     revision: row.revision,
     site,
     managedSite: hosted,
+    ...(domainSetup ? { domainSetup } : {}),
     key,
     next,
   };
@@ -255,6 +285,13 @@ export function openProjects(filename, { now = Date.now, launchWebsite = 'https:
       reserved_at INTEGER,
       hold_until INTEGER NOT NULL DEFAULT 0,
       CHECK(status = 'queued' OR setup_domain IS NOT NULL)
+    ) STRICT;
+    CREATE TABLE IF NOT EXISTS project_domain_setup (
+      project_id TEXT PRIMARY KEY REFERENCES projects(id),
+      registered_domain TEXT UNIQUE,
+      dns_challenge TEXT,
+      dns_expires_at INTEGER,
+      owner_verified_at INTEGER
     ) STRICT;
     CREATE TABLE IF NOT EXISTS project_sites (
       project_id TEXT PRIMARY KEY REFERENCES projects(id),
@@ -368,10 +405,13 @@ export function openProjects(filename, { now = Date.now, launchWebsite = 'https:
   const ownerOfProject = db.prepare('SELECT account_id FROM projects WHERE id = ?');
   const projection = 'SELECT p.*, s.site_url, s.core_version, s.wordpress_version, s.verified_at, '
     + 'm.status AS managed_status, m.setup_domain, '
+    + "json_extract(o.details, '$.domain.mode') AS domain_mode, "
+    + 'd.registered_domain, d.dns_challenge, d.dns_expires_at, d.owner_verified_at, '
     + 'k.project_id AS key_project_id, k.state AS key_state, k.sender AS key_sender, k.site_authenticated AS key_site_authenticated, '
     + 'k.manage_url AS key_manage_url, k.pairing_pending AS key_pairing_pending, '
     + 'a.name AS agency_name, a.website AS agency_website FROM projects p '
     + 'LEFT JOIN project_sites s ON p.id = s.project_id LEFT JOIN managed_sites m ON p.id = m.project_id '
+    + 'LEFT JOIN project_client_orders o ON p.id = o.project_id LEFT JOIN project_domain_setup d ON p.id = d.project_id '
     + 'LEFT JOIN project_key_links k ON p.id = k.project_id LEFT JOIN agency_spaces a ON p.account_id = a.account_id';
   const owned = db.prepare(projection + ' WHERE p.id = ? AND p.account_id = ?');
   const list = db.prepare(projection + ' WHERE p.account_id = ? ORDER BY p.rowid');
@@ -401,6 +441,8 @@ export function openProjects(filename, { now = Date.now, launchWebsite = 'https:
   );
   const newClientDomain = db.prepare("UPDATE projects SET domain = ?, hosting = 'included' WHERE id = ?");
   const clientOrderByProject = db.prepare('SELECT details, referral_id FROM project_client_orders WHERE project_id = ?');
+  const ownedDomainByAccount = db.prepare("SELECT 1 FROM project_client_orders o JOIN projects p ON o.project_id = p.id "
+    + "WHERE p.account_id = ? AND json_extract(o.details, '$.domain.mode') = 'owned' LIMIT 1");
   const clientOrderByPayment = db.prepare('SELECT project_id FROM project_client_orders WHERE payment_id = ?');
   const clientOrderByReferral = db.prepare('SELECT project_id FROM project_client_orders WHERE referral_id = ?');
   const insertClientOrder = db.prepare(
@@ -453,7 +495,7 @@ export function openProjects(filename, { now = Date.now, launchWebsite = 'https:
     return { row, domain };
   }
 
-  const managedJob = db.prepare('SELECT status, setup_domain AS domain, reserved_at AS reservedAt FROM managed_sites WHERE project_id = ?');
+  const managedJob = db.prepare('SELECT status, setup_domain AS domain, reserved_at AS reservedAt, hold_until AS holdUntil FROM managed_sites WHERE project_id = ?');
   const addManaged = db.prepare('INSERT INTO managed_sites(project_id, status) VALUES (?, ?) ON CONFLICT(project_id) DO NOTHING');
   const reserveManaged = db.prepare(
     "UPDATE managed_sites SET setup_domain = ?, reserved_at = ? WHERE project_id = ? AND setup_domain IS NULL",
@@ -464,6 +506,17 @@ export function openProjects(filename, { now = Date.now, launchWebsite = 'https:
   const updateManaged = db.prepare(
     "UPDATE managed_sites SET status = ? WHERE project_id = ? AND status NOT IN ('ready', 'needs_attention')",
   );
+  const assignRegisteredDomain = db.prepare(
+    'INSERT INTO project_domain_setup(project_id, registered_domain) VALUES (?, ?) ON CONFLICT DO NOTHING',
+  );
+  const saveDomainChallenge = db.prepare(
+    'INSERT INTO project_domain_setup(project_id, dns_challenge, dns_expires_at) VALUES (?, ?, ?) '
+    + 'ON CONFLICT(project_id) DO UPDATE SET dns_challenge = excluded.dns_challenge, dns_expires_at = excluded.dns_expires_at',
+  );
+  const verifyDomainChallenge = db.prepare(
+    'UPDATE project_domain_setup SET owner_verified_at = ?, dns_challenge = NULL, dns_expires_at = NULL '
+    + 'WHERE project_id = ? AND dns_challenge = ? AND dns_expires_at > ?',
+  );
 
   function requireManagedTarget(accountId, { projectId, revision }) {
     const row = owned.get(projectId, accountId);
@@ -473,6 +526,14 @@ export function openProjects(filename, { now = Date.now, launchWebsite = 'https:
     }
     if (!row.domain || row.hosting !== 'included' || !row.hosting_included) {
       throw new StartError(409, 'hosting_unavailable', 'Choose the hosting included with your plan first.');
+    }
+    return row;
+  }
+
+  function requireOwnedDomain(accountId, details) {
+    const row = requireManagedTarget(accountId, details);
+    if (row.domain_mode !== 'owned') {
+      throw new StartError(409, 'owned_domain_required', 'Use DNS verification for a domain you brought to Kiwe.');
     }
     return row;
   }
@@ -527,7 +588,7 @@ export function openProjects(filename, { now = Date.now, launchWebsite = 'https:
     return agencyState(accountId);
   }
 
-  const projectView = (row) => view(row, launchWebsite);
+  const projectView = (row) => view(row, launchWebsite, now());
 
   function requireKeyTarget(accountId, { projectId, revision }) {
     const row = owned.get(projectId, accountId);
@@ -732,6 +793,48 @@ export function openProjects(filename, { now = Date.now, launchWebsite = 'https:
       const ready = row.hosting === 'included' && row.managed_status === 'ready'
         && row.site_url === 'https://' + row.setup_domain;
       return { projectId: row.id, readyAt: ready ? Math.floor(Date.parse(row.verified_at) / 1000) : null };
+    },
+
+    confirmDomainRegistration(input) {
+      const { entitlementId, accountId, purchaseId, domain } = parse(domainRegistrationInput, input);
+      return transaction(() => {
+        const order = byEntitlement.get(entitlementId);
+        if (!order || order.account_id !== accountId || order.purchase_id !== purchaseId) throw missingProject();
+        const row = owned.get(order.id, accountId);
+        if (row.domain_mode !== 'register' || row.domain !== domain) {
+          throw new StartError(409, 'registration_mismatch', 'The registration must match the paid domain order.');
+        }
+        if (!row.registered_domain && !assignRegisteredDomain.run(row.id, domain).changes) {
+          throw new StartError(409, 'domain_claimed', 'The registered domain is already assigned to another project.');
+        }
+        return { projectId: row.id };
+      });
+    },
+
+    canVerifyDomain(accountId) {
+      return Boolean(ownedDomainByAccount.get(accountId));
+    },
+
+    ownedDomainProof(accountId, details, prepare = false) {
+      return transaction(() => {
+        const row = requireOwnedDomain(accountId, details);
+        const time = now();
+        if (prepare && row.owner_verified_at === null && !(row.dns_expires_at > time)) {
+          saveDomainChallenge.run(row.id, 'kiwe-site=' + randomBytes(24).toString('base64url'), time + 48 * 60 * 60 * 1000);
+        }
+        return projectView(owned.get(row.id, accountId));
+      });
+    },
+
+    confirmOwnedDomain(accountId, details, proof) {
+      return transaction(() => {
+        const row = requireOwnedDomain(accountId, details);
+        const time = now();
+        if (row.owner_verified_at === null && !verifyDomainChallenge.run(time, row.id, proof, time).changes) {
+          throw new StartError(409, 'domain_proof_expired', 'Create a new DNS verification record and try again.');
+        }
+        return projectView(owned.get(row.id, accountId));
+      });
     },
 
     redeemHandoff(input) {
@@ -971,14 +1074,20 @@ export function openProjects(filename, { now = Date.now, launchWebsite = 'https:
     prepareManagedSite(accountId, details) {
       return transaction(() => {
         const row = requireManagedTarget(accountId, details);
+        if (row.domain_mode === 'register' && !row.setup_domain && !row.registered_domain) {
+          throw new StartError(409, 'registration_pending', 'Hosting opens after Hostinger confirms your domain registration.');
+        }
         addManaged.run(row.id, 'queued');
-        return managedJob.get(row.id);
+        return { ...managedJob.get(row.id), registeredDomain: row.registered_domain };
       });
     },
 
     reserveManagedSite(accountId, details, domain) {
       return transaction(() => {
         const row = requireManagedTarget(accountId, details);
+        if (row.domain_mode === 'register' && !row.setup_domain && domain !== row.registered_domain) {
+          throw new StartError(409, 'registration_mismatch', 'Assign hosting to the confirmed domain.');
+        }
         reserveManaged.run(domain, now(), row.id);
         return managedJob.get(row.id);
       });

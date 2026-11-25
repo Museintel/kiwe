@@ -185,7 +185,7 @@ test('the paid order fixes the referral price, domain eligibility and project ow
   const state = await client.callTool({ name: 'kiwe_start_project', arguments: { projectId } });
   assert.equal(state.structuredContent.project.domain, 'client-bakery.in');
   assert.equal(state.structuredContent.project.hosting, 'included');
-  assert.equal(state.structuredContent.project.next, 'provision_site');
+  assert.equal(state.structuredContent.project.next, 'register_domain');
   assert.doesNotMatch(JSON.stringify(state.structuredContent), /referral-one/);
   const partner = await f.connect('partner-one');
   assert.equal((await partner.callTool({ name: 'kiwe_start_project', arguments: { projectId } })).isError, true);

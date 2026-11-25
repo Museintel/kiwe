@@ -56,7 +56,8 @@ file_put_contents($gatewayFile, '{"links":{},"payments":{},"subscriptions":{}}')
 $charges = 0;
 $readyAt = null;
 $fixtureProject = '00000000-1221-4111-8111-000000000001';
-$startCallback = static function (string $action, array $data) use ($buyer, $draft, $fixtureProject, &$readyAt, &$charges): array {
+$domainConfirmation = null;
+$startCallback = static function (string $action, array $data) use ($buyer, $draft, $fixtureProject, &$readyAt, &$charges, &$domainConfirmation): array {
     kiwe_checkout_expect($data['accountId'] === $buyer['id'], 'Start keeps the verified account ID.');
     if ($action === 'purchases') {
         kiwe_checkout_expect($data['clientOrder']['paidMinor'] === $draft['quote']['upfrontMinor'], 'Start receives the paid quote.');
@@ -64,6 +65,10 @@ $startCallback = static function (string $action, array $data) use ($buyer, $dra
         return ['projectId' => $fixtureProject];
     }
     if ($action === 'purchase-delivery') return ['projectId' => $fixtureProject, 'readyAt' => $readyAt];
+    if ($action === 'domain-registration') {
+        $domainConfirmation = $data;
+        return ['projectId' => $fixtureProject];
+    }
     return ['ticket' => str_repeat('a', 43), 'action' => 'http://127.0.0.1:8598/projects/open'];
 };
 $secret = 'Kiwe checkout isolated webhook fixture secret';
@@ -94,6 +99,58 @@ $gateway['links'][$linkId]['status'] = 'paid';
 $gateway['links'][$linkId]['amount_paid'] = $payment['amount'];
 $gateway['links'][$linkId]['order_id'] = $payment['order_id'];
 file_put_contents($gatewayFile, json_encode($gateway, JSON_THROW_ON_ERROR));
+
+$registrarCalls = 0;
+$chargeAttempts = 0;
+$registered = false;
+$contact = 451;
+$activeOwner = $contact;
+$verifiedContact = false;
+$registrarFixture = static function (string $method, string $path, array $body, bool $allowMissing) use (
+    $buyer, $contact, &$registered, &$activeOwner, &$verifiedContact, &$chargeAttempts, &$registrarCalls
+): array {
+    $registrarCalls++;
+    if ($method === 'GET' && str_starts_with($path, '/domains/v1/whois/')) {
+        $id = (int) basename($path);
+        return ['data' => ['id' => $id, 'tld' => 'in',
+            'whois_details' => ['email' => $id === $contact ? $buyer['email'] : 'different-owner@example.invalid']]];
+    }
+    if ($method === 'GET' && $path === '/domains/v1/portfolio') return [];
+    if ($method === 'GET' && $path === '/billing/v1/catalog?category=DOMAIN&name=.IN%2A') {
+        return [['name' => '.IN Domain', 'category' => 'DOMAIN', 'prices' => [
+            ['id' => 'fixture-inr-1y', 'currency' => 'INR', 'period' => 1, 'period_unit' => 'year',
+                'price' => 89900, 'first_period_price' => 54900],
+        ]]];
+    }
+    if ($method === 'POST' && $path === '/domains/v1/portfolio') {
+        $chargeAttempts++;
+        kiwe_checkout_expect($body === [
+            'domain' => 'eligible.in', 'item_id' => 'fixture-inr-1y', 'payment_method_id' => 123,
+            'domain_contacts' => ['owner_id' => $contact, 'admin_id' => $contact, 'billing_id' => $contact, 'tech_id' => $contact],
+        ], 'Send the approved domain, exact catalogue item and matched WHOIS contact.');
+        throw new RuntimeException('Synthetic loss of the purchase response.');
+    }
+    if ($method === 'GET' && $path === '/domains/v1/portfolio/eligible.in' && $allowMissing) {
+        return $registered ? ['domain' => 'eligible.in', 'status' => 'Active',
+            'registered_at' => gmdate(DATE_ATOM), 'expires_at' => gmdate(DATE_ATOM, time() + 3600),
+            'domain_contacts' => ['owner_id' => $activeOwner],
+            'contact_verification' => ['email' => ['status' => $verifiedContact ? 'verified' : 'pending']]] : [];
+    }
+    throw new RuntimeException('Unexpected provider operation.');
+};
+$registrar = new KiweRegistration($registrarFixture, 123, 55000, 90000);
+$rejectDomain = static function (Closure $request, int $status, string $check): void {
+    try {
+        $request();
+    } catch (KiweCheckoutError $error) {
+        kiwe_checkout_expect($error->status === $status, $check);
+        return;
+    }
+    throw new RuntimeException($check);
+};
+$purchaseId = $billing->status($buyer['id'])['id'];
+$rejectDomain(fn () => $billing->registerDomain($registrar, $purchaseId, 'eligible.in', $contact), 409, 'Unconfirmed purchase is denied.');
+kiwe_checkout_expect($registrarCalls === 0, 'Unconfirmed purchases do not reach Hostinger.');
 $event = json_encode(['account_id' => 'acc_KiweTestFixture', 'event' => 'payment_link.paid', 'created_at' => time(), 'payload' => [
     'payment_link' => ['entity' => $gateway['links'][$linkId]], 'payment' => ['entity' => $payment],
 ]], JSON_THROW_ON_ERROR);
@@ -102,6 +159,32 @@ $delivery = $billing->deliverPending();
 kiwe_checkout_expect($delivery === ['delivered' => 1, 'retry' => 0, 'errors' => []], 'One payment receives a Start project.');
 $billingState = $billing->status($buyer['id']);
 kiwe_checkout_expect($charges === 1 && strlen($billing->handoff($buyer['id'])['ticket']) === 43, 'Start handoff reuses the receipt.');
+$rejectDomain(fn () => $billing->registerDomain($registrar, $purchaseId, 'different.in', $contact), 409, 'Wrong paid domain is denied.');
+$rejectDomain(fn () => $billing->registerDomain($registrar, $purchaseId, 'eligible.in', $contact + 1), 409, 'Wrong owner contact is denied.');
+$belowBudget = new KiweRegistration($registrarFixture, 123, 54000, 90000);
+$rejectDomain(fn () => $billing->registerDomain($belowBudget, $purchaseId, 'eligible.in', $contact), 409, 'Above-budget domain is denied.');
+$gateway['payments'][$payment['id']]['amount_refunded'] = 1;
+file_put_contents($gatewayFile, json_encode($gateway, JSON_THROW_ON_ERROR));
+$rejectDomain(fn () => $billing->registerDomain($registrar, $purchaseId, 'eligible.in', $contact), 409, 'Provider refund blocks a registration.');
+$gateway['payments'][$payment['id']]['amount_refunded'] = 0;
+file_put_contents($gatewayFile, json_encode($gateway, JSON_THROW_ON_ERROR));
+kiwe_checkout_expect($chargeAttempts === 0, 'No ineligible request reached the purchase endpoint.');
+$rejectDomain(fn () => $billing->registerDomain($registrar, $purchaseId, 'eligible.in', $contact), 503, 'A lost reply keeps the purchase claim.');
+kiwe_checkout_expect($billing->registerDomain($registrar, $purchaseId, 'eligible.in', $contact)['state'] === 'awaiting_registration'
+    && $chargeAttempts === 1, 'Retrying a claimed purchase polls the original domain and never purchases again.');
+$registered = true;
+$activeOwner = $contact + 1;
+$rejectDomain(fn () => $billing->reconcileDomain($registrar, $purchaseId, 'eligible.in'), 409, 'A different registrar owner cannot confirm this order.');
+$activeOwner = $contact;
+kiwe_checkout_expect($billing->reconcileDomain($registrar, $purchaseId, 'eligible.in')['state'] === 'awaiting_registration'
+    && $domainConfirmation === null, 'Owner verification remains pending.');
+$verifiedContact = true;
+kiwe_checkout_expect($billing->reconcileDomain($registrar, $purchaseId, 'eligible.in')['state'] === 'registered'
+    && $domainConfirmation === ['entitlementId' => $purchaseId, 'accountId' => $buyer['id'], 'purchaseId' => $payment['id'],
+        'domain' => 'eligible.in'], 'An active, matched registration delivers only the facts needed by Start.');
+$callsAtCompletion = $registrarCalls;
+kiwe_checkout_expect($billing->reconcileDomain($registrar, $purchaseId, 'eligible.in')['state'] === 'registered'
+    && $registrarCalls === $callsAtCompletion, 'Completed registrations are durable.');
 $billing->renew($buyer['id'], '127.0.0.1', $draft['quote']['renewalMinor'], $billingState['firstTermEnd'], 120);
 $renewal = $billing->status($buyer['id'])['mandate'];
 kiwe_checkout_expect($renewal['startsAt'] === $billingState['firstTermEnd'] && $renewal['status'] === 'created',

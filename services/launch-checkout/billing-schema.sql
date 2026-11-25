@@ -18,6 +18,14 @@ CREATE TABLE IF NOT EXISTS launch_payments (
 ) STRICT;
 CREATE UNIQUE INDEX IF NOT EXISTS launch_one_open_payment ON launch_payments(account_id) WHERE retired_at IS NULL;
 
+CREATE TABLE IF NOT EXISTS launch_domain_orders (
+    purchase_id TEXT PRIMARY KEY REFERENCES launch_payments(id),
+    domain TEXT NOT NULL UNIQUE,
+    contact_id INTEGER NOT NULL CHECK(contact_id > 0),
+    requested_at INTEGER NOT NULL,
+    completed_at INTEGER
+) STRICT;
+
 CREATE TABLE IF NOT EXISTS launch_renewal_mandates (
     id TEXT PRIMARY KEY,
     purchase_id TEXT NOT NULL REFERENCES launch_payments(id),

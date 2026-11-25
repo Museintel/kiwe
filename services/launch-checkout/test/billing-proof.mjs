@@ -26,8 +26,9 @@ export async function startForCheckout(checkoutOrigin) {
   return {
     origin, purchaseToken, projects, pilotAccount,
     confirmManagedSite(accountId, projectId, readyAt) {
-      const target = { projectId, revision: projects.getProject(accountId, { projectId }).revision };
-      const domain = 'partner-fixture.example.invalid';
+      const project = projects.getProject(accountId, { projectId });
+      const target = { projectId, revision: project.revision };
+      const domain = project.domainSetup?.status === 'registered' ? project.domain : 'partner-fixture.example.invalid';
       fixtureTime = readyAt * 1000;
       try {
         projects.prepareManagedSite(accountId, target);
