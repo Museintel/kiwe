@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "version": "8.0.0-rc.498",
+  "version": "8.0.0-rc.499",
   "algorithm": "sha256",
   "file_count": 1038,
   "files": {
@@ -514,7 +514,7 @@
     },
     "dsa.php": {
       "bytes": 4536,
-      "sha256": "75c08906b7c80e7a7690d29d68d41f080f861e4a21f4186ccd4b348d93b4c84d"
+      "sha256": "858afbe9d8b14698308cbc3d2ba53c7abfcc9f61721f7295a7fd9f3ea6d95411"
     },
     "framework-system/HANDOFF-LITE.md": {
       "bytes": 4119,
@@ -2341,8 +2341,8 @@
       "sha256": "b40620d5f4139d82580f0966927afa3ea7dfb7e9a8288dcd88fc1343383b590f"
     },
     "includes/Secure/SecureTrack_Lifecycle_Service.php": {
-      "bytes": 22647,
-      "sha256": "c001322cdfd59404a126bc7634ad4fe77ce2d5d97c8d3329b5a13af29a1fdb52"
+      "bytes": 23410,
+      "sha256": "c90e868dd362f108785cf65d9ecbb4c768a7e66cea37de9964c60c7772cd11c4"
     },
     "includes/Secure/SecureTrack_Loader.php": {
       "bytes": 3820,

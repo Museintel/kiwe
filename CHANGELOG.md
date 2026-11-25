@@ -1,3 +1,7 @@
+## 8.0.0-rc.499 (2026-11-25, candidate)
+
+- Use an existing event session index to check protected incidents before retiring old page history. Preserve those pages when the lookup index is unavailable so other retention work can continue.
+
 ## 8.0.0-rc.498 (2026-11-24, candidate)
 
 - Preserve native WooCommerce order payment permissions when Kiwe ownership is active.

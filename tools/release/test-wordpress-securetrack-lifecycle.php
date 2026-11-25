@@ -29,6 +29,7 @@ function kiwe_test_securetrack_lifecycle(callable $assert,array &$observations):
         delete_option('stp_schema_maintenance');
         $assert(DSA\Secure\SecureTrack_Db_Service::repair_database(),'Explicit native lifecycle upgrade accepts an equivalent legacy index');
         $assert(DSA\Secure\SecureTrack_Db_Service::index_exists('alerts','idx_fixture_legacy_event')&&!DSA\Secure\SecureTrack_Db_Service::index_exists('alerts','idx_stp_alert_event'),'Native maintenance preserves the legacy index without a duplicate');
+        $assert($wpdb->query('ALTER TABLE '.$t('events').' RENAME INDEX idx_session TO idx_fixture_legacy_session')!==false,'Own fixture can use a legacy session index name');
         $stored=get_option('stp_settings');$stored['lifecycle_enabled']=0;$stored['inactive_state_days']=0;
         update_option('stp_settings',$life::preserve_settings(['green_trim_days'=>31],$stored),false);
         $assert($life::policy()['lifecycle_enabled']===0&&$life::policy()['inactive_state_days']===0&&$life::policy()['green_trim_days']===31,'A native legacy-form save preserves disabled/zero lifecycle choices and accepts the visible choice');
@@ -112,6 +113,10 @@ function kiwe_test_securetrack_lifecycle(callable $assert,array &$observations):
         $assert($race&&$exists('events',$eid),'A new native incident reference is rechecked before an eligible event can retire');
         // Refuse busy ownership, query failure, statement timeout, timezone drift and retry storms.
         $reset();$pid=$page();$lock='kiwe_stp_cleanup_'.substr(hash('sha256',$wpdb->dbname.':'.$wpdb->prefix),0,40);$wpdb->get_var($wpdb->prepare('SELECT GET_LOCK(%s,0)',$lock));$r=$maintain();$wpdb->get_var($wpdb->prepare('SELECT RELEASE_LOCK(%s)',$lock));$assert($r['status']==='busy'&&$exists('pages',$pid),'Busy ownership performs no history mutation');
+        // Keep page history when its incident lookup has no usable leading session index.
+        $noIndex=static function($q)use($t){return str_starts_with($q,'SHOW INDEX FROM '.$t('events').' WHERE Column_name=')?'SELECT 1 WHERE 1=0':$q;};
+        add_filter('query',$noIndex,PHP_INT_MAX);$r=$maintain();remove_filter('query',$noIndex,PHP_INT_MAX);
+        $assert($r['status']==='current'&&$r['refused']>0&&$exists('pages',$pid),'A missing event session index preserves page history without aborting other cleanup');
         $fault=static fn($q)=>str_starts_with($q,'DELETE FROM '.stp_t('pages'))?'DELETE FROM '.stp_t('pages').' WHERE synthetic_missing_column=1':$q;add_filter('query',$fault,PHP_INT_MAX);$r=$maintain();remove_filter('query',$fault,PHP_INT_MAX);$fault=null;
         $assert($r['status']==='error'&&$exists('pages',$pid),'A native write failure rolls back disposal and cursors');$assert($maintain()['status']==='backoff','A failed native pass backs off before scanning history again');
         $wpdb->query('UPDATE '.$t('lifecycle_state').' SET next_at=0 WHERE id=1');$assert($maintain()['status']==='current'&&!$exists('pages',$pid),'A later owner resumes and retires the same source exactly once');

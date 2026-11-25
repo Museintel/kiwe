@@ -189,11 +189,21 @@ final class SecureTrack_Lifecycle_Service {
                 if(!$ids)continue;$list=implode(',',$ids);$guard='';
                 // Lock referenced parents before child deletion. Their risk/activity can change concurrently.
                 if($name==='pages'){
+                    // A correlated DELETE can otherwise scan the whole event ledger for each page.
+                    $sessionIndex = '';
+                    $indexes = $run('SHOW INDEX FROM ' . $t('events') . " WHERE Column_name='session_id' AND Seq_in_index=1 AND Index_type='BTREE' AND Sub_part IS NULL", 'get_results');
+                    foreach ($indexes as $index) {
+                        if (($index['Ignored'] ?? 'NO') === 'NO' && preg_match('/^[A-Za-z0-9_]+$/D', $index['Key_name'])) {
+                            $sessionIndex = $index['Key_name'];
+                            break;
+                        }
+                    }
+                    if ($sessionIndex === '') { $refused += count($ids); continue; }
                     $parents=$run('SELECT id,flag_status,last_activity,retention_hold,report_pending FROM '.$t('sessions')." WHERE id IN (SELECT session_id FROM ".$t('pages')." WHERE id IN ({$list})) FOR UPDATE",'get_results');
                     $blocked=[];foreach($parents as$p)if($p['flag_status']==='red'||(int)$p['retention_hold']||(int)$p['report_pending']||!self::old_clock($p['last_activity'],$policy['page_trim_days']))$blocked[]=(int)$p['id'];
                     if($blocked)$guard.=' AND session_id NOT IN ('.implode(',',$blocked).')';
                     $guard.=' AND report_pending=0 AND retention_hold=0';
-                    $guard.=' AND NOT EXISTS (SELECT 1 FROM '.$t('events').' e WHERE e.session_id='.$t('pages').".session_id AND (e.flag_status='red' OR e.retention_hold<>0 OR (e.flag_status='yellow' AND e.reviewed=0)))";
+                    $guard.=' AND NOT EXISTS (SELECT 1 FROM '.$t('events')." e FORCE INDEX ({$sessionIndex}) WHERE e.session_id=".$t('pages').".session_id AND (e.flag_status='red' OR e.retention_hold<>0 OR (e.flag_status='yellow' AND e.reviewed=0)))";
                 }
                 if($name==='events'){
                     $run('SELECT id FROM '.$t('ai_queue')." WHERE event_id IN ({$list}) AND status IN ('pending','processing') LIMIT 200 FOR UPDATE",'get_col');
