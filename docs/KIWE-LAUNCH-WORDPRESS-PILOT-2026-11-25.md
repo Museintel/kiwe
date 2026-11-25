@@ -4,7 +4,7 @@
 
 The Kiwe Launch homepage, header and footer imported as editable Bricks content on isolated WordPress 7.1.5. The first rehearsal used Bricks 2.5-beta. The final package was imported with the licensed Bricks 2.4.5 build read from Hostinger's Plum Giraffe lab. Hosted checkout qualification and public cutover are pending.
 
-The audited Framework ZIP is 3,438,199 bytes and has SHA-256 **2C22BFBC9896CB71D012941038914689BABCE0E834ED27140358DFB291D63473**. [Kiwe checkout candidate](https://github.com/Museintel/kiwe-ecosystem/commit/15d8a372e9d875a26acb65fb371e59e2ba7b943e) · [Seam compiler candidate](https://github.com/Museintel/seam-compiler/commit/1a2d9847e97f1274cc374b3a756aeb9288cccd9c)
+The audited Framework ZIP is 3,438,199 bytes and has SHA-256 **2C22BFBC9896CB71D012941038914689BABCE0E834ED27140358DFB291D63473**. [Kiwe checkout candidate](https://github.com/Museintel/kiwe-ecosystem/commit/064df4ee1c75354387ceae1be8a5241c81870df5) · [Seam compiler revision used for the ZIP](https://github.com/Museintel/seam-compiler/commit/1a2d9847e97f1274cc374b3a756aeb9288cccd9c)
 
 ## Prepare the homepage
 
@@ -15,6 +15,8 @@ The audited Framework ZIP is 3,438,199 bytes and has SHA-256 **2C22BFBC9896CB71D
 The Framework audit and the authorized local import passed with three templates. The hero uses eager WordPress Media for the Dharwad Pedha screenshots and raster partner logos. The Bricks HTML elements for the mobile menu and demo form keep their authored markup. The carousel and form script use data attributes that survive conversion. The demo control posts the original fields to the existing intake route and starts with consent unchecked.
 
 The front page rendered 187 Bricks elements. Both hero screenshots and all five partner logos loaded at nine viewport sizes from 360 × 640 to 1,440 × 970 with JavaScript disabled. In the standard browser run, the carousel paused and resumed and the demo form handled both a rejected response and a successful retry through synthetic intake responses.
+
+The matching local checkout opened the address sheet on the first tap, preserved the native fields through a stalled or failed request, and recorded a ₹199 cash-on-delivery test order with processing status. The address link also reached the native checkout form with JavaScript disabled.
 
 ## Rehearse on Hostinger
 
