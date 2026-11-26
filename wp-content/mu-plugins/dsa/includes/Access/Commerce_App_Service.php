@@ -205,6 +205,29 @@ final class Commerce_App_Service {
 		if('GET'!==$request->get_method()||!$this->permission($request))return $this->response($this->error('forbidden','Coupon editing is unavailable.',403));
 		return $this->response($this->coupon_record(Task_Workspace_UI::id($request->get_url_params()['id']??0)));
 	}
+	public function save_coupon_checkout_record( int $id, array $input ) {
+		$before = $this->coupon_record( $id );
+		if ( is_wp_error( $before ) ) return $before;
+		if ( ! $before['editable'] ) return $this->error( 'coupon_managed', 'This coupon is read-only in Kiwe.', 403 );
+		if ( ! is_string( $input['expected'] ?? null ) || ! hash_equals( $before['expected'], $input['expected'] ) ) {
+			return $this->error( 'stale', 'The coupon changed. Reload and review.', 409 );
+		}
+		if ( ! is_bool( $input['checkoutListed'] ?? null ) || ! is_int( $input['membershipProductId'] ?? null ) || $input['membershipProductId'] < 0 ) {
+			return $this->error( 'coupon_input', 'Choose the listing setting and a membership product ID or zero.' );
+		}
+		try {
+			\DSA\Commerce\Checkout_Offers::set_settings( new \WC_Coupon( $id ), $input['checkoutListed'], $input['membershipProductId'] );
+		} catch ( \DomainException $error ) {
+			return $this->error( 'coupon_input', $error->getMessage() );
+		}
+		$after = $this->coupon_record( $id );
+		if ( is_wp_error( $after ) ) return $after;
+		if ( $after['checkoutListed'] !== $input['checkoutListed'] || $after['membershipProductId'] !== $input['membershipProductId'] ) {
+			return $this->error( 'coupon_readback', 'The saved checkout offer differs. Reload and review.', 409 );
+		}
+		return $after;
+	}
+
 	public function save_coupon( \WP_REST_Request $request ): \WP_REST_Response {
 		if('POST'!==$request->get_method()||!$this->permission($request))return $this->response($this->error('forbidden','Coupon editing is unavailable.',403));
 		$body=$request->get_json_params();return $this->response($this->save_coupon_record(Task_Workspace_UI::id($request->get_url_params()['id']??0),is_array($body)?$body:[]));
@@ -214,13 +237,14 @@ final class Commerce_App_Service {
 		$post=get_post($id);if(!$post||'shop_coupon'!==$post->post_type||!in_array($post->post_status,['publish','draft','private'],true))return $this->error('coupon','Choose an existing saved coupon.',404);
 		try{$coupon=new \WC_Coupon($id);}catch(\Throwable $e){return $this->error('coupon','This coupon could not be read.',409);}
 		if((int)$coupon->get_id()!==$id)return $this->error('coupon','The coupon record could not be confirmed.',409);
-		$custom=[];foreach($coupon->get_meta_data()as$meta){$data=$meta->get_data();if(!in_array($data['key'],['_edit_lock','_edit_last'],true))$custom[]=$data;}
+		$custom=[];foreach($coupon->get_meta_data()as$meta){$data=$meta->get_data();if(!in_array($data['key'],['_edit_lock','_edit_last',\DSA\Commerce\Checkout_Offers::LISTED,\DSA\Commerce\Checkout_Offers::MEMBER],true))$custom[]=$data;}
 		$type=(string)$coupon->get_discount_type('edit');$code=(string)$coupon->get_code('edit');
 		$editable=!$coupon->get_virtual('edit')&&!str_starts_with(strtolower($code),'kiwe-')&&!$custom&&in_array($type,['percent','fixed_cart','fixed_product'],true);
 		$expiry=$coupon->get_date_expires('edit');
 		$constraints=['productIds'=>$coupon->get_product_ids('edit'),'excludedProductIds'=>$coupon->get_excluded_product_ids('edit'),'categoryIds'=>$coupon->get_product_categories('edit'),'excludedCategoryIds'=>$coupon->get_excluded_product_categories('edit'),'emailRestrictions'=>$coupon->get_email_restrictions('edit')];
 		$out=['id'=>$id,'name'=>$code,'type'=>$type,'amount'=>(string)$coupon->get_amount('edit'),'description'=>(string)$coupon->get_description('edit'),'status'=>$post->post_status,'currency'=>(string)get_option('woocommerce_currency',''),'expiresAt'=>$expiry?$expiry->getTimestamp():null,'usageCount'=>(int)$coupon->get_usage_count('edit'),'usageLimit'=>(int)$coupon->get_usage_limit('edit'),'perUserLimit'=>(int)$coupon->get_usage_limit_per_user('edit'),'itemLimit'=>$coupon->get_limit_usage_to_x_items('edit'),'individualUse'=>(bool)$coupon->get_individual_use('edit'),'freeShipping'=>(bool)$coupon->get_free_shipping('edit'),'excludeSaleItems'=>(bool)$coupon->get_exclude_sale_items('edit'),'minimum'=>(string)$coupon->get_minimum_amount('edit'),'maximum'=>(string)$coupon->get_maximum_amount('edit'),'restrictionCounts'=>array_map('count',$constraints),'editable'=>$editable,'reason'=>$editable?'':'This coupon uses automatic or extension rules. Ask your site designer to manage it.'];
 
+		$out += \DSA\Commerce\Checkout_Offers::settings( $coupon );
 		$out['expiresLocal']=$expiry?(new \DateTimeImmutable('@'.$expiry->getTimestamp()))->setTimezone(wp_timezone())->format('Y-m-d\TH:i:s'):'';
 		$out['timezone']=wp_timezone()->getName();$out['canPublish']=current_user_can('publish_shop_coupons');
 		$out['policyPreserved']=hash('sha256',wp_json_encode([$constraints,$custom,array_diff_key($out,array_flip(['status','expiresAt','expiresLocal','usageLimit','perUserLimit','minimum','maximum','individualUse','excludeSaleItems','freeShipping','itemLimit','usageCount','canPublish']))]));

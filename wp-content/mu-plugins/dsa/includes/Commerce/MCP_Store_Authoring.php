@@ -71,11 +71,12 @@ final class MCP_Store_Authoring {
   'shipping-class'=>['action','name'],
   'checkout'=>['operation','enabled','fields'],'display'=>['changes'],'offer-policy'=>['key','value'],
   'product-tax'=>['taxStatus','taxClass'],'coupon-create'=>['name','type','amount','description'],'coupon'=>['amount','description'],
+  'coupon-checkout'=>['checkoutListed','membershipProductId'],
   'coupon-policy'=>['freeShipping','itemLimit','status','maximum','minimum','expiresLocal','usageLimit','perUserLimit','individualUse','excludeSaleItems'],
   'business'=>['area','field','valueJson'],
   default=>throw new \RuntimeException('This Store authoring action is not implemented.'),
  };}
- private static function area(string $kind): string{return match($kind){'save','publish'=>'product','attribute'=>'attributes','attribute-value'=>'attribute-values','tax-setting'=>'tax','tax-class'=>'tax-classes','tax-rate-create'=>'tax-create','shipping-class'=>'shipping-classes','coupon','coupon-policy'=>'coupons',default=>$kind};}
+ private static function area(string $kind): string{return match($kind){'save','publish'=>'product','attribute'=>'attributes','attribute-value'=>'attribute-values','tax-setting'=>'tax','tax-class'=>'tax-classes','tax-rate-create'=>'tax-create','shipping-class'=>'shipping-classes','coupon','coupon-policy','coupon-checkout'=>'coupons',default=>$kind};}
  private static function initial(string $kind,array $a,array $f): array{
   if($kind==='create'){if(!self::kind_allowed($kind))throw new \RuntimeException('Your role cannot create products.');return['expected'=>Native::digest(['new-product',get_current_user_id()]),'status'=>'draft'];}
   if($kind==='coupon-create'){if(!current_user_can('edit_shop_coupons')||!current_user_can('edit_others_shop_coupons'))throw new \RuntimeException('Your role cannot create coupons.');return['expected'=>Native::digest(['new-coupon',get_current_user_id()]),'status'=>'draft'];}
@@ -132,6 +133,7 @@ final class MCP_Store_Authoring {
    'display'=>$p->save_display_policy_record($input),'offer-policy'=>$p->save_offer_policy_record($effect),
    'product-tax'=>$p->save_product_tax_record($id,$effect),
    'business'=>(new \DSA\Access\Continuity_App_Service())->change_field($f['area'],['path'=>$f['field'],'value'=>json_decode($f['valueJson'],true,16,JSON_THROW_ON_ERROR),'expected'=>$before['expected']]),
+   'coupon-checkout'=>$p->save_coupon_checkout_record($id,self::complete($before,$input,self::fields($kind))+['expected'=>$before['expected']]),
    'coupon-create'=>$p->create_coupon_record($f),'coupon'=>$p->save_coupon_record($id,self::complete($before,$input,self::fields($kind))),'coupon-policy'=>$p->save_coupon_policy_record($id,self::complete($before,$input,self::fields($kind))),
    default=>throw new \RuntimeException('This native Store action is not implemented.'),
   };

@@ -4187,7 +4187,7 @@
     },
     {
       "source": "wp-content/mu-plugins/dsa/includes/Commerce/Checkout_Experience_Service.php",
-      "sha256": "7faddb468de3b43786bbc338598979b27e8a850abd7ca3b777ec726cf34284ae",
+      "sha256": "ea51f617443e8453732dd547bd1b0b9ffd159ddfbd3bc086380bacbc67505cd0",
       "symbols": [
         {
           "kind": "method",
@@ -4262,42 +4262,42 @@
         {
           "kind": "method",
           "name": "address_text",
-          "line": 112
+          "line": 113
         },
         {
           "kind": "method",
           "name": "plain",
-          "line": 121
+          "line": 122
         },
         {
           "kind": "method",
           "name": "restore_shortcode_coupon",
-          "line": 125
+          "line": 126
         },
         {
           "kind": "hook",
           "name": "woocommerce_before_checkout_form",
-          "line": 129
+          "line": 130
         },
         {
           "kind": "method",
           "name": "assets",
-          "line": 133
+          "line": 134
         },
         {
           "kind": "method",
           "name": "body_classes",
-          "line": 145
+          "line": 146
         },
         {
           "kind": "method",
           "name": "address_summary",
-          "line": 150
+          "line": 151
         },
         {
           "kind": "method",
           "name": "payment_choices",
-          "line": 160
+          "line": 161
         }
       ]
     },
@@ -4314,6 +4314,162 @@
           "kind": "method",
           "name": "valid",
           "line": 19
+        }
+      ]
+    },
+    {
+      "source": "wp-content/mu-plugins/dsa/includes/Commerce/Checkout_Offers.php",
+      "sha256": "3e30a126b4908e5ba6dfc9704260dc07ffd17ae8bf522d1df22ddff41736637d",
+      "symbols": [
+        {
+          "kind": "metadata",
+          "name": "_kiwe_checkout_offer_listed",
+          "line": 11
+        },
+        {
+          "kind": "metadata",
+          "name": "_kiwe_checkout_offer_membership",
+          "line": 12
+        },
+        {
+          "kind": "method",
+          "name": "register",
+          "line": 15
+        },
+        {
+          "kind": "hook",
+          "name": "woocommerce_coupon_is_valid",
+          "line": 16
+        },
+        {
+          "kind": "hook",
+          "name": "woocommerce_before_calculate_totals",
+          "line": 17
+        },
+        {
+          "kind": "hook",
+          "name": "woocommerce_coupon_options",
+          "line": 18
+        },
+        {
+          "kind": "hook",
+          "name": "woocommerce_coupon_options_save",
+          "line": 19
+        },
+        {
+          "kind": "hook",
+          "name": "bricks/setup/control_options",
+          "line": 20
+        },
+        {
+          "kind": "hook",
+          "name": "bricks/query/run",
+          "line": 21
+        },
+        {
+          "kind": "hook",
+          "name": "bricks/query/loop_object_id",
+          "line": 22
+        },
+        {
+          "kind": "hook",
+          "name": "bricks/dynamic_tags_list",
+          "line": 23
+        },
+        {
+          "kind": "hook",
+          "name": "bricks/dynamic_data/render_tag",
+          "line": 24
+        },
+        {
+          "kind": "hook",
+          "name": "bricks/dynamic_data/render_content",
+          "line": 25
+        },
+        {
+          "kind": "method",
+          "name": "settings",
+          "line": 28
+        },
+        {
+          "kind": "method",
+          "name": "can_edit",
+          "line": 35
+        },
+        {
+          "kind": "method",
+          "name": "set_settings",
+          "line": 41
+        },
+        {
+          "kind": "method",
+          "name": "membership_product",
+          "line": 56
+        },
+        {
+          "kind": "method",
+          "name": "editor",
+          "line": 74
+        },
+        {
+          "kind": "method",
+          "name": "save_editor",
+          "line": 102
+        },
+        {
+          "kind": "method",
+          "name": "validate_membership",
+          "line": 113
+        },
+        {
+          "kind": "method",
+          "name": "apply_membership_offers",
+          "line": 119
+        },
+        {
+          "kind": "method",
+          "name": "coupon_ids",
+          "line": 145
+        },
+        {
+          "kind": "method",
+          "name": "listed",
+          "line": 153
+        },
+        {
+          "kind": "method",
+          "name": "review",
+          "line": 170
+        },
+        {
+          "kind": "method",
+          "name": "query_options",
+          "line": 199
+        },
+        {
+          "kind": "method",
+          "name": "run_query",
+          "line": 204
+        },
+        {
+          "kind": "method",
+          "name": "loop_id",
+          "line": 216
+        },
+        {
+          "kind": "method",
+          "name": "tags",
+          "line": 220
+        },
+        {
+          "kind": "method",
+          "name": "render_tag",
+          "line": 229
+        },
+        {
+          "kind": "method",
+          "name": "render_content",
+          "line": 242
         }
       ]
     },
@@ -5135,7 +5291,7 @@
     },
     {
       "source": "wp-content/mu-plugins/dsa/includes/Commerce/MCP_Store_Authoring.php",
-      "sha256": "cd22e56122eb250982682ffa9c29a87ae1fa8a32790da84770a1cb27f7d00555",
+      "sha256": "14c8a8ed3b116d6a1a1cc49e849a6b16d4407714e13b51141c8fc3390d4fa602",
       "symbols": [
         {
           "kind": "method",
@@ -5175,43 +5331,43 @@
         {
           "kind": "method",
           "name": "area",
-          "line": 78
-        },
-        {
-          "kind": "method",
-          "name": "initial",
           "line": 79
         },
         {
           "kind": "method",
+          "name": "initial",
+          "line": 80
+        },
+        {
+          "kind": "method",
           "name": "prepare",
-          "line": 89
+          "line": 90
         },
         {
           "kind": "method",
           "name": "complete",
-          "line": 107
-        },
-        {
-          "kind": "method",
-          "name": "apply",
           "line": 108
         },
         {
           "kind": "method",
+          "name": "apply",
+          "line": 109
+        },
+        {
+          "kind": "method",
           "name": "apply_native",
-          "line": 112
+          "line": 113
         },
         {
           "kind": "method",
           "name": "checkout",
-          "line": 144
+          "line": 146
         }
       ]
     },
     {
       "source": "wp-content/mu-plugins/dsa/includes/Commerce/MCP_Store_Provider.php",
-      "sha256": "9a4538074d044740def35694e3cf16a73a1a53e2fcaf57910537e4bb95624b2d",
+      "sha256": "f0bf0cfd95a46867a9e38b91dec7550161b8e334da1a017ad1a7ecaa949c27b4",
       "symbols": [
         {
           "kind": "method",
@@ -5464,57 +5620,72 @@
     },
     {
       "source": "wp-content/mu-plugins/dsa/includes/Commerce/Membership_Directory.php",
-      "sha256": "3f3a629a3b1b77de4fec0874cd0b2a5f04285109c22ef6d99df10093fabe1f54",
+      "sha256": "ae5933027c23f5877ba91d1df362f3256b9ee416a8d0fe7d91587238e51450c7",
       "symbols": [
         {
           "kind": "method",
           "name": "register",
-          "line": 13
+          "line": 14
+        },
+        {
+          "kind": "hook",
+          "name": "woocommerce_after_order_object_save",
+          "line": 16
         },
         {
           "kind": "method",
           "name": "can_list",
-          "line": 17
+          "line": 19
         },
         {
           "kind": "method",
           "name": "can_review",
-          "line": 24
+          "line": 26
         },
         {
           "kind": "method",
           "name": "notification_visible",
-          "line": 29
+          "line": 31
         },
         {
           "kind": "method",
           "name": "summary",
-          "line": 37
+          "line": 39
         },
         {
           "kind": "method",
           "name": "has_paid_access",
-          "line": 56
+          "line": 58
+        },
+        {
+          "kind": "method",
+          "name": "paid_product_ids",
+          "line": 64
+        },
+        {
+          "kind": "method",
+          "name": "paid_memberships",
+          "line": 77
         },
         {
           "kind": "method",
           "name": "record_payment",
-          "line": 80
+          "line": 101
         },
         {
           "kind": "method",
           "name": "notify_expiration",
-          "line": 104
+          "line": 125
         },
         {
           "kind": "method",
           "name": "notify",
-          "line": 112
+          "line": 133
         },
         {
           "kind": "method",
           "name": "plan_names",
-          "line": 141
+          "line": 162
         }
       ]
     },
@@ -8703,7 +8874,7 @@
     },
     {
       "source": "wp-content/mu-plugins/dsa/includes/Plugin.php",
-      "sha256": "cade5e14ca6e551ca83fa7f6934e1551a4dfceae2ef4eff6b971ada95438e457",
+      "sha256": "1745d1740a027c0ec8cce01ff08359450f899f5db3d9842361f926b12f22522d",
       "symbols": [
         {
           "kind": "method",
@@ -8918,42 +9089,42 @@
         {
           "kind": "hook",
           "name": "after_setup_theme",
-          "line": 434
+          "line": 435
         },
         {
           "kind": "method",
           "name": "cart_payload",
-          "line": 441
+          "line": 442
         },
         {
           "kind": "method",
           "name": "linked_products",
-          "line": 444
+          "line": 445
         },
         {
           "kind": "method",
           "name": "store_analytics",
-          "line": 447
+          "line": 448
         },
         {
           "kind": "method",
           "name": "abandoned_carts",
-          "line": 450
+          "line": 451
         },
         {
           "kind": "method",
           "name": "ai_broker",
-          "line": 459
+          "line": 460
         },
         {
           "kind": "method",
           "name": "modules",
-          "line": 463
+          "line": 464
         },
         {
           "kind": "method",
           "name": "registry",
-          "line": 467
+          "line": 468
         }
       ]
     },

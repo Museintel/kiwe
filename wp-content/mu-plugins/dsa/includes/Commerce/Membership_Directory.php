@@ -9,9 +9,11 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 /** Private account and notification projections over WooCommerce's verified receipts. */
 final class Membership_Directory {
 	private const EXPIRATION = 'kiwe_membership_term_ended';
+	private static array $paid_products = [];
 
 	public function register(): void {
 		add_action( self::EXPIRATION, [ self::class, 'notify_expiration' ], 10, 2 );
+		add_action( 'woocommerce_after_order_object_save', static function (): void { self::$paid_products = []; }, 10, 0 );
 	}
 
 	public static function can_list( int $actor ): bool {
@@ -54,8 +56,27 @@ final class Membership_Directory {
 	}
 
 	public static function has_paid_access( int $user_id ): bool {
+		foreach ( self::paid_memberships( $user_id ) as $membership ) return true;
+		return false;
+	}
+
+	/** Includes a paid variation and its parent so a store can reward either level. */
+	public static function paid_product_ids( int $user_id ): array {
+		if ( $user_id < 1 || Users::suspended( $user_id ) || Store_Recovery_Gate_Service::is_paused() ) return [];
+		if ( isset( self::$paid_products[$user_id] ) ) return self::$paid_products[$user_id];
+		$ids = [];
+		foreach ( self::paid_memberships( $user_id ) as $membership ) {
+			foreach ( $membership['products'] as $line ) {
+				$ids[(int) $line['productId']] = true;
+				if ( $line['variationId'] ) $ids[(int) $line['variationId']] = true;
+			}
+		}
+		return self::$paid_products[$user_id] = $ids;
+	}
+
+	private static function paid_memberships( int $user_id ): iterable {
 		if ( $user_id < 1 || ! Store_App_Service::enabled() || Store_Recovery_Gate_Service::is_paused()
-			|| ! get_user_meta( $user_id, Subscription_Renewal_Orders::JOINED, true ) ) return false;
+			|| ! get_user_meta( $user_id, Subscription_Renewal_Orders::JOINED, true ) ) return;
 		$now = time();
 		$checked = [];
 		$page = 1;
@@ -70,11 +91,11 @@ final class Membership_Directory {
 				$order = $id ? wc_get_order( $id ) : $receipt;
 				if ( ! $order || isset( $checked[ $order->get_id() ] ) ) continue;
 				$checked[ $order->get_id() ] = true;
-				if ( Subscription_Renewal_Orders::owned_by( $user_id, $order )
-					&& ! empty( Subscription_Renewal_Orders::paid_period( $order, $now )['active'] ) ) return true;
+				if ( ! Subscription_Renewal_Orders::owned_by( $user_id, $order ) ) continue;
+				$membership = Subscription_Renewal_Orders::paid_period( $order, $now );
+				if ( ! empty( $membership['active'] ) ) yield $membership;
 			}
 		} while ( count( $receipts ) === 20 );
-		return false;
 	}
 
 	public static function record_payment( \WC_Order $original, \WC_Order $receipt, array $charge ): void {

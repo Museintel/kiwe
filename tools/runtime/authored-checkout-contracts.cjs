@@ -28,6 +28,10 @@ async function run() {
  const cod = control({kiweCheckoutPay: 'cod'});
  const renewal = control({kiweCheckoutConsent: 'renewal'});
  const terms = control({kiweCheckoutConsent: 'terms'});
+ const offer = control({kiweCheckoutOffer: '42'});
+ offer.closest = () => null;
+ offer.querySelector = () => null;
+ offer.hasAttribute = name => name === 'data-kiwe-checkout-offer';
  const couponEvents = {};
  const coupon = {
   ...control(),
@@ -41,16 +45,17 @@ async function run() {
   querySelectorAll(selector) {
    if (selector === '[data-kiwe-checkout-pay]') return [upi, subscription, cod];
    if (selector === '[data-kiwe-checkout-consent]') return [renewal, terms];
+   if (selector === '[data-kiwe-checkout-offer]') return [offer];
    return [address, total];
   },
-  querySelector: selector => selector === '[data-kiwe-checkout-status]' ? status : coupon,
+  querySelector: selector => selector === '[data-kiwe-checkout-status]' ? status : selector === '[data-kiwe-checkout-coupon]' ? coupon : null,
   contains: () => true,
  };
  const review = {
   available: true, address: 'Demo Street', total: '₹300', empty: false, subscriptionQuote: 'quote1',
   methods: {subscription: 'kiwe_razorpay_subscription'}, shipping: [], fields: {billing_email: 'test@example.invalid'},
   checkoutNonce: 'fixture', checkoutUrl: '/?wc-ajax=checkout', couponNonce: 'fixture', couponUrl: '/?wc-ajax=apply_coupon',
-  termsRequired: true, coupons: true,
+  termsRequired: true, coupons: true, offers: {'42': {state: 'apply', code: 'LISTED'}},
  };
  let reviewFails = false;
  let reviewReads = 0;
@@ -75,8 +80,9 @@ async function run() {
   fetch: async (url, options) => {
    requests.push([url.href, Object.fromEntries(options.body)]);
    if (url.href.endsWith('apply_coupon')) {
-    review.total = '₹275';
-    review.subscriptionQuote = 'quote2';
+    review.total = options.body.get('coupon_code') === 'LISTED' ? '₹495' : '₹275';
+    if (options.body.get('coupon_code') === 'LISTED') review.offers['42'] = {state: 'applied'};
+    else review.subscriptionQuote = 'quote2';
     return {ok: true, text: async () => 'Coupon applied'};
    }
    return {json: async () => ({result: 'success', redirect: '/checkout/order-received/123/'})};
@@ -148,6 +154,14 @@ async function run() {
  assert.equal(reviewReads, beforeCartUpdate + 1);
  assert.equal(total.textContent, '₹550');
  assert.equal(upi.disabled, false);
+ assert.equal(offer.textContent, 'Apply');
+ await click(offer);
+ assert.equal(requests[4][1].coupon_code, 'LISTED');
+ assert.equal(total.textContent, '₹495');
+ assert.equal(offer.textContent, 'Applied');
+ assert.equal(offer.disabled, true);
+ await click(offer);
+ assert.equal(requests.length, 5);
  reviewFails = true;
  events['dsa:checkout:cart-updated']();
  await settle();

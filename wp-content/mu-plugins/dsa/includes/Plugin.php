@@ -418,6 +418,7 @@ final class Plugin {
 		if ( class_exists( \DSA\Commerce\Subscription_Billing_Service::class ) ) ( new \DSA\Commerce\Subscription_Billing_Service() )->register();
 		if ( class_exists( \DSA\Commerce\Subscription_Checkout_Service::class ) ) ( new \DSA\Commerce\Subscription_Checkout_Service() )->register();
 		if ( $paused ) return;
+		if ( class_exists( \DSA\Commerce\Checkout_Offers::class ) ) ( new \DSA\Commerce\Checkout_Offers() )->register();
 		if ( class_exists( \DSA\Commerce\Checkout_Experience_Service::class ) && \DSA\Commerce\Checkout_Experience_Service::enabled() ) {
 			( new \DSA\Commerce\Checkout_Experience_Service() )->register();
 			( new \DSA\Commerce\Razorpay_Checkout_Service() )->register();

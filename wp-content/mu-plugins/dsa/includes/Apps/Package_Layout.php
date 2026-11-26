@@ -45,6 +45,7 @@ final class Package_Layout {
   'includes/Commerce/Checkout_Details_Model.php',
   'includes/Commerce/Checkout_Experience_Service.php',
   'includes/Commerce/Checkout_Field_Service.php',
+  'includes/Commerce/Checkout_Offers.php',
   'includes/Commerce/Checkout_Service.php',
   'includes/Commerce/Checkout_Session_Details.php',
   'includes/Commerce/Commerce_Context_Service.php',

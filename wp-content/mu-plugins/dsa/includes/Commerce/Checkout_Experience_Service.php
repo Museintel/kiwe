@@ -103,6 +103,7 @@ final class Checkout_Experience_Service {
 			'subscriptionQuote'=>$terms['quote'] ?? '', 'methods'=>empty( $methods ) ? (object) [] : $methods,
 			'fields'=>$values, 'shipping'=>(array) WC()->session->get( 'chosen_shipping_methods', [] ),
 			'termsRequired'=>wc_terms_and_conditions_checkbox_enabled(),
+			'offers'=>(object) Checkout_Offers::review( $cart ),
 			'coupons'=>wc_coupons_enabled(), 'checkoutUrl'=>\WC_AJAX::get_endpoint( 'checkout' ),
 			'couponUrl'=>\WC_AJAX::get_endpoint( 'apply_coupon' ),
 			'checkoutNonce'=>wp_create_nonce( 'woocommerce-process_checkout' ), 'couponNonce'=>wp_create_nonce( 'apply-coupon' ),

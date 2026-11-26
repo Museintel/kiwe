@@ -81,6 +81,12 @@
 		const consents = Array.from( page.querySelectorAll( '[data-kiwe-checkout-consent]' ) );
 		const coupon = page.querySelector( '[data-kiwe-checkout-coupon]' );
 		const status = page.querySelector( '[data-kiwe-checkout-status]' );
+		const offers = Array.from( page.querySelectorAll( '[data-kiwe-checkout-offer]' ) );
+		const offerPanel = page.querySelector( '[data-kiwe-checkout-offers]' );
+		const offerLabels = {
+			apply: 'Apply', applied: 'Applied', join: 'Add membership',
+			'in-cart': 'Membership in cart', choose: 'Choose a plan', unavailable: 'Unavailable for this cart',
+		};
 		let review = null;
 		let busy = false;
 		let refreshing = false;
@@ -105,6 +111,23 @@
 				control.hidden = ! ready || !( control.dataset.kiweCheckoutConsent === 'terms' ? review.termsRequired : review.subscriptionQuote );
 			} );
 			if ( coupon ) coupon.hidden = Boolean( review ) && ( ! ready || ! review.coupons );
+			let visibleOffers = 0;
+			offers.forEach( button => {
+				const offer = ready && review.offers?.[button.dataset.kiweCheckoutOffer];
+				const card = button.closest( '[data-kiwe-checkout-offer-card]' );
+				if ( card ) card.hidden = ! offer;
+				else button.hidden = ! offer;
+				if ( ! offer ) return;
+				visibleOffers++;
+				const actionable = [ 'apply', 'join', 'choose' ].includes( offer.state );
+				button.dataset.kiweOfferState = offer.state;
+				button.setAttribute( 'aria-disabled', String( disabled || ! actionable ) );
+				if ( 'disabled' in button ) button.disabled = disabled || ! actionable;
+				const label = button.querySelector( '[data-kiwe-offer-label]' ) || button;
+				const text = offerLabels[offer.state];
+				if ( text && label.textContent !== text ) label.textContent = text;
+			} );
+			if ( offerPanel ) offerPanel.hidden = ! visibleOffers;
 			page.setAttribute( 'aria-busy', updating ? 'true' : 'false' );
 		}
 
@@ -191,21 +214,43 @@
 			window.location.assign( destination.href );
 		}
 
-		async function applyCoupon() {
-			if ( ! review || ! review.coupons || ! coupon ) return;
-			const field = coupon.querySelector( '[name="coupon_code"], input[type="text"]' );
-			if ( ! field || ! field.value.trim() ) {
+		async function applyCoupon( selectedCode = '' ) {
+			if ( ! review || ! review.coupons ) return;
+			const field = coupon?.querySelector( '[name="coupon_code"], input[type="text"]' );
+			const code = selectedCode || field?.value.trim();
+			if ( ! code ) {
 				announce( 'Enter a coupon code.' );
 				if ( field ) field.focus();
 				return;
 			}
-			const fields = new URLSearchParams( { coupon_code: field.value.trim(), security: review.couponNonce } );
+			const fields = new URLSearchParams( { coupon_code: code, security: review.couponNonce } );
 			if ( review.fields.billing_email ) fields.set( 'billing_email', review.fields.billing_email );
 			const response = await request( review.couponUrl, fields );
 			if ( ! response.ok ) throw new Error( 'The coupon could not be checked. Try again.' );
-			const message = noticeText( await response.text() );
+			const html = await response.text();
+			const message = noticeText( html );
+			const output = new DOMParser().parseFromString( html, 'text/html' );
+			if ( window.jQuery && output.querySelector( '.woocommerce-message' ) ) {
+				window.jQuery( document.body ).trigger( 'applied_coupon_in_checkout', [ code ] );
+			}
 			await refresh();
 			announce( message );
+		}
+
+		async function actOnOffer( id ) {
+			const offer = review?.offers?.[id];
+			if ( ! offer ) return;
+			if ( offer.state === 'apply' ) await applyCoupon( offer.code );
+			if ( offer.state === 'join' ) {
+				if ( ! cart?.addProduct ) throw new Error( 'The cart could not load. Try again.' );
+				await cart.addProduct( offer.productId, 'kiwe_checkout_offer', 1 );
+				await refresh();
+				announce( 'Membership added. This benefit starts once your payment is confirmed.' );
+			}
+			if ( offer.state === 'choose' ) {
+				const destination = new URL( offer.url, window.location.href );
+				if ( destination.origin === window.location.origin ) window.location.assign( destination.href );
+			}
 		}
 
 		function run( action, message ) {
@@ -222,13 +267,16 @@
 		}
 
 		page.addEventListener( 'click', function ( event ) {
-			const button = event.target.closest( '[data-kiwe-checkout-pay], [data-kiwe-checkout-consent], [data-kiwe-checkout-apply-coupon]' );
+			const button = event.target.closest( '[data-kiwe-checkout-pay], [data-kiwe-checkout-consent], [data-kiwe-checkout-apply-coupon], [data-kiwe-checkout-offer]' );
 			if ( ! button || ! page.contains( button ) ) return;
 			event.preventDefault();
 			if ( button.hasAttribute( 'data-kiwe-checkout-consent' ) ) {
 				button.setAttribute( 'aria-pressed', button.getAttribute( 'aria-pressed' ) === 'true' ? 'false' : 'true' );
 			} else if ( button.hasAttribute( 'data-kiwe-checkout-pay' ) ) {
 				run( () => placeOrder( button.dataset.kiweCheckoutPay ), 'Checking your order…' );
+			} else if ( button.hasAttribute( 'data-kiwe-checkout-offer' ) ) {
+				if ( button.getAttribute( 'aria-disabled' ) === 'true' ) return;
+				run( () => actOnOffer( button.dataset.kiweCheckoutOffer ), 'Updating your offers…' );
 			} else {
 				run( applyCoupon, 'Checking coupon…' );
 			}

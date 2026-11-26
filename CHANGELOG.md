@@ -1,3 +1,8 @@
+## 8.0.0-rc.514 (2026-11-27)
+
+- Keep the native Bricks Checkout Coupon element and add an editable offers query for WooCommerce coupons selected by the store.
+- Link a coupon to a paid Kiwe subscription product or variation and apply it through the verified paid term. Expose the listing and link through Store MCP authoring.
+
 ## 8.0.0-rc.513 (2026-11-27, candidate)
 
 - Carry the native Bricks authoring reference and linked product control retirement into the membership checkout candidate.
