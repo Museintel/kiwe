@@ -4901,9 +4901,7 @@
 					return;
 				}
 
-				closeOverlay();
-				clearSurfaceReturnState();
-				navigateWithFullPageLoader( checkoutButton.href );
+				navigateFromCheckoutSheet( checkoutButton.href );
 			} );
 		}
 	}
@@ -5287,10 +5285,17 @@
 		}
 
 		if ( checkoutUrl ) {
-			closeOverlay();
-			clearSurfaceReturnState();
-			navigateWithFullPageLoader( checkoutUrl );
+			navigateFromCheckoutSheet( checkoutUrl );
 		}
+	}
+
+	function navigateFromCheckoutSheet( checkoutUrl ) {
+		// Use the sheet's history entry for checkout so closing cannot race the page load with Back.
+		const replaceHistoryEntry = surfaceHistoryActive;
+		surfaceHistoryActive = false;
+		closeOverlay( false, { retainHistory: true, immediate: true } );
+		clearSurfaceReturnState();
+		navigateWithFullPageLoader( checkoutUrl, replaceHistoryEntry );
 	}
 
 	function renderCheckoutSurface() {
@@ -10369,11 +10374,15 @@
 		window.dispatchEvent( new CustomEvent( 'surface:loading:complete' ) );
 	}
 
-	function commitPendingFullNavigation() {
+	function commitPendingFullNavigation( replaceHistoryEntry ) {
 		if ( ! pendingFullNavigationUrl ) return;
 		const url = pendingFullNavigationUrl;
 		pendingFullNavigationUrl = '';
-		window.location.href = url;
+		if ( replaceHistoryEntry ) {
+			window.location.replace( url );
+		} else {
+			window.location.href = url;
+		}
 	}
 
 	function startNavigationWatchdog( url, mode ) {
@@ -12218,7 +12227,7 @@
 		return new RegExp( '^' + escaped + '$', 'i' ).test( value );
 	}
 
-	function navigateWithFullPageLoader( url ) {
+	function navigateWithFullPageLoader( url, replaceHistoryEntry = false ) {
 		if ( navigationInFlight ) {
 			return;
 		}
@@ -12236,7 +12245,7 @@
 		// Begin the native request now. The outgoing screen remains only until
 		// the browser paints the next document; no interstitial dwell is added.
 		if ( window.DSA.transitionReader ) window.DSA.transitionReader.navigate( url );
-		commitPendingFullNavigation();
+		commitPendingFullNavigation( replaceHistoryEntry );
 	}
 
 	function enhanceFormMessageAccessibility( root ) {

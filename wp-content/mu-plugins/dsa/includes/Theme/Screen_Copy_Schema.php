@@ -75,7 +75,7 @@ final class Screen_Copy_Schema {
 					'title'               => self::field( __( 'Title', 'dsa' ), __( 'Checkout details', 'dsa' ) ),
 					'loadingText'         => self::field( __( 'Loading text', 'dsa' ), __( 'Preparing checkout...', 'dsa' ) ),
 					'unavailableText'     => self::field( __( 'Unavailable text', 'dsa' ), __( 'WooCommerce checkout is not available.', 'dsa' ), 220 ),
-					'continueLabel'       => self::field( __( 'Continue label', 'dsa' ), __( 'Place order', 'dsa' ) ),
+					'continueLabel'       => self::field( __( 'Continue label', 'dsa' ), __( 'Continue to checkout', 'dsa' ) ),
 					'returnLabel'         => self::field( __( 'Return label', 'dsa' ), __( 'Place order', 'dsa' ) ),
 					'shippingToggleLabel' => self::field( __( 'Shipping toggle label', 'dsa' ), __( 'Use a different shipping address', 'dsa' ) ),
 					'accountToggleLabel'  => self::field( __( 'Account toggle label', 'dsa' ), __( 'Create an account', 'dsa' ) ),

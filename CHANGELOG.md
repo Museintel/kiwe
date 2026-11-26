@@ -1,3 +1,8 @@
+## 8.0.0-rc.504 (2026-11-26, candidate)
+
+- Preserve browser history when a shopper continues from the Cart or Checkout sheet to the checkout page.
+- Label the address sheet's first checkout step “Continue to checkout.”
+
 ## 8.0.0-rc.503 (2026-11-26, candidate)
 
 - Keep subscription authorization and the verified Razorpay payment return in the website checkout.

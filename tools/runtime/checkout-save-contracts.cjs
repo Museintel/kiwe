@@ -21,7 +21,46 @@ function fixture(){
  return {c,calls,paint,button,message,shipping,toggle,city,separate,form};
 }
 function response(marker,shipToDifferent=false,extra={}){return{valid:true,checkout:{marker,shipToDifferent,errors:{},notices:[]},...extra};}
+function verifyCheckoutNavigation(surfaceHistoryActive) {
+ const events = [];
+ const checkoutUrl = 'https://example.test/checkout/';
+ const context = {
+  checkoutState: {contract: {checkoutUrl}},
+  commerce: {},
+  surfaceHistoryActive,
+  pendingFullNavigationUrl: '',
+  navigationInFlight: false,
+  window: {
+   location: {
+    replace(url) { events.push(['replace', url]); },
+    set href(url) { events.push(['assign', url]); },
+   },
+   DSA: {},
+   dispatchEvent() {},
+  },
+  CustomEvent: class {},
+  closeOverlay(force, options) {
+   assert.equal(force, false);
+   assert.equal(options.immediate, true);
+   if (context.surfaceHistoryActive && !options.retainHistory) events.push(['back']);
+   events.push(['close']);
+  },
+  clearSurfaceReturnState() {},
+  startNavigationWatchdog() {},
+  shouldShowNavigationSurface: () => false,
+ };
+ const functions = [
+  'completeCheckoutSurface', 'navigateFromCheckoutSheet',
+  'navigateWithFullPageLoader', 'commitPendingFullNavigation',
+ ];
+ vm.runInNewContext(functions.map(extract).join('\n') + '\ncompleteCheckoutSurface();', context);
+ assert.deepEqual(events, [['close'], [surfaceHistoryActive ? 'replace' : 'assign', checkoutUrl]]);
+ check(!context.surfaceHistoryActive, 'Checkout releases the sheet without a Back action');
+}
+
 (async()=>{
+ verifyCheckoutNavigation(true);
+ verifyCheckoutNavigation(false);
  {
   const f=fixture();f.c.checkoutDraftDirty=true;f.city.value='Final address';f.c.flushCheckoutDraft();f.c.open=false;await settle();
   check(f.calls.length===1&&f.calls[0].payload.fields.billing_city==='Final address','Final pending draft starts even after the sheet lifecycle closes');

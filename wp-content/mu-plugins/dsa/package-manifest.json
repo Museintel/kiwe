@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "version": "8.0.0-rc.503",
+  "version": "8.0.0-rc.504",
   "algorithm": "sha256",
   "file_count": 1055,
   "files": {
@@ -365,8 +365,8 @@
       "sha256": "d31a2a5e3b1896cc332aa0aa815c765c00de1187c9f2e1b4574d71aba8146808"
     },
     "assets/js/modules/commerce-panels.js": {
-      "bytes": 25963,
-      "sha256": "0c87373e4c6eba3ad8c40f553087e24adedaa00db904b0a365a7227149ed1b9a"
+      "bytes": 25972,
+      "sha256": "427586e6b9bee654f56f71580acd680e89d094c71770c7e60ce89bb1b3d4dc09"
     },
     "assets/js/modules/diagnostics.js": {
       "bytes": 6292,
@@ -461,8 +461,8 @@
       "sha256": "0b7e10b4fe4b9649f92e360bfa96737f7d5d271d43cf5912aa140bf9ea5820c2"
     },
     "assets/js/surface.js": {
-      "bytes": 516576,
-      "sha256": "0d19a573c31c7b25ba9d7b850d2c35d6906477ea8278a4f722f40c823ae08db3"
+      "bytes": 517026,
+      "sha256": "34a9311e33a27d6b2a3091bb42d5c1bd55e5dbf3c452428152b3c4de4ad8426d"
     },
     "assets/js/system-app.js": {
       "bytes": 14025,
@@ -522,7 +522,7 @@
     },
     "dsa.php": {
       "bytes": 4536,
-      "sha256": "7d3da611ca1539d43dffe5e0953812a42631d731b9af21144d2dba316adb0d85"
+      "sha256": "23b58e2efd7ad61026791f817fdbd50ebe8fd6737ed89f1725a1f987a742064b"
     },
     "framework-system/HANDOFF-LITE.md": {
       "bytes": 4119,
@@ -2513,8 +2513,8 @@
       "sha256": "92e846c0e62e2db58d66ebc2b3ae66990bdc27f5d5bdc097cc5d0ce0223ec261"
     },
     "includes/Theme/Screen_Copy_Schema.php": {
-      "bytes": 16132,
-      "sha256": "193386e7ea0f64668bfecbd22cbcc7e71702177214d3092b105d413b0118ba8f"
+      "bytes": 16141,
+      "sha256": "d11dee70a276d6a13efa63a7e78ae0560bbc6957ffd2acf04be9f03bacfba39b"
     },
     "includes/Theme/Theme_Package_Service.php": {
       "bytes": 23032,

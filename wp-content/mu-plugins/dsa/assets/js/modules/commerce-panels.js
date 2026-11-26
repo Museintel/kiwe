@@ -158,7 +158,7 @@ function checkoutCopy( payload ) {
 		title: screen.title || 'Checkout details',
 		loadingText: screen.loadingText || 'Preparing checkout...',
 		unavailableText: screen.unavailableText || 'WooCommerce checkout is not available.',
-		continueLabel: screen.continueLabel || 'Place order',
+		continueLabel: screen.continueLabel || 'Continue to checkout',
 		returnLabel: screen.returnLabel || 'Place order',
 		shippingToggleLabel: screen.shippingToggleLabel || 'Use a different shipping address',
 		accountToggleLabel: screen.accountToggleLabel || 'Create an account',
