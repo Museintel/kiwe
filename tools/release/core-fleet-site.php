@@ -173,6 +173,8 @@ function kiwe_fleet_recovery(string $root, string $work, string $choice, bool $u
     if (!hash_equals($fingerprint, kiwe_fleet_fingerprint(WPMU_PLUGIN_DIR))) {
         throw new RuntimeException('The previous Core files do not match their recovery copy.');
     }
+    // The private backup parent stays owner-only. Its Core folder may move into the web root.
+    kiwe_fleet_prepare_core_directories($backup . '/dsa');
     return kiwe_fleet_state($work, [
         'current' => DSA_VERSION, 'backup' => wp_normalize_path($backup), 'databaseSha256' => $database['sha256'],
         'databaseFile' => $database['file'], 'sqlGzipSha256' => $database['sqlGzipSha256'] ?? null,
@@ -308,6 +310,7 @@ try {
             if (!hash_equals($checkpoint['fingerprint'], kiwe_fleet_fingerprint(WPMU_PLUGIN_DIR))) {
                 throw new RuntimeException('The previous Core files were not confirmed.');
             }
+            kiwe_fleet_prepare_core_directories(WPMU_PLUGIN_DIR . '/dsa');
             if ($checkpoint['updateState'] === null) {
                 delete_option(Update_Service::STATE_OPTION);
             } else {

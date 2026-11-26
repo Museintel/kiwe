@@ -40,9 +40,11 @@ Set `firstScroll` for sites whose Dock settings are managed in the rollout. Supp
 
 ## Verification and recovery
 
-The runner checks every target, authenticates and transfers the signed packet into private hosting storage, then backs up every site that needs a change before the first switch. Each switch uses Kiwe's native updater, clears WordPress and Hostinger caches, and checks two ordinary homepage requests with no cache-busting query. The normal URL must serve the same Core as WordPress reports. The final pass checks the whole fleet again.
+The runner checks every target, authenticates and transfers the signed packet into private hosting storage, then backs up every site that needs a change before the first switch. Each switch uses Kiwe's native updater, clears WordPress and Hostinger caches, and checks two ordinary homepage requests with no cache-busting query. The normal URL must serve the same Core as WordPress reports. Each public check also fetches the dashboard's versioned stylesheet and script and verifies their HTTP status and content type. The final pass checks the whole fleet again.
 
 If any switch or verification fails, the runner restores attempted sites in reverse order and reports the run ID and any site needing recovery. If WordPress cannot start, a standalone PHP step verifies and restores the previous Core files before the native settings check. Database snapshots are read back and authenticated. Manual database recovery remains separate from the automated Core rollback so recent orders stay in WordPress. The transfer files are removed while the recovery checkpoints remain in the site's private storage.
+
+The private recovery parent remains owner-only. The authenticated Core tree inside it uses mode 0755 for directories before it can move into the website. A private umask can otherwise leave the restored folder inaccessible to the static web server even when WordPress and its homepage boot.
 
 ### Native SQL backup for large databases
 

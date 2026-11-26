@@ -30,6 +30,21 @@ function kiwe_fleet_fingerprint(string $root): string {
     return hash('sha256', json_encode(kiwe_fleet_core_files($root), JSON_THROW_ON_ERROR));
 }
 
+function kiwe_fleet_prepare_core_directories(string $core): void {
+    if (is_link($core) || !is_dir($core) || !chmod($core, 0755)) {
+        throw new RuntimeException('The Core folder could not be prepared for web access.');
+    }
+    $directories = new RecursiveIteratorIterator(
+        new RecursiveDirectoryIterator($core, FilesystemIterator::SKIP_DOTS),
+        RecursiveIteratorIterator::SELF_FIRST
+    );
+    foreach ($directories as $entry) {
+        if ($entry->isLink() || ($entry->isDir() && !chmod($entry->getPathname(), 0755))) {
+            throw new RuntimeException('A Core directory could not be prepared for web access.');
+        }
+    }
+}
+
 function kiwe_fleet_restore_files(string $work, string $wordpressRoot): bool {
     $work = realpath($work) ?: '';
     $private = dirname($work);
@@ -85,6 +100,7 @@ function kiwe_fleet_restore_files(string $work, string $wordpressRoot): bool {
             throw new RuntimeException('The staged recovery copy did not verify.');
         }
     }
+    kiwe_fleet_prepare_core_directories($staged . '/dsa');
 
     $moved = [];
     try {

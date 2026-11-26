@@ -6,7 +6,7 @@ import path from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
-import { publicVersion, readRelease, rollout, validateTargets } from './rollout-core-fleet.mjs';
+import { publicVersion, readRelease, rollout, validateTargets, verifyDashboardAssets } from './rollout-core-fleet.mjs';
 import { verifyEncryptedSql } from './core-fleet-sql-backup.mjs';
 
 const exec = promisify(execFile);
@@ -208,6 +208,7 @@ async function canonicalVersion(domain, version) {
 		assert.ok(response.ok && new URL(response.url).hostname === domain, 'Invalid canonical response for ' + domain);
 		assert.equal(publicVersion(await response.text()), version, 'Unexpected canonical Kiwe version for ' + domain);
 	}
+  await verifyDashboardAssets(domain, version);
 }
 
 await mkdir(channelDir, { recursive: true });

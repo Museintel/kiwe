@@ -40,6 +40,21 @@ export function publicVersion(html) {
     html.match(/<!-- DSA Surface (\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?) -->/)?.[1] ?? null;
 }
 
+export async function verifyDashboardAssets(domain, version, request = fetch) {
+  const assets = [
+    ['css/workspace-shell.css', /^text\/css(?:;|$)/i],
+    ['js/workspace-shell.js', /^(?:text|application)\/(?:x-)?javascript(?:;|$)/i],
+  ];
+  await Promise.all(assets.map(async ([asset, type]) => {
+    const url = new URL('/wp-content/mu-plugins/dsa/assets/' + asset, 'https://' + domain);
+    url.searchParams.set('ver', version);
+    const response = await request(url, { redirect: 'error', signal: AbortSignal.timeout(10000) });
+    if (!response.ok || !type.test(response.headers.get('content-type') ?? '') || !(await response.text()).trim()) {
+      throw Error(domain + ' could not serve dashboard asset ' + asset + ' (HTTP ' + response.status + ')');
+    }
+  }));
+}
+
 async function verifyPublic(site, expected, firstScroll) {
   let last;
   let consecutive = 0;
@@ -54,7 +69,7 @@ async function verifyPublic(site, expected, firstScroll) {
           (firstScroll === undefined || firstScroll === last.firstScroll) &&
           !/There has been a critical error|Checking your browser/i.test(body)) {
         consecutive++;
-        if (consecutive === 2) return last;
+        if (consecutive === 2) break;
       } else {
         consecutive = 0;
       }
@@ -63,7 +78,11 @@ async function verifyPublic(site, expected, firstScroll) {
     }
     await delay(1500);
   }
-  throw Error(site.domain + ' canonical homepage did not serve ' + expected + ' (' + JSON.stringify(last) + ')');
+  if (consecutive !== 2) {
+    throw Error(site.domain + ' canonical homepage did not serve ' + expected + ' (' + JSON.stringify(last) + ')');
+  }
+  await verifyDashboardAssets(site.domain, expected);
+  return last;
 }
 
 export async function rollout(sites, target, siteTask, purge, probe = verifyPublic) {

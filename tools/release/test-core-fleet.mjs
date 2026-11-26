@@ -1,13 +1,13 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { Readable } from 'node:stream';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { gzipSync } from 'node:zlib';
-import { publicVersion, rollout, validateIdentities, validateTargets } from './rollout-core-fleet.mjs';
+import { publicVersion, rollout, validateIdentities, validateTargets, verifyDashboardAssets } from './rollout-core-fleet.mjs';
 import { inspectSqlDump } from './core-fleet-sql-backup.mjs';
 
 test('native SQL backup verification rejects incomplete and mismatched data', async () => {
@@ -55,6 +55,28 @@ test('reads version evidence from ordinary visitor HTML', () => {
   assert.equal(publicVersion('<script id="dsa-boot-seed">window.DSA.boot={version:"8.0.0-rc.494",loadedAt:0}</script>'), target);
   assert.equal(publicVersion('<!-- DSA Surface 8.0.0-rc.493 -->'), '8.0.0-rc.493');
   assert.equal(publicVersion('An unrelated page mentions 8.0.0-rc.494.'), null);
+});
+
+test('dashboard assets must serve CSS and JavaScript at their versioned URLs', async () => {
+  const urls = [];
+  const servesAssets = async url => {
+    urls.push(String(url));
+    const stylesheet = url.pathname.endsWith('.css');
+    return new Response(stylesheet ? '.workspace { display: grid; }' : 'document.title;', {
+      headers: { 'content-type': stylesheet ? 'text/css; charset=utf-8' : 'application/x-javascript' },
+    });
+  };
+  await verifyDashboardAssets('lab.example', target, servesAssets);
+  assert.deepEqual(urls, [
+    'https://lab.example/wp-content/mu-plugins/dsa/assets/css/workspace-shell.css?ver=' + target,
+    'https://lab.example/wp-content/mu-plugins/dsa/assets/js/workspace-shell.js?ver=' + target,
+  ]);
+  await assert.rejects(verifyDashboardAssets('lab.example', target, async url =>
+    url.pathname.endsWith('.css') ? new Response('WordPress 404', { status: 404 }) : servesAssets(url)),
+  /workspace-shell\.css \(HTTP 404\)/);
+  await assert.rejects(verifyDashboardAssets('lab.example', target, async url =>
+    url.pathname.endsWith('.css') ? new Response('<html>WordPress</html>', { headers: { 'content-type': 'text/html' } }) : servesAssets(url)),
+  /workspace-shell\.css \(HTTP 200\)/);
 });
 
 test('backs up the whole fleet before changing Core and keeps each App selection', async () => {
@@ -145,19 +167,27 @@ test('file recovery runs without WordPress and excludes unrelated files and data
   const php = (args) => execFileSync(process.env.KIWE_PHP || 'php', args, { encoding: 'utf8' }).trim();
   await buildCore(backup, previous);
   await buildCore(mu, '8.0.0-rc.495');
-  await mkdir(work);
+  await mkdir(work, { mode: 0o700 });
+  const prepend = path.join(root, 'restrictive-umask.php');
+  await writeFile(prepend, '<?php umask(0077);');
+  const restore = () => php(['-d', 'auto_prepend_file=' + prepend, script, work, wordpress]);
   await writeFile(path.join(mu, 'plugin-unrelated.php'), 'unrelated');
   await writeFile(path.join(wordpress, 'latest-orders.fixture'), 'new order since backup');
   const fingerprint = php(['-r', 'require $argv[1]; echo kiwe_fleet_fingerprint($argv[2]);', script, backup]);
   await writeFile(path.join(work, 'checkpoint.json'), JSON.stringify({ backup, current: previous, startedTarget: target,
     fingerprint, wordpressRoot: wordpress, muRoot: mu }));
-  assert.throws(() => php([script, work, wordpress]), error =>
+  assert.throws(restore, error =>
     error.status === 1 && /no longer belong/.test(JSON.parse(error.stdout).error));
   assert.match(await readFile(path.join(mu, 'dsa', 'dsa.php'), 'utf8'), /rc\.495/);
   await buildCore(mu, target);
   await writeFile(path.join(mu, 'dsa.php'), '<?php invalid PHP !');
-  assert.deepEqual(JSON.parse(php([script, work, wordpress])), { filesRestored: true });
-  assert.deepEqual(JSON.parse(php([script, work, wordpress])), { filesRestored: false });
+  assert.deepEqual(JSON.parse(restore()), { filesRestored: true });
+  assert.deepEqual(JSON.parse(restore()), { filesRestored: false });
+  if (process.platform !== 'win32') {
+    assert.equal((await stat(path.join(mu, 'dsa'))).mode & 0o777, 0o755);
+    assert.equal((await stat(path.join(mu, 'dsa', 'assets'))).mode & 0o777, 0o755);
+    assert.equal((await stat(work)).mode & 0o777, 0o700);
+  }
   assert.equal(await readFile(path.join(mu, 'dsa', 'assets', 'dock.js'), 'utf8'), 'asset ' + previous);
   assert.equal(await readFile(path.join(mu, 'plugin-unrelated.php'), 'utf8'), 'unrelated');
   assert.equal(await readFile(path.join(wordpress, 'latest-orders.fixture'), 'utf8'), 'new order since backup');
