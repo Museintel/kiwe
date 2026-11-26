@@ -3,6 +3,7 @@
 namespace DSA\Access {
  final class Commerce_App_Service {
   const AUTHORING_API=1;
+  const COUPON_TARGETS=['products'=>'product_ids','excludedProducts'=>'excluded_product_ids','categories'=>'product_categories','excludedCategories'=>'excluded_product_categories'];
   public function product_record($id){$GLOBALS['nativeReads']++;if(\in_array($id,$GLOBALS['denied'],true))return new \WP_Error('forbidden','Native product unavailable');return$GLOBALS['storeProduct'];}
   public function save_product_record($id,$input){$GLOBALS['writes']++;$GLOBALS['nativeInput']=$input;$GLOBALS['storeProduct']=array_replace($GLOBALS['storeProduct'],$input);return$GLOBALS['storeProduct'];}
  }
@@ -24,6 +25,13 @@ namespace {
  check(array_values(array_diff(array_keys($ops),array_keys($pins)))===['store.razorpay.status','store.subscription.quote','store.members.list','store.subscription.orders','store.subscription.status','store.subscription.change','store.membership.self','store.membership.cancel','store.membership.renewals','store.membership.switch','store.membership.page.access'],
   'A product author grant excludes merchant settings, private membership and renewal operations without their native authorities');
  check($r->describe(['mcp.setup.read','mcp.setup.write','mcp.apps.manage'])===[],'Old MCP setup/software scopes gain no Store access');
+ $targetArgs=['id'=>201,'group'=>'products','operation'=>'add','ids'=>[401]];
+ $targetSchema=$ops['store.coupon.targets.change']['inputSchema'];
+ check(Schema::value($targetArgs,$targetSchema)&&!Schema::value(array_replace($targetArgs,['ids'=>range(1,21)]),$targetSchema),'Coupon target changes are bounded to twenty positive IDs');
+ check(!Schema::value($targetArgs+['expected'=>str_repeat('a',64)],$targetSchema),'Coupon target writes cannot supply their own approval fingerprint');
+ $caps['edit_others_shop_coupons']=false;
+ check(!$ops['store.coupon.targets.read']['discoverPermission']()&&!$ops['store.coupon.targets.change']['permission']($targetArgs),'Revoking coupon permission hides targeting and denies writes');
+ $caps['edit_others_shop_coupons']=true;
  $s=new Store();$args=['id'=>10,'fieldsJson'=>json_encode(['name'=>'New draft title'])];$plan=$s->prepare('save',$args);check(!$plan['needsApproval']&&$writes===0,'Routine Store draft editing prepares without financial publication or writes');
  $data=json_decode($s->read(['area'=>'product','id'=>10])['dataJson'],true);check($data['price']==='50.00'&&$data['weight']==='200'&&!isset($data['controls']),'Native prices/weights are preserved while browser nonces are excluded');
  foreach(['expected','acceptEffect','confirmed','meta','option','customerId','sql']as$key)denied(fn()=>$s->prepare('save',['id'=>10,'fieldsJson'=>json_encode([$key=>'untrusted'])]),'No arbitrary native bypass field '.$key);

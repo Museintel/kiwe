@@ -75,7 +75,7 @@ final class Commerce_App_Service {
 	}
 
 
-	private const COUPON_TARGETS=['products'=>'product_ids','excludedProducts'=>'excluded_product_ids','categories'=>'product_categories','excludedCategories'=>'excluded_product_categories'];
+	public const COUPON_TARGETS=['products'=>'product_ids','excludedProducts'=>'excluded_product_ids','categories'=>'product_categories','excludedCategories'=>'excluded_product_categories'];
 	private function coupon_target_state(int $id,string $group) {
 		$record=$this->coupon_record($id);if(is_wp_error($record))return $record;
 		if(!isset(self::COUPON_TARGETS[$group]))return $this->error('target_group','Choose a product or category targeting view.');
@@ -117,17 +117,45 @@ final class Commerce_App_Service {
 		if('POST'!==$request->get_method()||!$this->permission($request))return $this->response($this->error('forbidden','Coupon targeting is unavailable.',403));
 		$input=$request->get_json_params();return $this->response($this->save_coupon_targets_record(Task_Workspace_UI::id($request->get_url_params()['id']??0),is_array($input)?$input:[]));
 	}
-	public function save_coupon_targets_record(int $id,array $input) {
+	private function coupon_target_change(int $id,array $input,bool $check_version) {
 		if(array_diff(array_keys($input),['group','operation','ids','expected'])||!is_string($input['group']??null)||!in_array($input['operation']??null,['add','remove'],true)||!is_array($input['ids']??null)||!array_is_list($input['ids'])||count($input['ids'])<1||count($input['ids'])>20)return $this->error('target_input','Choose up to twenty selections to add or remove.');
 		foreach($input['ids']as$item)if(!is_int($item)||$item<1)return $this->error('target_input','Choose valid product or category selections.');
 		$group=$input['group'];$state=$this->coupon_target_state($id,$group);if(is_wp_error($state))return $state;
 		if(!$state['record']['editable'])return $this->error('coupon_managed','This coupon is read-only in Kiwe.',403);
-		if(!is_string($input['expected']??null)||!hash_equals($state['record']['expected'],$input['expected']))return $this->error('stale','The coupon or its rules changed. Reload and review.',409);
+		if($check_version&&(!is_string($input['expected']??null)||!hash_equals($state['record']['expected'],$input['expected'])))return $this->error('stale','The coupon or its rules changed. Reload and review.',409);
 		$current=$state['sets'][$group];$ids=array_values(array_unique($input['ids']));$add=$input['operation']==='add';
 		$opposite=['products'=>'excludedProducts','excludedProducts'=>'products','categories'=>'excludedCategories','excludedCategories'=>'categories'][$group];
-		foreach($ids as$item){if($add){if(!$this->coupon_target_label($item,$state['category']))return $this->error('target_unavailable','A selection is unavailable for your account.',403);if(in_array($item,$state['sets'][$opposite],true))return $this->error('target_overlap','Remove the selection from the opposite rule first.');}elseif(!in_array($item,$current,true))return $this->error('stale','A selection is no longer in this rule. Reload and review.',409);}
+		$selections=[];
+		foreach($ids as$item){
+			$label=$this->coupon_target_label($item,$state['category']);
+			if($add){
+				if(!$label)return $this->error('target_unavailable','A selection is unavailable for your account.',403);
+				if(in_array($item,$state['sets'][$opposite],true))return $this->error('target_overlap','Remove the selection from the opposite rule first.');
+			}elseif(!in_array($item,$current,true))return $this->error('stale','A selection is no longer in this rule. Reload and review.',409);
+			$selections[]=['id'=>$item,'name'=>Task_Workspace_UI::text($label['name']??'Unavailable selection',36)];
+		}
 		$next=$add?array_values(array_unique(array_merge($current,$ids))):array_values(array_diff($current,$ids));
-		if($next===$current)return $state['record'];if($add&&count($next)>max(1000,count($current)))return $this->error('target_limit','This rule has reached the workspace limit of one thousand selections. Remove selections or ask your site designer to review it.');
+		if($add&&count($next)>max(1000,count($current)))return $this->error('target_limit','This rule has reached the workspace limit of one thousand selections. Remove selections or ask your site designer to review it.');
+		return compact('state','current','next','selections');
+	}
+
+	public function review_coupon_target_change(int $id,array $input) {
+		$change=$this->coupon_target_change($id,$input,false);
+		if(is_wp_error($change))return $change;
+		$record=$change['state']['record'];
+		return [
+			'expected'=>$record['expected'],'coupon'=>$record['name'],'type'=>$record['type'],
+			'group'=>$input['group'],'operation'=>$input['operation'],'selections'=>$change['selections'],
+			'beforeCount'=>count($change['current']),'afterCount'=>count($change['next']),
+		];
+	}
+
+	public function save_coupon_targets_record(int $id,array $input) {
+		$change=$this->coupon_target_change($id,$input,true);
+		if(is_wp_error($change))return $change;
+		['state'=>$state,'current'=>$current,'next'=>$next]=$change;
+		if($next===$current)return $state['record'];
+		$group=$input['group'];
 		try{$coupon=new \WC_Coupon($id);$setter='set_'.self::COUPON_TARGETS[$group];$coupon->$setter($next);$saved=$coupon->save();}catch(\Throwable $e){return $this->error('coupon_write','Targeting could not be confirmed. Reload and review before retrying.',409);}
 		$after=$this->coupon_target_state($id,$group);if(!$saved||is_wp_error($after)||!hash_equals($state['preserved'],$after['preserved']))return $this->error('coupon_readback','Saved targeting differs. Reload and review before retrying.',409);
 		$actual=$after['sets'][$group];sort($actual);sort($next);if($actual!==$next)return $this->error('coupon_readback','Saved selections differ. Reload and review.',409);

@@ -63,7 +63,7 @@ final class MCP_Store_Provider {
     return ['resultJson'=>Native::json(array_intersect_key($orders,array_flip(['orders','page','hasNext'])))];
    },
   ];
-  $ops+=self::subscription_pilot_operations() + self::membership_operations();
+  $ops+=self::subscription_pilot_operations() + self::membership_operations() + self::coupon_target_operations();
   $definitions=[
    'store.product.create'=>['create',[],[]],
    'store.product.save'=>['save',['id'],[]],
@@ -104,6 +104,65 @@ final class MCP_Store_Provider {
   $args=static fn($a)=>['kind'=>'product','action'=>$a['action'],'id'=>$a['id'],'fields'=>Native::object($a['fieldsJson'],['name','sourceId','targetId','tagIds'])];
   $ops['store.tag-group.change']=['scope'=>'store.authoring.write','label'=>'Change native Store tag groups and exact selected members','effect'=>'write','approval'=>'required','accessVersion'=>1,'inputSchema'=>$tagFields,'outputSchema'=>$out,'permission'=>$allowed,'discoverPermission'=>$allowed,'prepare'=>static fn($a)=>\DSA\MCP\Tag_Group_Authoring::prepare($args($a)),'current'=>static fn($a)=>\DSA\MCP\Tag_Group_Authoring::prepare($args($a))['nativeExpected'],'execute'=>static fn($a,$expected)=>['resultJson'=>Native::json(\DSA\MCP\Tag_Group_Authoring::apply($args($a),$expected))]];
   return$ops;
+ }
+ private static function coupon_target_operations(): array {
+  $store = new \DSA\Access\Commerce_App_Service();
+  $allowed = static fn() => MCP_Store_Authoring::kind_allowed('coupon');
+  $target = ['id'=>self::integer(1),'group'=>self::choice(array_keys($store::COUPON_TARGETS))];
+  $page = self::integer(1) + ['maximum'=>1000];
+  $receipt = static fn(int $limit) => self::object(['resultJson'=>self::text($limit)],['resultJson']);
+  $read = [
+   'scope'=>'store.authoring.read','label'=>'Read WooCommerce coupon product, variation and category targets',
+   'effect'=>'read','approval'=>'none','accessVersion'=>1,'permission'=>$allowed,'discoverPermission'=>$allowed,
+   'inputSchema'=>self::object($target+['page'=>$page,'selectedPage'=>$page,'search'=>self::text(100)],['id','group']),
+   'outputSchema'=>$receipt(24000),
+   'execute'=>static function(array $input) use ($store,$allowed): array {
+    if (!$allowed()) throw new \RuntimeException('Your current Store role cannot read coupon targeting.');
+    $data = Native::native($store->coupon_targets_record($input['id'],$input));
+    unset($data['expected']);
+    return ['resultJson'=>Native::json($data,24000)];
+   },
+  ];
+  $review = static function(array $input) use ($store,$allowed): array {
+   if (!$allowed()) throw new \RuntimeException('Your current Store role cannot edit coupon targeting.');
+   $change = Native::native($store->review_coupon_target_change($input['id'],array_diff_key($input,['id'=>true])));
+   $summary = 'Review '.$change['operation'].' coupon targets. ';
+   $summary .= $change['type']==='fixed_cart' ? 'Targets determine cart eligibility.' : 'Targeted lines receive the discount.';
+   $plan = Native::plan($summary,Native::digest($change+['id'=>$input['id']]),[
+    'coupon'=>$change['coupon'],'group'=>$change['group'],'selectedCount'=>$change['beforeCount'],
+   ],[
+    'ids'=>array_column($change['selections'],'id'),'selectedCount'=>$change['afterCount'],'selections'=>$change['selections'],
+   ],true);
+   return $plan+['couponExpected'=>$change['expected']];
+  };
+  $write = [
+   'scope'=>'store.authoring.write','label'=>'Review and change WooCommerce coupon products, variations or categories',
+   'effect'=>'write','approval'=>'required','accessVersion'=>1,'permission'=>$allowed,'discoverPermission'=>$allowed,
+   'inputSchema'=>self::object($target+[
+    'operation'=>self::choice(['add','remove']),
+    'ids'=>['type'=>'array','items'=>self::integer(1),'minItems'=>1,'maxItems'=>20],
+   ],['id','group','operation','ids']),
+   'outputSchema'=>$receipt(6000),
+   'prepare'=>static function(array $input) use ($review): array {
+    $plan = $review($input);
+    unset($plan['couponExpected']);
+    return $plan;
+   },
+   'current'=>static fn(array $input) => $review($input)['nativeExpected'],
+   'execute'=>static function(array $input,string $expected) use ($store,$review): array {
+    return Native::mutate('store-setup',static function() use ($input,$expected,$store,$review): array {
+     $plan = $review($input);
+     if (!hash_equals($plan['nativeExpected'],$expected)) throw new \RuntimeException('The coupon or selected targets changed. Read them before preparing a new review.');
+     $saved = Native::native($store->save_coupon_targets_record($input['id'],[
+      'group'=>$input['group'],'operation'=>$input['operation'],'ids'=>$input['ids'],'expected'=>$plan['couponExpected'],
+     ]));
+     return ['resultJson'=>Native::json([
+      'id'=>$saved['id'],'name'=>$saved['name'],'group'=>$input['group'],'operation'=>$input['operation'],'ids'=>$input['ids'],
+     ])];
+    });
+   },
+  ];
+  return ['store.coupon.targets.read'=>$read,'store.coupon.targets.change'=>$write];
  }
  private static function subscription_pilot_operations(): array {
   $discover=static fn()=>class_exists(Subscription_Billing_Service::class)&&Subscription_Billing_Service::can_manage();

@@ -5387,7 +5387,7 @@
     },
     {
       "source": "wp-content/mu-plugins/dsa/includes/Commerce/MCP_Store_Provider.php",
-      "sha256": "f0bf0cfd95a46867a9e38b91dec7550161b8e334da1a017ad1a7ecaa949c27b4",
+      "sha256": "e1d6a22ca9107c279aed5d75015ea233c19324f5469a2535824e299d7bd53a8c",
       "symbols": [
         {
           "kind": "method",
@@ -5421,23 +5421,28 @@
         },
         {
           "kind": "method",
-          "name": "subscription_pilot_operations",
+          "name": "coupon_target_operations",
           "line": 108
         },
         {
           "kind": "method",
+          "name": "subscription_pilot_operations",
+          "line": 167
+        },
+        {
+          "kind": "method",
           "name": "membership_operations",
-          "line": 139
+          "line": 198
         },
         {
           "kind": "method",
           "name": "group",
-          "line": 229
+          "line": 288
         },
         {
           "kind": "method",
           "name": "change_group",
-          "line": 232
+          "line": 291
         }
       ]
     },
