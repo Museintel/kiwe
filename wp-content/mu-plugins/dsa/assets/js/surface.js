@@ -4623,6 +4623,7 @@
 				const memberships = response.activeMemberships || [];
 				rail.innerHTML = renderMembershipRail( memberships, response.shopUrl, response.accountUrl );
 				rail.hidden = ! memberships.length;
+				if ( memberships.length && target.isConnected ) target.hidden = false;
 			}
 		} ).catch( function () {
 			if ( target.isConnected ) target.innerHTML = '<div class="dsa-recent-orders__head"><strong>Recent orders</strong><span>Unavailable</span></div>';
