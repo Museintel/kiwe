@@ -10,10 +10,13 @@ final class Checkout_Offers {
 	public const QUERY = 'kiwe_checkout_offers';
 	public const LISTED = '_kiwe_checkout_offer_listed';
 	public const MEMBER = '_kiwe_checkout_offer_membership';
+	public const START = '_kiwe_checkout_offer_membership_start';
+	public const NEXT_PURCHASE = 'next-purchase';
+	public const SAME_PURCHASE = 'same-purchase';
 	private static ?array $listed = null;
 
 	public function register(): void {
-		add_filter( 'woocommerce_coupon_is_valid', [ $this, 'validate_membership' ], 25, 2 );
+		add_filter( 'woocommerce_coupon_is_valid', [ $this, 'validate_membership' ], 25, 3 );
 		add_action( 'woocommerce_before_calculate_totals', [ $this, 'apply_membership_offers' ], 10 );
 		add_action( 'woocommerce_cart_loaded_from_session', [ $this, 'refresh_restored_cart' ], 35 );
 		add_action( 'woocommerce_coupon_options', [ $this, 'editor' ], 10, 2 );
@@ -30,6 +33,7 @@ final class Checkout_Offers {
 		return [
 			'checkoutListed' => 'yes' === $coupon->get_meta( self::LISTED, true, 'edit' ),
 			'membershipProductId' => (int) $coupon->get_meta( self::MEMBER, true, 'edit' ),
+			'membershipStart' => self::SAME_PURCHASE === $coupon->get_meta( self::START, true, 'edit' ) ? self::SAME_PURCHASE : self::NEXT_PURCHASE,
 		];
 	}
 
@@ -39,7 +43,11 @@ final class Checkout_Offers {
 			&& ! \DSA\Access\Team_Workspace_Service::suspended( get_current_user_id() );
 	}
 
-	public static function set_settings( \WC_Coupon $coupon, bool $listed, int $membership_id ): void {
+	public static function set_settings( \WC_Coupon $coupon, bool $listed, int $membership_id, ?string $membership_start = null ): void {
+		$membership_start ??= self::settings( $coupon )['membershipStart'];
+		if ( ! in_array( $membership_start, [ self::NEXT_PURCHASE, self::SAME_PURCHASE ], true ) ) {
+			throw new \DomainException( __( 'Choose when the membership discount starts.', 'dsa' ) );
+		}
 		if ( ! self::can_edit( $coupon->get_id() ) ) throw new \DomainException( __( 'Your role cannot edit this coupon.', 'dsa' ) );
 		if ( $membership_id && ! self::membership_product( $membership_id ) ) {
 			throw new \DomainException( __( 'Select a published Kiwe subscription product or a recurring variation.', 'dsa' ) );
@@ -50,6 +58,8 @@ final class Checkout_Offers {
 		$coupon->update_meta_data( self::LISTED, $listed ? 'yes' : 'no' );
 		if ( $membership_id ) $coupon->update_meta_data( self::MEMBER, $membership_id );
 		else $coupon->delete_meta_data( self::MEMBER );
+		if ( $membership_id && self::SAME_PURCHASE === $membership_start ) $coupon->update_meta_data( self::START, $membership_start );
+		else $coupon->delete_meta_data( self::START );
 		$coupon->save_meta_data();
 		self::$listed = null;
 	}
@@ -98,6 +108,16 @@ final class Checkout_Offers {
 			<span class="description"><?php esc_html_e( 'Applies automatically through the paid membership term. Leave blank for a regular coupon.', 'dsa' ); ?></span>
 		</p>
 		<?php
+		woocommerce_wp_select( [
+			'id' => 'kiwe_checkout_offer_membership_start',
+			'label' => __( 'Membership discount starts', 'dsa' ),
+			'value' => $settings['membershipStart'],
+			'options' => [
+				self::NEXT_PURCHASE => __( 'Next purchase after payment', 'dsa' ),
+				self::SAME_PURCHASE => __( 'The purchase that includes this membership', 'dsa' ),
+			],
+			'description' => __( 'For a maximum number of discounted orders per account, set Usage limit per user in Usage limits. Leave it blank for unlimited use during paid access.', 'dsa' ),
+		] );
 	}
 
 	public function save_editor( int $id, \WC_Coupon $coupon ): void {
@@ -105,15 +125,36 @@ final class Checkout_Offers {
 		try {
 			$value = wp_unslash( $_POST['kiwe_checkout_offer_membership'] );
 			if ( '' !== $value && ! ctype_digit( $value ) ) throw new \DomainException( __( 'Enter a valid membership product ID.', 'dsa' ) );
-			self::set_settings( $coupon, 'yes' === ( $_POST['kiwe_checkout_offer_listed'] ?? '' ), (int) $value );
+			$start = $_POST['kiwe_checkout_offer_membership_start'] ?? null;
+			self::set_settings( $coupon, 'yes' === ( $_POST['kiwe_checkout_offer_listed'] ?? '' ), (int) $value, is_string( $start ) ? wp_unslash( $start ) : null );
 		} catch ( \DomainException $error ) {
 			\WC_Admin_Meta_Boxes::add_error( $error->getMessage() );
 		}
 	}
 
-	public function validate_membership( bool $valid, \WC_Coupon $coupon ): bool {
-		$id = self::settings( $coupon )['membershipProductId'];
-		return $valid && ( ! $id || isset( Membership_Directory::paid_product_ids( get_current_user_id() )[ $id ] ) );
+	private static function purchasing_memberships( \WC_Cart $cart ): array {
+		$customer = get_current_user_id();
+		if ( ! $customer || ! current_user_can( 'read' ) || \DSA\Access\Team_Workspace_Service::suspended( $customer )
+			|| ! Store_App_Service::supports_memberships() || ! Subscription_Checkout_Service::enabled() ) return [];
+		$ids = [];
+		foreach ( $cart->get_cart_contents() as $line ) {
+			$product = $line['data'] ?? null;
+			if ( ! $product instanceof \WC_Product || empty( $line['quantity'] ) || 'publish' !== $product->get_status()
+				|| ! Subscription_Product_Service::checkout_allowed( $product, Subscription_Product_Service::terms( $product ) ) ) continue;
+			$ids[(int) $line['product_id']] = true;
+			if ( ! empty( $line['variation_id'] ) ) $ids[(int) $line['variation_id']] = true;
+		}
+		return $ids;
+	}
+
+	public function validate_membership( bool $valid, \WC_Coupon $coupon, \WC_Discounts $discounts ): bool {
+		if ( ! $valid ) return false;
+		$settings = self::settings( $coupon );
+		$id = $settings['membershipProductId'];
+		if ( ! $id || isset( Membership_Directory::paid_product_ids( get_current_user_id() )[ $id ] ) ) return true;
+		$source = $discounts->get_object();
+		return self::SAME_PURCHASE === $settings['membershipStart'] && $source instanceof \WC_Cart
+			&& isset( self::purchasing_memberships( $source )[ $id ] );
 	}
 
 	public function refresh_restored_cart( \WC_Cart $cart ): void {
@@ -135,8 +176,9 @@ final class Checkout_Offers {
 			$exclusive = $exclusive || $coupon->get_individual_use();
 		}
 		$owned = $cart->get_cart_contents() ? Membership_Directory::paid_product_ids( get_current_user_id() ) : [];
-		if ( $owned && ! $exclusive ) {
-			$ids = self::coupon_ids( self::MEMBER, array_keys( $owned ) );
+		$admitted = $exclusive ? [] : $owned + self::purchasing_memberships( $cart );
+		if ( $admitted ) {
+			$ids = self::coupon_ids( self::MEMBER, array_keys( $admitted ) );
 			foreach ( $ids as $id ) {
 				$coupon = new \WC_Coupon( $id );
 				$code = $coupon->get_code();

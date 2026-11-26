@@ -71,7 +71,7 @@ final class MCP_Store_Authoring {
   'shipping-class'=>['action','name'],
   'checkout'=>['operation','enabled','fields'],'display'=>['changes'],'offer-policy'=>['key','value'],
   'product-tax'=>['taxStatus','taxClass'],'coupon-create'=>['name','type','amount','description'],'coupon'=>['amount','description'],
-  'coupon-checkout'=>['checkoutListed','membershipProductId'],
+  'coupon-checkout'=>['checkoutListed','membershipProductId','membershipStart'],
   'coupon-policy'=>['freeShipping','itemLimit','status','maximum','minimum','expiresLocal','usageLimit','perUserLimit','individualUse','excludeSaleItems'],
   'business'=>['area','field','valueJson'],
   default=>throw new \RuntimeException('This Store authoring action is not implemented.'),

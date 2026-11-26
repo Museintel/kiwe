@@ -215,14 +215,19 @@ final class Commerce_App_Service {
 		if ( ! is_bool( $input['checkoutListed'] ?? null ) || ! is_int( $input['membershipProductId'] ?? null ) || $input['membershipProductId'] < 0 ) {
 			return $this->error( 'coupon_input', 'Choose the listing setting and a membership product ID or zero.' );
 		}
+		$start = $input['membershipStart'] ?? $before['membershipStart'];
+		if ( ! is_string( $start ) || ! in_array( $start, [ \DSA\Commerce\Checkout_Offers::NEXT_PURCHASE, \DSA\Commerce\Checkout_Offers::SAME_PURCHASE ], true ) ) {
+			return $this->error( 'coupon_input', 'Choose next-purchase or same-purchase.' );
+		}
+		if ( ! $input['membershipProductId'] ) $start = \DSA\Commerce\Checkout_Offers::NEXT_PURCHASE;
 		try {
-			\DSA\Commerce\Checkout_Offers::set_settings( new \WC_Coupon( $id ), $input['checkoutListed'], $input['membershipProductId'] );
+			\DSA\Commerce\Checkout_Offers::set_settings( new \WC_Coupon( $id ), $input['checkoutListed'], $input['membershipProductId'], $start );
 		} catch ( \DomainException $error ) {
 			return $this->error( 'coupon_input', $error->getMessage() );
 		}
 		$after = $this->coupon_record( $id );
 		if ( is_wp_error( $after ) ) return $after;
-		if ( $after['checkoutListed'] !== $input['checkoutListed'] || $after['membershipProductId'] !== $input['membershipProductId'] ) {
+		if ( $after['checkoutListed'] !== $input['checkoutListed'] || $after['membershipProductId'] !== $input['membershipProductId'] || $after['membershipStart'] !== $start ) {
 			return $this->error( 'coupon_readback', 'The saved checkout offer differs. Reload and review.', 409 );
 		}
 		return $after;
@@ -237,7 +242,7 @@ final class Commerce_App_Service {
 		$post=get_post($id);if(!$post||'shop_coupon'!==$post->post_type||!in_array($post->post_status,['publish','draft','private'],true))return $this->error('coupon','Choose an existing saved coupon.',404);
 		try{$coupon=new \WC_Coupon($id);}catch(\Throwable $e){return $this->error('coupon','This coupon could not be read.',409);}
 		if((int)$coupon->get_id()!==$id)return $this->error('coupon','The coupon record could not be confirmed.',409);
-		$custom=[];foreach($coupon->get_meta_data()as$meta){$data=$meta->get_data();if(!in_array($data['key'],['_edit_lock','_edit_last',\DSA\Commerce\Checkout_Offers::LISTED,\DSA\Commerce\Checkout_Offers::MEMBER],true))$custom[]=$data;}
+		$custom=[];foreach($coupon->get_meta_data()as$meta){$data=$meta->get_data();if(!in_array($data['key'],['_edit_lock','_edit_last',\DSA\Commerce\Checkout_Offers::LISTED,\DSA\Commerce\Checkout_Offers::MEMBER,\DSA\Commerce\Checkout_Offers::START],true))$custom[]=$data;}
 		$type=(string)$coupon->get_discount_type('edit');$code=(string)$coupon->get_code('edit');
 		$editable=!$coupon->get_virtual('edit')&&!str_starts_with(strtolower($code),'kiwe-')&&!$custom&&in_array($type,['percent','fixed_cart','fixed_product'],true);
 		$expiry=$coupon->get_date_expires('edit');

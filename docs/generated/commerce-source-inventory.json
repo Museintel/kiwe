@@ -4319,7 +4319,7 @@
     },
     {
       "source": "wp-content/mu-plugins/dsa/includes/Commerce/Checkout_Offers.php",
-      "sha256": "863faa0a1cbdce6a93d2d77d134b2256261a286ca6568fb8c7eef207bbdd0bcf",
+      "sha256": "d2ef07605285af149a84def5d3b107cbf940f1e1ad2c16b704fdd44f444a5201",
       "symbols": [
         {
           "kind": "metadata",
@@ -4332,154 +4332,164 @@
           "line": 12
         },
         {
+          "kind": "metadata",
+          "name": "_kiwe_checkout_offer_membership_start",
+          "line": 13
+        },
+        {
           "kind": "method",
           "name": "register",
-          "line": 15
-        },
-        {
-          "kind": "hook",
-          "name": "woocommerce_coupon_is_valid",
-          "line": 16
-        },
-        {
-          "kind": "hook",
-          "name": "woocommerce_before_calculate_totals",
-          "line": 17
-        },
-        {
-          "kind": "hook",
-          "name": "woocommerce_cart_loaded_from_session",
           "line": 18
         },
         {
           "kind": "hook",
-          "name": "woocommerce_coupon_options",
+          "name": "woocommerce_coupon_is_valid",
           "line": 19
         },
         {
           "kind": "hook",
-          "name": "woocommerce_coupon_options_save",
+          "name": "woocommerce_before_calculate_totals",
           "line": 20
         },
         {
           "kind": "hook",
-          "name": "bricks/setup/control_options",
+          "name": "woocommerce_cart_loaded_from_session",
           "line": 21
         },
         {
           "kind": "hook",
-          "name": "bricks/query/run",
+          "name": "woocommerce_coupon_options",
           "line": 22
         },
         {
           "kind": "hook",
-          "name": "bricks/query/loop_object_id",
+          "name": "woocommerce_coupon_options_save",
           "line": 23
         },
         {
           "kind": "hook",
-          "name": "bricks/dynamic_tags_list",
+          "name": "bricks/setup/control_options",
           "line": 24
         },
         {
           "kind": "hook",
-          "name": "bricks/dynamic_data/render_tag",
+          "name": "bricks/query/run",
           "line": 25
         },
         {
           "kind": "hook",
-          "name": "bricks/dynamic_data/render_content",
+          "name": "bricks/query/loop_object_id",
           "line": 26
         },
         {
-          "kind": "method",
-          "name": "settings",
+          "kind": "hook",
+          "name": "bricks/dynamic_tags_list",
+          "line": 27
+        },
+        {
+          "kind": "hook",
+          "name": "bricks/dynamic_data/render_tag",
+          "line": 28
+        },
+        {
+          "kind": "hook",
+          "name": "bricks/dynamic_data/render_content",
           "line": 29
         },
         {
           "kind": "method",
+          "name": "settings",
+          "line": 32
+        },
+        {
+          "kind": "method",
           "name": "can_edit",
-          "line": 36
+          "line": 40
         },
         {
           "kind": "method",
           "name": "set_settings",
-          "line": 42
+          "line": 46
         },
         {
           "kind": "method",
           "name": "membership_product",
-          "line": 57
+          "line": 67
         },
         {
           "kind": "method",
           "name": "editor",
-          "line": 75
+          "line": 85
         },
         {
           "kind": "method",
           "name": "save_editor",
-          "line": 103
+          "line": 123
+        },
+        {
+          "kind": "method",
+          "name": "purchasing_memberships",
+          "line": 135
         },
         {
           "kind": "method",
           "name": "validate_membership",
-          "line": 114
+          "line": 150
         },
         {
           "kind": "method",
           "name": "refresh_restored_cart",
-          "line": 119
-        },
-        {
-          "kind": "method",
-          "name": "apply_membership_offers",
-          "line": 126
-        },
-        {
-          "kind": "method",
-          "name": "coupon_ids",
-          "line": 152
-        },
-        {
-          "kind": "method",
-          "name": "listed",
           "line": 160
         },
         {
           "kind": "method",
+          "name": "apply_membership_offers",
+          "line": 167
+        },
+        {
+          "kind": "method",
+          "name": "coupon_ids",
+          "line": 194
+        },
+        {
+          "kind": "method",
+          "name": "listed",
+          "line": 202
+        },
+        {
+          "kind": "method",
           "name": "review",
-          "line": 177
+          "line": 219
         },
         {
           "kind": "method",
           "name": "query_options",
-          "line": 207
+          "line": 249
         },
         {
           "kind": "method",
           "name": "run_query",
-          "line": 212
+          "line": 254
         },
         {
           "kind": "method",
           "name": "loop_id",
-          "line": 224
+          "line": 266
         },
         {
           "kind": "method",
           "name": "tags",
-          "line": 228
+          "line": 270
         },
         {
           "kind": "method",
           "name": "render_tag",
-          "line": 237
+          "line": 279
         },
         {
           "kind": "method",
           "name": "render_content",
-          "line": 250
+          "line": 292
         }
       ]
     },
@@ -5301,7 +5311,7 @@
     },
     {
       "source": "wp-content/mu-plugins/dsa/includes/Commerce/MCP_Store_Authoring.php",
-      "sha256": "14c8a8ed3b116d6a1a1cc49e849a6b16d4407714e13b51141c8fc3390d4fa602",
+      "sha256": "6669b946a9157d1aa6b75a8f228c40ad72b6f12a32c7b0068d9da44bd7730b34",
       "symbols": [
         {
           "kind": "method",
