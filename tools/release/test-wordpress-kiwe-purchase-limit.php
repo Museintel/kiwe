@@ -40,6 +40,7 @@ try {
     $editor = new Commerce_App_Service();
     $save = static function (string $type, string $name, bool $limit) use ($editor, $verify, &$products): WC_Product {
         $record = $editor->create_product_record(['name'=>$name, 'type'=>$type, 'oncePerAccount'=>$limit]);
+        if (is_wp_error($record)) throw new RuntimeException('Product draft: ' . $record->get_error_message());
         $verify(is_array($record) && $record['oncePerAccount'] === $limit, 'Draft authoring saves the limit.');
         $id = $record['id'];
         $products[] = $id;
@@ -54,6 +55,7 @@ try {
     $ordinary = $save('simple', $slug . ' ordinary', false);
     $variable = $save('variable', $slug . ' variable', true);
     $recurring = $save('variable', $slug . ' subscriptions', false);
+    $paid = $save('variable', $slug . ' paid subscription', false);
     $make_variation = static function (WC_Product $parent, ?array $terms = null) use (&$products): WC_Product_Variation {
         $choice = new WC_Product_Variation();
         $choice->set_parent_id($parent->get_id());
@@ -67,6 +69,7 @@ try {
     $choice = $make_variation($variable);
     $alternate = $make_variation($variable);
     $member = $make_variation($recurring, ['membershipGroup'=>$slug, 'renewalMinor'=>10000, 'intervalMonths'=>3, 'firstTermMonths'=>3]);
+    $paid_member = $make_variation($paid, ['membershipGroup'=>$slug . '-paid', 'renewalMinor'=>10000, 'intervalMonths'=>3, 'firstTermMonths'=>3]);
     $verify(in_array('oncePerAccount', MCP_Store_Authoring::fields('create'), true)
         && in_array('oncePerAccount', MCP_Store_Authoring::fields('publish'), true), 'MCP exposes the same limit.');
     $buy = static function (int $customer, array $items, string $status) use (&$orders, $verify): WC_Order {
@@ -81,22 +84,32 @@ try {
     };
     $buy($buyer, [$simple, $ordinary, $choice], 'completed');
     $buy($other, [$simple], 'failed');
-    $agreement = $buy($buyer, [$member], 'pending');
+    $agreement = $buy($buyer, [$member], 'on-hold');
     $agreement->set_payment_method(Renewals::GATEWAY);
     $agreement->update_meta_data(Renewals::AGREEMENT, ['customerId'=>$buyer, 'providerStatus'=>'created',
         'lines'=>[['productId'=>$recurring->get_id(), 'variationId'=>$member->get_id(), 'membershipGroup'=>$slug]]]);
     $agreement->save();
+    $paid_order = $buy($buyer, [$paid_member], 'completed');
+    $paid_order->set_payment_method(Renewals::GATEWAY);
+    $paid_order->set_transaction_id('pay_' . $slug);
+    $paid_order->set_date_paid(time() - MINUTE_IN_SECONDS);
+    $paid_order->update_meta_data(Renewals::AGREEMENT, ['customerId'=>$buyer, 'providerStatus'=>'authenticated',
+        'lines'=>[['productId'=>$paid->get_id(), 'variationId'=>$paid_member->get_id(), 'membershipGroup'=>$slug . '-paid', 'name'=>'Paid membership']]]);
+    $paid_order->update_meta_data(Renewals::CHARGE, ['paymentId'=>'pay_' . $slug, 'amountMinor'=>10000,
+        'refundedMinor'=>0, 'startsAt'=>time() - MINUTE_IN_SECONDS, 'endsAt'=>time() + DAY_IN_SECONDS]);
+    $paid_order->save();
+    $verify(Renewals::paid_period($paid_order)['active'] ?? false, 'The paid fixture has current access.');
 
     if (!WC()->session) WC()->initialize_session();
     if (!WC()->cart) WC()->initialize_cart();
-    $ids = [$simple->get_id(), $ordinary->get_id(), $variable->get_id(), $recurring->get_id()];
+    $ids = [$simple->get_id(), $ordinary->get_id(), $variable->get_id(), $recurring->get_id(), $paid->get_id()];
     $results = static function (string $billing) use ($ids): array {
         $vars = apply_filters('bricks/posts/query_vars', ['post_type'=>['product'], 'post__in'=>$ids,
             'orderby'=>'post__in', 'post_status'=>'publish', 'fields'=>'ids', 'posts_per_page'=>9], ['query'=>['kiweProductBilling'=>$billing]], 'fixture', 'block');
         return array_map('intval', (new WP_Query($vars))->posts);
     };
     wp_set_current_user(0);
-    $verify($results('subscriptions') === [$recurring->get_id()] && $results('one_time') === array_slice($ids, 0, 3), 'Guest loops distinguish native Woo product families.');
+    $verify($results('subscriptions') === array_slice($ids, 3) && $results('one_time') === array_slice($ids, 0, 3), 'Guest loops distinguish native Woo product families.');
     $verify(!apply_filters('woocommerce_add_to_cart_validation', true, $simple->get_id(), 1), 'Limit requires an account at cart entry.');
     wc_clear_notices();
     wp_set_current_user($other);
@@ -122,7 +135,7 @@ try {
     $cart->empty_cart();
     wp_set_current_user($buyer);
     $remaining = $results('both');
-    if ($remaining !== [$ordinary->get_id()]) {
+    if ($remaining !== [$ordinary->get_id(), $recurring->get_id()]) {
         throw new RuntimeException('Unexpected filtered product indexes: ' . json_encode([
             'remaining'=>array_keys(array_intersect($ids, $remaining)),
             'purchased'=>array_keys(array_intersect($ids, (new Limits())->purchased($buyer))),
@@ -131,12 +144,15 @@ try {
     }
     $verify(!apply_filters('woocommerce_add_to_cart_validation', true, $variable->get_id(), 1, $alternate->get_id()), 'Buying one variation consumes the parent limit.');
     wc_clear_notices();
-    $verify(!apply_filters('woocommerce_add_to_cart_validation', true, $recurring->get_id(), 1, $member->get_id()), 'An existing membership blocks repeat addition before checkout.');
+    $verify($results('subscriptions') === [$recurring->get_id()], 'An unpaid approval stays visible and a paid membership is excluded.');
+    $verify(!apply_filters('woocommerce_add_to_cart_validation', true, $recurring->get_id(), 1, $member->get_id()), 'An unpaid approval blocks a second checkout.');
+    wc_clear_notices();
+    $verify(!apply_filters('woocommerce_add_to_cart_validation', true, $paid->get_id(), 1, $paid_member->get_id()), 'An existing paid membership blocks repeat addition.');
     wc_clear_notices();
     $verify(apply_filters('woocommerce_add_to_cart_validation', true, $ordinary->get_id(), 1), 'An ordinary product remains repurchasable.');
     $verify(is_wp_error($editor->product_record($ordinary->get_id())), 'A customer cannot read the product editor.');
     echo json_encode(['passed'=>true, 'store'=>WC_VERSION, 'core'=>DSA_VERSION, 'bricks'=>wp_get_theme('bricks')->get('Version'),
-        'coverage'=>['draft', 'editor', 'MCP fields', 'guest', 'failed retry', 'quantity', 'checkout reservation', 'variation family', 'active membership', 'Bricks filtering', 'product permissions']]), PHP_EOL;
+        'coverage'=>['draft', 'editor', 'MCP fields', 'guest', 'failed retry', 'quantity', 'checkout reservation', 'variation family', 'active membership', 'pending approval', 'Bricks filtering', 'product permissions']]), PHP_EOL;
 } finally {
     foreach ($orders as $id) if ($order = wc_get_order($id)) $order->delete(true);
     foreach (array_reverse($products) as $id) if ($product = wc_get_product($id)) $product->delete(true);

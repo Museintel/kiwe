@@ -95,6 +95,9 @@ final class Purchase_Limit_Service {
 			try {
 				Subscription_Quote_Service::assert_groups_available( $customer, [ [ 'productId'=>$id, 'membershipGroup'=>$terms['membershipGroup'] ?? '' ] ] );
 			} catch ( \DomainException $error ) {
+				if ( Subscription_Checkout_Service::pending_approval_card( $id, $terms['membershipGroup'] ?? '' ) ) {
+					return $this->notice( __( 'You already started this subscription. Open Profile to review the existing order.', 'dsa' ) );
+				}
 				return $this->notice( $error->getMessage() );
 			}
 		}

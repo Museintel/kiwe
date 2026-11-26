@@ -61,7 +61,7 @@ final class Product_Availability_Query {
 		}
 		if ( 'one_time' === $billing ) return $where;
 
-		$lines = $this->membership_lines[$customer] ??= Subscription_Quote_Service::blocked_membership_lines( $customer );
+		$lines = $this->membership_lines[$customer] ??= Subscription_Quote_Service::blocked_membership_lines( $customer, 0, true );
 		$ids = array_values( array_filter( array_map( 'absint', array_column( $lines, 'productId' ) ) ) );
 		if ( $ids ) {
 			$list = implode( ',', array_unique( $ids ) );

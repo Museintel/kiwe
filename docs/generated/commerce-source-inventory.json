@@ -5556,7 +5556,7 @@
     },
     {
       "source": "wp-content/mu-plugins/dsa/includes/Commerce/Product_Availability_Query.php",
-      "sha256": "18ba471706cbf3cad695467384189d1d3a23206fec3edc1f6c2eed8a77ea3ff7",
+      "sha256": "a1f1de5a61397499b959135d851df02054a552a74cd9fbfa9fe559a2771f56a3",
       "symbols": [
         {
           "kind": "method",
@@ -5764,7 +5764,7 @@
     },
     {
       "source": "wp-content/mu-plugins/dsa/includes/Commerce/Purchase_Limit_Service.php",
-      "sha256": "76511f12c1e07f94b37bab87f7b1184638e6022f36ba3e5c68bacada3a74d437",
+      "sha256": "6b1d1d01f5262d95a8db564c2fe598c94618a05d9ccef4eee9ba58700b8ed569",
       "symbols": [
         {
           "kind": "metadata",
@@ -5874,77 +5874,77 @@
         {
           "kind": "method",
           "name": "validate_quantity",
-          "line": 104
+          "line": 107
         },
         {
           "kind": "method",
           "name": "quantity_message",
-          "line": 114
+          "line": 117
         },
         {
           "kind": "method",
           "name": "purchase_error",
-          "line": 118
+          "line": 121
         },
         {
           "kind": "method",
           "name": "notice",
-          "line": 124
+          "line": 127
         },
         {
           "kind": "method",
           "name": "limited_counts",
-          "line": 129
+          "line": 132
         },
         {
           "kind": "method",
           "name": "store_cart_errors",
-          "line": 138
+          "line": 141
         },
         {
           "kind": "method",
           "name": "review_error",
-          "line": 145
+          "line": 148
         },
         {
           "kind": "method",
           "name": "check_cart",
-          "line": 151
+          "line": 154
         },
         {
           "kind": "method",
           "name": "validate_checkout",
-          "line": 157
+          "line": 160
         },
         {
           "kind": "method",
           "name": "guard_store_order",
-          "line": 172
+          "line": 175
         },
         {
           "kind": "method",
           "name": "record_classic_reservation",
-          "line": 188
+          "line": 191
         },
         {
           "kind": "method",
           "name": "order_counts",
-          "line": 192
+          "line": 195
         },
         {
           "kind": "method",
           "name": "guard_order_payment",
-          "line": 201
+          "line": 204
         },
         {
           "kind": "method",
           "name": "reserve",
-          "line": 217
+          "line": 220
         },
         {
           "kind": "method",
           "name": "release_lock",
-          "line": 227
+          "line": 230
         }
       ]
     },
@@ -7479,7 +7479,7 @@
     },
     {
       "source": "wp-content/mu-plugins/dsa/includes/Commerce/Subscription_Checkout_Service.php",
-      "sha256": "8da0948ad09b7aa4d08daa9eab14d6e2970ee349d682b5847a6e9274ce31b710",
+      "sha256": "6b273023313f017efb32d2c23bba4aafeaf665bca4b482aedd6882d1aa125e86",
       "symbols": [
         {
           "kind": "metadata",
@@ -7578,73 +7578,78 @@
         },
         {
           "kind": "method",
+          "name": "pending_approval_card",
+          "line": 94
+        },
+        {
+          "kind": "method",
           "name": "current_quote",
-          "line": 93
+          "line": 116
         },
         {
           "kind": "method",
           "name": "consent_token",
-          "line": 102
+          "line": 125
         },
         {
           "kind": "method",
           "name": "review",
-          "line": 109
+          "line": 132
         },
         {
           "kind": "method",
           "name": "payment_fields",
-          "line": 138
+          "line": 161
         },
         {
           "kind": "method",
           "name": "months",
-          "line": 157
+          "line": 180
         },
         {
           "kind": "method",
           "name": "validate_checkout",
-          "line": 161
+          "line": 184
         },
         {
           "kind": "hook",
           "name": "shutdown",
-          "line": 202
+          "line": 225
         },
         {
           "kind": "method",
           "name": "release_checkout",
-          "line": 212
+          "line": 235
         },
         {
           "kind": "method",
           "name": "needs_payment",
-          "line": 219
+          "line": 242
         },
         {
           "kind": "method",
           "name": "process_payment",
-          "line": 223
+          "line": 246
         },
         {
           "kind": "method",
           "name": "continuation",
-          "line": 243
+          "line": 266
         },
         {
           "kind": "method",
           "name": "checkout_return_route",
-          "line": 249
+          "line": 272
         },
         {
           "kind": "method",
           "name": "render_authorization",
-          "line": 270
+          "line": 293
         },
         {
           "kind": "method",
           "name": "account_status",
-          "line": 322
+          "line": 345
         }
       ]
     },
@@ -7716,7 +7721,7 @@
     },
     {
       "source": "wp-content/mu-plugins/dsa/includes/Commerce/Subscription_Quote_Service.php",
-      "sha256": "c2f6bdfe4fcbbf188cbb9e54008246b6c5dac7b0d327823f47b53878e99146a4",
+      "sha256": "3a8eb148576e5d24640cc168f30dcc2ef931598e6c423ffff614ca03a5d008d4",
       "symbols": [
         {
           "kind": "method",
@@ -7781,7 +7786,7 @@
         {
           "kind": "method",
           "name": "minor",
-          "line": 160
+          "line": 161
         }
       ]
     },
@@ -9315,7 +9320,7 @@
     },
     {
       "source": "wp-content/mu-plugins/dsa/includes/Rest/Account_Controller.php",
-      "sha256": "c31bca3bbc14b5ab3dfcf07396a4a6f868904478f4725a081e65b08322be50dd",
+      "sha256": "b23944b9878b58e907aefcee2bcc6a558199205380e1dfe2c9d857f3787b4354",
       "symbols": [
         {
           "kind": "method",
@@ -9370,57 +9375,57 @@
         {
           "kind": "method",
           "name": "memberships",
-          "line": 320
+          "line": 325
         },
         {
           "kind": "method",
           "name": "membership_action",
-          "line": 338
+          "line": 343
         },
         {
           "kind": "method",
           "name": "downloads",
-          "line": 366
+          "line": 371
         },
         {
           "kind": "method",
           "name": "addresses",
-          "line": 385
+          "line": 390
         },
         {
           "kind": "method",
           "name": "update_address",
-          "line": 395
+          "line": 400
         },
         {
           "kind": "method",
           "name": "address_data",
-          "line": 429
+          "line": 434
         },
         {
           "kind": "method",
           "name": "address_fields",
-          "line": 456
+          "line": 461
         },
         {
           "kind": "method",
           "name": "sanitize_address_value",
-          "line": 460
+          "line": 465
         },
         {
           "kind": "method",
           "name": "persist_woocommerce_address",
-          "line": 468
+          "line": 473
         },
         {
           "kind": "method",
           "name": "money_text",
-          "line": 504
+          "line": 509
         },
         {
           "kind": "method",
           "name": "remote_addr",
-          "line": 510
+          "line": 515
         }
       ]
     },

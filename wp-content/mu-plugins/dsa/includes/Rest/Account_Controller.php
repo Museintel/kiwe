@@ -307,10 +307,15 @@ final class Account_Controller {
 
 		$membership = \DSA\Commerce\Membership_Account_Service::class;
 		$summary = [ 'orders'=>$data ];
-		if ( 1 === absint( $request?->get_param( 'memberships' ) ) && class_exists( $membership ) && ( $active = $membership::active_cards() ) ) {
+		$include_memberships = 1 === absint( $request?->get_param( 'memberships' ) );
+		if ( $include_memberships && class_exists( $membership ) && ( $active = $membership::active_cards() ) ) {
 			$summary['activeMemberships'] = $active;
 			$summary['shopUrl'] = esc_url_raw( wc_get_page_permalink( 'shop' ) );
 			$summary['accountUrl'] = esc_url_raw( wc_get_page_permalink( 'myaccount' ) ) . '#kiwe-memberships';
+		}
+		$checkout = \DSA\Commerce\Subscription_Checkout_Service::class;
+		if ( $include_memberships && class_exists( $checkout ) && ( $pending = $checkout::pending_approval_card() ) ) {
+			$summary['pendingSubscription'] = $pending;
 		}
 		$response = new WP_REST_Response( $summary, 200 );
 		$response->header( 'Cache-Control', 'private, no-store' );

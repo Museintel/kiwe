@@ -4625,8 +4625,8 @@
 			const rail = panel.querySelector( '[data-dsa-active-memberships]' );
 			if ( rail && rail.isConnected ) {
 				const memberships = response.activeMemberships || [];
-				rail.innerHTML = renderMembershipRail( memberships, response.shopUrl );
-				rail.hidden = ! memberships.length;
+				rail.innerHTML = renderMembershipRail( memberships, response.shopUrl, response.pendingSubscription );
+				rail.hidden = ! memberships.length && ! response.pendingSubscription;
 				if ( memberships.length && target.isConnected ) target.hidden = false;
 			}
 		} ).catch( function () {
@@ -4634,8 +4634,8 @@
 		} );
 	}
 
-	function renderMembershipRail( memberships, shopUrl ) {
-		if ( ! memberships.length ) return '';
+	function renderMembershipRail( memberships, shopUrl, pending ) {
+		if ( ! memberships.length && ! pending ) return '';
 		function group( items, label ) {
 			if ( ! items.length ) return '';
 			return '<div class="dsa-recent-orders__head"><strong>' + label + '</strong></div>'
@@ -4650,7 +4650,11 @@
 		}
 		return group( memberships.filter( item => item.active ), 'Active memberships' )
 			+ group( memberships.filter( item => item.status === 'scheduled' ), 'Scheduled memberships' )
-			+ '<button type="button" class="dsa-recent-orders__all" data-dsa-account-view="memberships">View all memberships</button>'
+			+ ( pending ? '<div class="dsa-recent-orders__head"><strong>Pending subscription</strong></div>'
+				+ '<div class="dsa-recent-orders__rail"><article class="dsa-recent-order"><strong>' + escapeHtml( pending.name ) + '</strong>'
+				+ '<small>' + escapeHtml( pending.status ) + '</small><a class="dsa-recent-orders__all" href="' + escapeHtml( pending.url ) + '">'
+				+ escapeHtml( pending.label ) + '</a></article></div>' : '' )
+			+ ( memberships.length ? '<button type="button" class="dsa-recent-orders__all" data-dsa-account-view="memberships">View all memberships</button>' : '' )
 			+ ( shopUrl ? '<a class="dsa-recent-orders__all" href="' + escapeHtml( shopUrl ) + '">Change plan</a>' : '' );
 	}
 

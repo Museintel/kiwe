@@ -135,7 +135,7 @@ final class Subscription_Quote_Service {
 		}
 	}
 
-	public static function blocked_membership_lines( int $customer, int $replaced_order = 0 ): array {
+	public static function blocked_membership_lines( int $customer, int $replaced_order = 0, bool $paid_only = false ): array {
 		if ( ! $customer ) return [];
 		$lines = [];
 		$page = 1;
@@ -151,7 +151,8 @@ final class Subscription_Quote_Service {
 				$ended = in_array( $agreement['providerStatus'], [ 'cancelled','completed','expired' ], true );
 				// A previously paid renewal may cover a future term even after billing stops.
 				$period = Subscription_Renewal_Orders::paid_period( $order, null, true );
-				if ( ! $ended || ! empty( $period['active'] ) ) $lines = array_merge( $lines, $agreement['lines'] );
+				$active = ! empty( $period['active'] );
+				if ( $active || ( ! $paid_only && ! $ended ) ) $lines = array_merge( $lines, $agreement['lines'] );
 			}
 		} while ( count( $orders ) === 20 );
 		return $lines;

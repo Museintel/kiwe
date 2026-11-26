@@ -90,6 +90,29 @@ final class Subscription_Checkout_Service {
 		return $order;
 	}
 
+	/** The already-created authorization is private to the shopper who owns its WooCommerce order. */
+	public static function pending_approval_card( int $product_id = 0, string $group = '' ): array {
+		$customer = self::customer();
+		if ( ! $customer || ! self::enabled() ) return [];
+		$order = self::pending_order( $customer );
+		if ( ! $order || ! $order->has_status( 'on-hold' ) || $order->get_date_paid()
+			|| Subscription_Renewal_Orders::GATEWAY !== $order->get_payment_method()
+			|| ! Subscription_Renewal_Orders::owned_by( $customer, $order ) ) return [];
+		$agreement = $order->get_meta( Subscription_Renewal_Orders::AGREEMENT );
+		if ( $product_id && ! in_array( $product_id, array_column( $agreement['lines'] ?? [], 'productId' ), true )
+			&& ( '' === $group || ! in_array( $group, array_column( $agreement['lines'] ?? [], 'membershipGroup' ), true ) ) ) return [];
+		$can_continue = '' !== self::continuation( $agreement );
+		$closed = (int) ( $agreement['approvalExpiresAt'] ?? 0 ) > 0 && $agreement['approvalExpiresAt'] <= time();
+		return [
+			'orderId'=>$order->get_id(),
+			'name'=>Membership_Directory::plan_names( $order ) ?: __( 'Subscription', 'dsa' ),
+			'label'=>$can_continue ? __( 'Continue subscription approval', 'dsa' ) : __( 'View subscription order', 'dsa' ),
+			'status'=>$can_continue ? __( 'Awaiting payment authorization', 'dsa' )
+				: ( $closed ? __( 'Authorization expired', 'dsa' ) : __( 'Awaiting confirmation', 'dsa' ) ),
+			'url'=>esc_url_raw( $can_continue ? $order->get_checkout_order_received_url() : $order->get_view_order_url() ),
+		];
+	}
+
 	private function current_quote(): array {
 		$cart = WC()->cart;
 		$quote = Subscription_Quote_Service::cart_snapshot( $cart );

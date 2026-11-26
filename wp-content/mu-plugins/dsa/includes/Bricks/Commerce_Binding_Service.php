@@ -59,7 +59,7 @@ final class Commerce_Binding_Service {
 			'commerce.products'=>[ 'query'=>[ 'objectType'=>'post', 'post_type'=>['product'], 'post_status'=>'publish' ], 'fieldsPrefix'=>'commerce.product' ] + ( class_exists( \DSA\Commerce\Product_Availability_Query::class ) ? [
 				'billingControl'=>'kiweProductBilling',
 				'billingModes'=>['one_time','subscriptions','both'],
-				'eligibility'=>'Exclude owned once-per-account products and active or pending membership groups for the signed-in shopper.',
+				'eligibility'=>'Exclude owned once-per-account products and membership groups with paid access for the signed-in shopper.',
 			] : [] ),
 			'commerce.relationships'=>[ 'query'=>[ 'objectType'=>'post', 'post_type'=>['product'] ], 'relationControl'=>'kiweProductRelation', 'sourceControl'=>'kiweRelationSource', 'relations'=>['upsells','cross_sells','grouped','companion'], 'emptyPolicy'=>'no-results', 'fieldsPrefix'=>'commerce.product' ],
 			'commerce.offers'=>[ 'query'=>[ 'objectType'=>'post', 'post_type'=>['product'], 'kiweProductRelation'=>'configured_offers' ], 'fieldsPrefix'=>'commerce.offer', 'identity'=>'native-trigger-product-id', 'enumerationLimit'=>100, 'totalsAuthority'=>'WooCommerce cart and coupon engine; no preview total or automatic claim' ],

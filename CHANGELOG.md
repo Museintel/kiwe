@@ -1,3 +1,8 @@
+## 8.0.0-rc.511 (2026-11-27, candidate)
+
+- Keep unpaid subscription products in Bricks catalogues and keep paid membership groups out of the signed-in shopper's results.
+- Show pending subscriptions in Profile with a way back to the existing approval. Preserve the guard against duplicate subscriptions.
+
 ## 8.0.0-rc.510 (2026-11-26, candidate)
 
 - Reuse Bricks' Cart contents loop, Dynamic fragment and Cart quantity element in authored checkout.
