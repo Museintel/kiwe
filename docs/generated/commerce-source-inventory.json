@@ -4192,7 +4192,7 @@
     },
     {
       "source": "wp-content/mu-plugins/dsa/includes/Commerce/Checkout_Experience_Service.php",
-      "sha256": "d96252bb7a56ec495000ea3b0958bffceb227c546a1ff782b021278b99cfa289",
+      "sha256": "7faddb468de3b43786bbc338598979b27e8a850abd7ca3b777ec726cf34284ae",
       "symbols": [
         {
           "kind": "method",
@@ -4267,42 +4267,42 @@
         {
           "kind": "method",
           "name": "address_text",
-          "line": 110
+          "line": 112
         },
         {
           "kind": "method",
           "name": "plain",
-          "line": 119
+          "line": 121
         },
         {
           "kind": "method",
           "name": "restore_shortcode_coupon",
-          "line": 123
+          "line": 125
         },
         {
           "kind": "hook",
           "name": "woocommerce_before_checkout_form",
-          "line": 127
+          "line": 129
         },
         {
           "kind": "method",
           "name": "assets",
-          "line": 131
+          "line": 133
         },
         {
           "kind": "method",
           "name": "body_classes",
-          "line": 143
+          "line": 145
         },
         {
           "kind": "method",
           "name": "address_summary",
-          "line": 148
+          "line": 150
         },
         {
           "kind": "method",
           "name": "payment_choices",
-          "line": 158
+          "line": 160
         }
       ]
     },
@@ -5140,7 +5140,7 @@
     },
     {
       "source": "wp-content/mu-plugins/dsa/includes/Commerce/MCP_Store_Authoring.php",
-      "sha256": "ec632e2ebf1d4ffeeb9b0f51640b4edf7b7f74cc09a95894c09a6e398f5eed5f",
+      "sha256": "cd22e56122eb250982682ffa9c29a87ae1fa8a32790da84770a1cb27f7d00555",
       "symbols": [
         {
           "kind": "method",
@@ -5540,6 +5540,57 @@
       ]
     },
     {
+      "source": "wp-content/mu-plugins/dsa/includes/Commerce/Product_Availability_Query.php",
+      "sha256": "18ba471706cbf3cad695467384189d1d3a23206fec3edc1f6c2eed8a77ea3ff7",
+      "symbols": [
+        {
+          "kind": "method",
+          "name": "__construct",
+          "line": 10
+        },
+        {
+          "kind": "method",
+          "name": "register",
+          "line": 12
+        },
+        {
+          "kind": "hook",
+          "name": "bricks/elements/",
+          "line": 14
+        },
+        {
+          "kind": "hook",
+          "name": "bricks/posts/query_vars",
+          "line": 16
+        },
+        {
+          "kind": "hook",
+          "name": "posts_where",
+          "line": 17
+        },
+        {
+          "kind": "method",
+          "name": "controls",
+          "line": 20
+        },
+        {
+          "kind": "method",
+          "name": "query_vars",
+          "line": 30
+        },
+        {
+          "kind": "method",
+          "name": "where",
+          "line": 45
+        },
+        {
+          "kind": "method",
+          "name": "terms_exist",
+          "line": 77
+        }
+      ]
+    },
+    {
       "source": "wp-content/mu-plugins/dsa/includes/Commerce/Product_Context_Service.php",
       "sha256": "9ac880d52663ed03096b81f3e61001595a6cb5172bcc13f61207eec49c8b2cb0",
       "symbols": [
@@ -5693,6 +5744,182 @@
           "kind": "method",
           "name": "woocommerce_account_required",
           "line": 166
+        }
+      ]
+    },
+    {
+      "source": "wp-content/mu-plugins/dsa/includes/Commerce/Purchase_Limit_Service.php",
+      "sha256": "9d56b7986f40d0ac6dec02d5713e223c9207164b8af2dd10cea333bb6f898065",
+      "symbols": [
+        {
+          "kind": "metadata",
+          "name": "_kiwe_once_per_account",
+          "line": 8
+        },
+        {
+          "kind": "metadata",
+          "name": "_kiwe_once_per_account_reserved",
+          "line": 9
+        },
+        {
+          "kind": "method",
+          "name": "allow_term_check",
+          "line": 14
+        },
+        {
+          "kind": "method",
+          "name": "family",
+          "line": 24
+        },
+        {
+          "kind": "method",
+          "name": "enabled",
+          "line": 28
+        },
+        {
+          "kind": "method",
+          "name": "write",
+          "line": 32
+        },
+        {
+          "kind": "method",
+          "name": "register",
+          "line": 37
+        },
+        {
+          "kind": "hook",
+          "name": "woocommerce_add_to_cart_validation",
+          "line": 38
+        },
+        {
+          "kind": "hook",
+          "name": "woocommerce_update_cart_validation",
+          "line": 39
+        },
+        {
+          "kind": "hook",
+          "name": "woocommerce_check_cart_items",
+          "line": 40
+        },
+        {
+          "kind": "hook",
+          "name": "woocommerce_store_api_cart_errors",
+          "line": 41
+        },
+        {
+          "kind": "hook",
+          "name": "woocommerce_after_checkout_validation",
+          "line": 42
+        },
+        {
+          "kind": "hook",
+          "name": "woocommerce_checkout_create_order",
+          "line": 43
+        },
+        {
+          "kind": "hook",
+          "name": "woocommerce_store_api_checkout_order_processed",
+          "line": 44
+        },
+        {
+          "kind": "hook",
+          "name": "woocommerce_order_needs_payment",
+          "line": 45
+        },
+        {
+          "kind": "hook",
+          "name": "shutdown",
+          "line": 46
+        },
+        {
+          "kind": "method",
+          "name": "families",
+          "line": 50
+        },
+        {
+          "kind": "method",
+          "name": "purchased",
+          "line": 71
+        },
+        {
+          "kind": "method",
+          "name": "validate_add",
+          "line": 75
+        },
+        {
+          "kind": "method",
+          "name": "validate_quantity",
+          "line": 99
+        },
+        {
+          "kind": "method",
+          "name": "quantity_message",
+          "line": 109
+        },
+        {
+          "kind": "method",
+          "name": "purchase_error",
+          "line": 113
+        },
+        {
+          "kind": "method",
+          "name": "notice",
+          "line": 119
+        },
+        {
+          "kind": "method",
+          "name": "limited_counts",
+          "line": 124
+        },
+        {
+          "kind": "method",
+          "name": "store_cart_errors",
+          "line": 133
+        },
+        {
+          "kind": "method",
+          "name": "review_error",
+          "line": 140
+        },
+        {
+          "kind": "method",
+          "name": "check_cart",
+          "line": 146
+        },
+        {
+          "kind": "method",
+          "name": "validate_checkout",
+          "line": 152
+        },
+        {
+          "kind": "method",
+          "name": "guard_store_order",
+          "line": 167
+        },
+        {
+          "kind": "method",
+          "name": "record_classic_reservation",
+          "line": 183
+        },
+        {
+          "kind": "method",
+          "name": "order_counts",
+          "line": 187
+        },
+        {
+          "kind": "method",
+          "name": "guard_order_payment",
+          "line": 196
+        },
+        {
+          "kind": "method",
+          "name": "reserve",
+          "line": 212
+        },
+        {
+          "kind": "method",
+          "name": "release_lock",
+          "line": 222
         }
       ]
     },
@@ -7464,7 +7691,7 @@
     },
     {
       "source": "wp-content/mu-plugins/dsa/includes/Commerce/Subscription_Quote_Service.php",
-      "sha256": "7dfaf3488e470227ae55f2ee1db4aff9357c4a6ab49ce6fc895c50dcd5933492",
+      "sha256": "c2f6bdfe4fcbbf188cbb9e54008246b6c5dac7b0d327823f47b53878e99146a4",
       "symbols": [
         {
           "kind": "method",
@@ -7523,8 +7750,13 @@
         },
         {
           "kind": "method",
+          "name": "blocked_membership_lines",
+          "line": 138
+        },
+        {
+          "kind": "method",
           "name": "minor",
-          "line": 155
+          "line": 160
         }
       ]
     },
@@ -8461,7 +8693,7 @@
     },
     {
       "source": "wp-content/mu-plugins/dsa/includes/Plugin.php",
-      "sha256": "965010738e030ad17a891ecd335e74e6b8f848904197efb5d3d8e2a972ef6810",
+      "sha256": "cade5e14ca6e551ca83fa7f6934e1551a4dfceae2ef4eff6b971ada95438e457",
       "symbols": [
         {
           "kind": "method",
@@ -8676,42 +8908,42 @@
         {
           "kind": "hook",
           "name": "after_setup_theme",
-          "line": 429
+          "line": 434
         },
         {
           "kind": "method",
           "name": "cart_payload",
-          "line": 436
+          "line": 441
         },
         {
           "kind": "method",
           "name": "linked_products",
-          "line": 439
+          "line": 444
         },
         {
           "kind": "method",
           "name": "store_analytics",
-          "line": 442
+          "line": 447
         },
         {
           "kind": "method",
           "name": "abandoned_carts",
-          "line": 445
+          "line": 450
         },
         {
           "kind": "method",
           "name": "ai_broker",
-          "line": 454
+          "line": 459
         },
         {
           "kind": "method",
           "name": "modules",
-          "line": 458
+          "line": 463
         },
         {
           "kind": "method",
           "name": "registry",
-          "line": 462
+          "line": 467
         }
       ]
     },

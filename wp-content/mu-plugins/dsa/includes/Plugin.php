@@ -410,6 +410,11 @@ final class Plugin {
 		( new \DSA\Commerce\Weight_Shipping_Service() )->register();
 		( new Order_Notification_Service( $this->notification_preferences, $this->channels, $this->push ) )->register();
 		if ( class_exists( \DSA\Commerce\Subscription_Product_Service::class ) ) ( new \DSA\Commerce\Subscription_Product_Service() )->register();
+		if ( class_exists( \DSA\Commerce\Purchase_Limit_Service::class ) ) {
+			$purchase_limits = new \DSA\Commerce\Purchase_Limit_Service();
+			$purchase_limits->register();
+			if ( Bricks_Integration::is_active_theme() ) ( new \DSA\Commerce\Product_Availability_Query( $purchase_limits ) )->register();
+		}
 		if ( class_exists( \DSA\Commerce\Subscription_Billing_Service::class ) ) ( new \DSA\Commerce\Subscription_Billing_Service() )->register();
 		if ( class_exists( \DSA\Commerce\Subscription_Checkout_Service::class ) ) ( new \DSA\Commerce\Subscription_Checkout_Service() )->register();
 		if ( $paused ) return;

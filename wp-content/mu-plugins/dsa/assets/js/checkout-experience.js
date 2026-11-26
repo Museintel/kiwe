@@ -124,6 +124,7 @@
 				} );
 				if ( ! data.available ) announce( 'Checkout details are unavailable. Open the address editor to continue.' );
 				else if ( data.empty ) announce( 'Your cart is empty.' );
+				else if ( data.purchaseError ) announce( data.purchaseError );
 				else if ( data.sharedAgreement ) announce( 'These plans share one billing agreement. Buy them separately to manage renewals independently.' );
 				else if ( ! Object.keys( data.methods ).length && ! data.renewal ) announce( 'No payment method is available for this cart.' );
 				else announce( '' );

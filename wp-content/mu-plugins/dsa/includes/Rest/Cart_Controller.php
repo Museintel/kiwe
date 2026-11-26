@@ -95,9 +95,14 @@ final class Cart_Controller {
 		$attributes = $variation->get_variation_attributes();
 		// Custom line data can encode add-ons or a different price. Keep those rows intact.
 		$native = [ 'key','product_id','variation_id','variation','quantity','data','data_hash','line_tax_data','line_subtotal','line_subtotal_tax','line_total','line_tax' ];
-		if ( array_diff( array_keys( $item ), $native ) || $cart->find_product_in_cart( $cart->generate_cart_id( $parent, $id, $attributes ) )
-			|| ! apply_filters( 'woocommerce_add_to_cart_validation', true, $parent, 1, $id, $attributes, [] ) ) {
+		if ( array_diff( array_keys( $item ), $native ) || $cart->find_product_in_cart( $cart->generate_cart_id( $parent, $id, $attributes ) ) ) {
 			return new WP_Error( 'kiwe_cart_term', __( 'This cart line cannot change terms here.', 'dsa' ), [ 'status'=>409 ] );
+		}
+		$validate = static fn() => apply_filters( 'woocommerce_add_to_cart_validation', true, $parent, 1, $id, $attributes, [] );
+		$allowed = class_exists( \DSA\Commerce\Purchase_Limit_Service::class )
+			? \DSA\Commerce\Purchase_Limit_Service::allow_term_check( $key, $validate ) : $validate();
+		if ( ! $allowed ) {
+			return new WP_Error( 'kiwe_cart_term', $this->cart_error_message( __( 'This cart line cannot change terms here.', 'dsa' ) ), [ 'status'=>409 ] );
 		}
 		$new = $cart->add_to_cart( $parent, 1, $id, $attributes );
 		if ( ! $new || ! $cart->remove_cart_item( $key ) ) {

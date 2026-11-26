@@ -55,8 +55,8 @@ final class MCP_Store_Authoring {
  }
  /** Fixed field allowlists are adapters, not arbitrary options, meta or REST targets. */
  public static function fields(string $kind): array{return match($kind){
-  'create'=>['name','type','imageId'],
-  'save','publish'=>['name','price','status','description','shortDescription','categories','tags','imageId','galleryIds','reviewsAllowed','subscriptionTerms'],
+  'create'=>['name','type','imageId','oncePerAccount'],
+  'save','publish'=>['name','price','status','description','shortDescription','categories','tags','imageId','galleryIds','reviewsAllowed','subscriptionTerms','oncePerAccount'],
   'inventory'=>['manageStock','sku','stockStatus','stock'],
   'delivery'=>['virtual','shippingClassId','weight','length','width','height'],
   'sale'=>['salePrice','startsAt','endsAt'],'nutrition'=>['imageId'],

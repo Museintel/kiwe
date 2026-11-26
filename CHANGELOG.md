@@ -1,3 +1,9 @@
+## 8.0.0-rc.509 (2026-11-26, candidate)
+
+- Limit simple and variable products, including subscriptions, to one purchase per account from Kiwe Store or MCP.
+- Extend the native Bricks product query with one-time, subscription and combined views. Hide ineligible products for the signed-in shopper before pagination.
+- Reject overlapping memberships at add to cart and validate purchase limits during cart updates and checkout.
+
 ## 8.0.0-rc.508 (2026-11-26, candidate)
 
 - Use a shared Store release cache key for the checkout stylesheet and script so browsers can load the matching pair.

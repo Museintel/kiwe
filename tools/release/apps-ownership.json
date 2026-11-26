@@ -114,6 +114,8 @@
         "includes/Commerce/Subscription_Checkout_Gateway.php",
         "includes/Commerce/Subscription_Checkout_Service.php",
         "includes/Commerce/Subscription_Product_Service.php",
+        "includes/Commerce/Purchase_Limit_Service.php",
+        "includes/Commerce/Product_Availability_Query.php",
         "includes/Commerce/Subscription_Quote_Service.php",
         "includes/Commerce/Subscription_Renewal_Orders.php",
         "includes/Commerce/Weight_Shipping_Service.php",

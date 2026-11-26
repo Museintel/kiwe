@@ -4,6 +4,7 @@ namespace DSA\Access;
 
 use DSA\Utilities\Origin_Checker;
 use DSA\Commerce\Subscription_Product_Service as Billing;
+use DSA\Commerce\Purchase_Limit_Service as Purchase_Limit;
 
 if ( ! defined( 'ABSPATH' ) ) exit;
 
@@ -693,13 +694,19 @@ final class Commerce_App_Service {
 		$image = Workspace_Media::validate( $input['imageId'] ?? 0 );
 		if ( is_wp_error( $image ) ) return $image;
 		$type=$input['type']??'simple';if(!in_array($type,['simple','variable','grouped'],true))return $this->error('type','Choose a simple, variable or grouped draft product.');
+		$limit = array_key_exists( 'oncePerAccount', $input );
+		if ( $limit && ( 'grouped' === $type || ! is_bool( $input['oncePerAccount'] ) || ! class_exists( Purchase_Limit::class ) ) ) {
+			return $this->error( 'purchase_limit', 'Choose a valid purchase limit for a simple or variable product.' );
+		}
 		// Creation only makes a draft. Categories and inventory use the existing
 		// record's checked editors; a lost response is never auto-replayed.
-		try { $product = $type==='variable'?new \WC_Product_Variable():($type==='grouped'?new \WC_Product_Grouped():new \WC_Product_Simple()); $product->set_name( $name ); $product->set_image_id( $image ); $product->set_status( 'draft' ); $id = $product->save(); }
+		try { $product = $type==='variable'?new \WC_Product_Variable():($type==='grouped'?new \WC_Product_Grouped():new \WC_Product_Simple()); $product->set_name( $name ); $product->set_image_id( $image ); $product->set_status( 'draft' ); if ( $limit ) Purchase_Limit::write( $product, $input['oncePerAccount'] ); $id = $product->save(); }
 		catch ( \Throwable $error ) { return $this->error( 'create', 'The draft could not be confirmed. Reload the product list before trying again.', 409 ); }
 		$record = $id ? wc_get_product( $id ) : false;
 		if ( ! $record || $record->get_type()!==$type || $record->get_name( 'edit' ) !== $name || (int) $record->get_image_id( 'edit' ) !== $image || 'draft' !== $record->get_status( 'edit' ) ) return $this->error( 'create', 'The draft could not be confirmed. Reload the product list before trying again.', 409 );
-		return $this->project_product( $record );
+		$project = $this->project_product( $record );
+		if ( $limit && $project['oncePerAccount'] !== $input['oncePerAccount'] ) return $this->error( 'purchase_limit', 'The draft purchase limit could not be confirmed.', 409 );
+		return $project;
 	}
 	public function save_inventory( \WP_REST_Request $request ): \WP_REST_Response {
 		if ( 'POST' !== $request->get_method() || ! $this->permission( $request ) ) return $this->response( $this->error( 'forbidden', 'Inventory editing is unavailable.', 403 ) );
@@ -1005,6 +1012,7 @@ final class Commerce_App_Service {
 		$record = [ self::product_values( $product ), (bool) $product->get_reviews_allowed( 'edit' ) ];
 		$billing = class_exists( Billing::class ) ? Billing::terms( $product ) : null;
 		if ( null !== $billing ) $record[] = $billing;
+		if ( class_exists( Purchase_Limit::class ) && Purchase_Limit::enabled( $product->get_id() ) ) $record['oncePerAccount'] = true;
 		return hash( 'sha256', wp_json_encode( $record ) );
 	}
 	/** One current product without hydrating the category catalogue or any orders. */
@@ -1017,6 +1025,9 @@ final class Commerce_App_Service {
 	private function project_product( $product ): array {
 		$out = self::product_values( $product );
 		if ( class_exists( Billing::class ) ) $out += Billing::editor( $product );
+		if ( class_exists( Purchase_Limit::class ) && $product->is_type( [ 'simple', 'variable' ] ) ) {
+			$out['oncePerAccount'] = Purchase_Limit::enabled( $product->get_id() );
+		}
 		$out['reviewsAllowed']=(bool)$product->get_reviews_allowed('edit');
 		$out['feedbackAvailable']=\DSA\Discussion\Feedback_Access::enabled();
 		$out['expected'] = self::fingerprint( $product );
@@ -1037,7 +1048,9 @@ final class Commerce_App_Service {
 	}
 	public function save_product_record( int $id, array $input ) {
 		if ( ! function_exists( 'wc_get_product' ) || ! current_user_can( 'edit_products' ) || ! current_user_can( 'edit_post', $id ) ) return $this->error( 'forbidden', 'Your role cannot edit this product.', 403 );
-		if ( ! class_exists( Billing::class ) || ! Billing::can_author() ) return $this->persist_product_record( $id, $input );
+		if ( ! array_key_exists( 'oncePerAccount', $input ) && ( ! class_exists( Billing::class ) || ! Billing::can_author() ) ) {
+			return $this->persist_product_record( $id, $input );
+		}
 
 		global $wpdb;
 		$lock = 'kiwe-product-details-' . substr( hash( 'sha256', DB_NAME . '|' . $wpdb->prefix . '|' . $id ), 0, 32 );
@@ -1058,6 +1071,10 @@ final class Commerce_App_Service {
 		$before = $this->project_product( $product );
 		if ( ! $before['editable'] ) return $this->error( 'type', 'This product cannot be changed from the basic details task.', 409 );
 		if ( ! is_string( $input['expected'] ?? null ) || ! hash_equals( $before['expected'], $input['expected'] ) ) return $this->error( 'stale', 'This product changed elsewhere. Refresh before saving.', 409 );
+		$change_limit = array_key_exists( 'oncePerAccount', $input );
+		if ( $change_limit && ( ! array_key_exists( 'oncePerAccount', $before ) || ! is_bool( $input['oncePerAccount'] ) ) ) {
+			return $this->error( 'purchase_limit', 'Choose a valid purchase limit for a simple or variable product.' );
+		}
 		foreach ( [ 'name','price','status' ] as $key ) if ( ! is_string( $input[ $key ] ?? null ) ) return $this->error( 'input', 'Complete the product details.' );
 		$description_changed = array_key_exists( 'description', $input );
 		$short_changed = array_key_exists( 'shortDescription', $input );
@@ -1116,6 +1133,7 @@ final class Commerce_App_Service {
 			if ( null !== $gallery ) $product->set_gallery_image_ids( $gallery );
 			if ( $reviews_changed ) $product->set_reviews_allowed($input['reviewsAllowed']);
 			if ( $billing_changed ) Billing::write( $product, $billing );
+			if ( $change_limit ) Purchase_Limit::write( $product, $input['oncePerAccount'] );
 			$saved = $product->save();
 		} catch ( \Throwable $error ) { return $this->error( 'write', 'The save could not be confirmed. Refresh before retrying.', 409 ); }
 		if ( ! $saved || is_wp_error( $saved ) ) return $this->error( 'write', 'The save could not be confirmed. Refresh before retrying.', 409 );
@@ -1125,6 +1143,7 @@ final class Commerce_App_Service {
 		foreach ( [ 'name'=>$name, 'description'=>$description, 'shortDescription'=>$short, 'price'=>$price, 'status'=>$status ] as $key=>$value ) if ( $after[ $key ] !== $value ) return $this->error( 'readback', 'The saved product differs. Refresh and review it.', 409 );
 		if($after['reviewsAllowed']!==($reviews_changed?$input['reviewsAllowed']:$before['reviewsAllowed']))return $this->error('reviews_readback','The review setting could not be confirmed. Reload and review.',409);
 		if ( $billing_changed && Billing::terms( $record ) !== $billing ) return $this->error( 'billing', 'The recurring terms could not be confirmed. Reload and review.', 409 );
+		if ( $change_limit && $after['oncePerAccount'] !== $input['oncePerAccount'] ) return $this->error( 'purchase_limit', 'The purchase limit could not be confirmed. Reload and review.', 409 );
 		if ( $after['categories'] !== $categories ) return $this->error( 'readback', 'The saved categories differ. Refresh and review them.', 409 );
 		if ( $after['tags'] !== $tags ) return $this->error( 'readback', 'The saved product tags differ. Refresh and review them.', 409 );
 		if ( ( null !== $image && $after['imageId'] !== $image ) || ( null !== $gallery && $after['galleryIds'] !== $gallery ) ) return $this->error( 'image_readback', 'The saved images differ. Reload and review them.', 409 );

@@ -75,8 +75,9 @@ final class Checkout_Experience_Service {
 		$gateways = WC()->payment_gateways()->get_available_payment_gateways();
 		$subscription = new Subscription_Checkout_Service();
 		$terms = $subscription->review();
+		$purchase_error = class_exists( Purchase_Limit_Service::class ) ? ( new Purchase_Limit_Service() )->review_error( $cart ) : '';
 		$methods = [];
-		if ( ! $cart->is_empty() ) {
+		if ( ! $cart->is_empty() && '' === $purchase_error ) {
 			if ( null !== $terms ) {
 				if ( ! empty( $terms['quote'] ) && isset( $gateways[ Subscription_Renewal_Orders::GATEWAY ] ) ) $methods['subscription'] = Subscription_Renewal_Orders::GATEWAY;
 			} elseif ( ! $cart->needs_payment() ) {
@@ -97,6 +98,7 @@ final class Checkout_Experience_Service {
 		return [
 			'available'=>true, 'empty'=>$cart->is_empty(), 'address'=>$address,
 			'total'=>self::plain( $cart->get_total() ), 'renewal'=>$terms['summary'] ?? $terms['message'] ?? '',
+			'purchaseError'=>$purchase_error,
 			'sharedAgreement'=>! empty( $terms['sharedAgreement'] ),
 			'subscriptionQuote'=>$terms['quote'] ?? '', 'methods'=>empty( $methods ) ? (object) [] : $methods,
 			'fields'=>$values, 'shipping'=>(array) WC()->session->get( 'chosen_shipping_methods', [] ),

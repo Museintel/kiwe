@@ -128,8 +128,16 @@ final class Subscription_Quote_Service {
 	}
 
 	public static function assert_groups_available( int $customer, array $lines, int $replaced_order = 0 ): void {
-		$groups = self::groups( $lines );
-		$products = array_column( $lines, 'productId' );
+		$blocked = self::blocked_membership_lines( $customer, $replaced_order );
+		if ( array_intersect( self::groups( $lines ), self::groups( $blocked ) )
+			|| array_intersect( array_column( $lines, 'productId' ), array_column( $blocked, 'productId' ) ) ) {
+			throw new \DomainException( __( 'You already have a membership or an approval in progress for this group. Manage it in Profile → Active memberships.', 'dsa' ) );
+		}
+	}
+
+	public static function blocked_membership_lines( int $customer, int $replaced_order = 0 ): array {
+		if ( ! $customer ) return [];
+		$lines = [];
 		$page = 1;
 		do {
 			$orders = wc_get_orders( [
@@ -139,17 +147,14 @@ final class Subscription_Quote_Service {
 			foreach ( $orders as $order ) {
 				if ( $replaced_order && $replaced_order === $order->get_id() ) continue;
 				$agreement = $order->get_meta( Subscription_Renewal_Orders::AGREEMENT );
-				if ( ! is_array( $agreement['lines'] ?? null ) || ! Subscription_Renewal_Orders::owned_by( $customer, $order )
-					|| ( ! array_intersect( $groups, self::groups( $agreement['lines'] ) )
-						&& ! array_intersect( $products, array_column( $agreement['lines'], 'productId' ) ) ) ) continue;
+				if ( ! is_array( $agreement['lines'] ?? null ) || ! Subscription_Renewal_Orders::owned_by( $customer, $order ) ) continue;
 				$ended = in_array( $agreement['providerStatus'], [ 'cancelled','completed','expired' ], true );
 				// A previously paid renewal may cover a future term even after billing stops.
 				$period = Subscription_Renewal_Orders::paid_period( $order, null, true );
-				if ( ! $ended || ! empty( $period['active'] ) ) {
-					throw new \DomainException( __( 'This group already has a membership or an approval in progress. Stop its renewals and wait until paid access ends to switch terms.', 'dsa' ) );
-				}
+				if ( ! $ended || ! empty( $period['active'] ) ) $lines = array_merge( $lines, $agreement['lines'] );
 			}
 		} while ( count( $orders ) === 20 );
+		return $lines;
 	}
 
 	public static function minor( string $total ): int {
