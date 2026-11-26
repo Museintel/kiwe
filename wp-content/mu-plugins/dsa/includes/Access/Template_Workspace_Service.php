@@ -8,6 +8,7 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 /** A private presentation over the installed Bricks catalog and native WP posts. */
 final class Template_Workspace_Service {
 	public const PAGE = 'kiwe-templates';
+	public const REFERENCE_PAGE = 'kiwe-bricks-reference';
 	public const ROLE = 'kiwe_web_designer';
 	public static function template_caps(): array {
 		return [ 'kiwe_manage_templates','edit_kiwe_templates','edit_others_kiwe_templates','edit_published_kiwe_templates','edit_private_kiwe_templates','publish_kiwe_templates','read_private_kiwe_templates','create_kiwe_templates' ];
@@ -54,7 +55,9 @@ final class Template_Workspace_Service {
 		if ( ! get_role( self::ROLE ) ) add_role( self::ROLE, __( 'Web Designer','dsa' ), array_fill_keys( self::designer_caps(), true ) );
 	}
 	public function menu(): void {
-		if ( self::allowed() ) add_menu_page( __( 'Templates','dsa' ), __( 'Templates','dsa' ), 'kiwe_manage_templates', self::PAGE, [ $this,'document' ], 'dashicons-layout',34 );
+		if ( ! self::allowed() ) return;
+		add_menu_page( __( 'Templates','dsa' ), __( 'Templates','dsa' ), 'kiwe_manage_templates', self::PAGE, [ $this,'document' ], 'dashicons-layout',34 );
+		add_submenu_page( self::PAGE, __( 'Bricks reference', 'dsa' ), __( 'Bricks reference', 'dsa' ), 'kiwe_manage_templates', self::REFERENCE_PAGE, [ $this, 'reference' ] );
 	}
 	public function permission( \WP_REST_Request $request ): bool {
 		return Team_App_Service::enabled() && self::allowed() && in_array( $request->get_method(), [ 'GET','POST' ], true ) && wp_verify_nonce( (string) $request->get_header( 'X-WP-Nonce' ),'wp_rest' ) && Origin_Checker::is_same_site_request() && ( 'GET' === $request->get_method() || true === Origin_Checker::mutation_allowed( $request ) );
@@ -105,5 +108,15 @@ final class Template_Workspace_Service {
 	public function document(): void {
 		if ( ! self::allowed() ) wp_die( 'Templates are unavailable for your account.','',[ 'response'=>403 ] );
 		Task_Workspace_UI::app_document( 'templates','Templates',[ 'endpoint'=>rest_url( 'dsa/v1/workspace/templates' ),...Content_Archive_App_Service::config() ] );
+	}
+
+	public function reference(): void {
+		if ( ! self::allowed() ) wp_die( __( 'The Bricks reference is unavailable for your account.', 'dsa' ), '', [ 'response'=>403 ] );
+		?>
+		<div class="wrap dsa-admin">
+			<h1><?php esc_html_e( 'Bricks reference', 'dsa' ); ?></h1>
+			<?php \DSA\Admin\Admin::render_app_developer_reference(); ?>
+		</div>
+		<?php
 	}
 }

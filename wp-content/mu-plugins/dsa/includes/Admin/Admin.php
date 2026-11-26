@@ -6602,7 +6602,7 @@ final class Admin {
 		<?php
 	}
 
-	private function render_app_developer_reference(): void {
+	public static function render_app_developer_reference(): void {
 		$contract     = Seam_Vocabulary_Schema::contract();
 		$capabilities = is_array( $contract['capabilityAttributes'] ?? null ) ? $contract['capabilityAttributes'] : [];
 		$groups       = is_array( $capabilities['groups'] ?? null ) ? $capabilities['groups'] : [];
@@ -6681,7 +6681,7 @@ final class Admin {
 		<div class="wrap dsa-admin">
 			<h1><?php esc_html_e( 'Kiwe Attributes', 'dsa' ); ?></h1>
 			<p><?php esc_html_e( 'Builder-neutral attributes for Bricks, block themes, and custom HTML. These contracts open Kiwe journeys without coupling a page to one builder.', 'dsa' ); ?></p>
-			<?php $this->render_app_developer_reference(); ?>
+			<?php self::render_app_developer_reference(); ?>
 		</div>
 		<?php
 	}
@@ -7176,7 +7176,7 @@ final class Admin {
 			<section class="dsa-admin__panel">
 				<h2><?php esc_html_e( 'Builder attributes', 'dsa' ); ?></h2>
 				<p><?php esc_html_e( 'Builder-neutral HTML attributes for Bricks, block themes, and custom markup now live with the developer contracts that define them.', 'dsa' ); ?></p>
-				<?php $this->render_app_developer_reference(); ?>
+				<?php self::render_app_developer_reference(); ?>
 			</section>
 
 			<section class="dsa-admin__panel">

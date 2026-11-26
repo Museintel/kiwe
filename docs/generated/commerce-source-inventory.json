@@ -407,7 +407,7 @@
     },
     {
       "source": "wp-content/mu-plugins/dsa/includes/Access/WordPress_Role_Access_Service.php",
-      "sha256": "50cd1a5d7e38a7899d885c59d749c2341a147be6ab4d9deafd516a805fbe25ba",
+      "sha256": "601ae3ec64bf0bc23f0d263a94ef531807e1269fdeca4af5035ead97e472d30a",
       "symbols": [
         {
           "kind": "method",
@@ -567,73 +567,73 @@
         {
           "kind": "method",
           "name": "guard_editorial_admin_route",
-          "line": 333
+          "line": 336
         },
         {
           "kind": "method",
           "name": "restricted_role",
-          "line": 396
+          "line": 399
         },
         {
           "kind": "method",
           "name": "guard_shop_manager_route",
-          "line": 421
+          "line": 424
         },
         {
           "kind": "method",
           "name": "redirect_to_posts",
-          "line": 444
+          "line": 447
         },
         {
           "kind": "method",
           "name": "menu_order",
-          "line": 449
+          "line": 452
         },
         {
           "kind": "method",
           "name": "toolbar",
-          "line": 456
+          "line": 459
         },
         {
           "kind": "method",
           "name": "guard_builder",
-          "line": 462
+          "line": 465
         },
         {
           "kind": "method",
           "name": "enforce_bricks_boundary",
-          "line": 467
+          "line": 470
         },
         {
           "kind": "method",
           "name": "bricks_access_column",
-          "line": 478
+          "line": 481
         },
         {
           "kind": "method",
           "name": "guard_client_route",
-          "line": 483
+          "line": 486
         },
         {
           "kind": "method",
           "name": "guard_ajax",
-          "line": 584
+          "line": 587
         },
         {
           "kind": "method",
           "name": "guard_rest",
-          "line": 604
+          "line": 607
         },
         {
           "kind": "method",
           "name": "deny",
-          "line": 702
+          "line": 705
         }
       ]
     },
     {
       "source": "wp-content/mu-plugins/dsa/includes/Admin/Admin.php",
-      "sha256": "a21c1698455f7b5bca2dbc73f74d05d9639f7bdc58f187d95338e2b9771ac869",
+      "sha256": "61e08b75c8935920bd21f35ba66ed754cca186b90782dedbb13485c8cf2222fc",
       "symbols": [
         {
           "kind": "method",
