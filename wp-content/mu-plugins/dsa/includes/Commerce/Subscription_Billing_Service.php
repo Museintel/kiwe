@@ -178,13 +178,13 @@ final class Subscription_Billing_Service {
 	}
 
 	/** Preserve the original paid term and put the next term on a new native order. */
-	public static function switch_own_plan( int $id, int $variation, string $expected ): string {
-		return self::synchronized( 'order', $id, static function () use ( $id, $variation, $expected ): string {
+	public static function switch_own_plan( int $id, int $variation, string $expected, bool $checkout = false ): string {
+		return self::synchronized( 'order', $id, static function () use ( $id, $variation, $expected, $checkout ): string {
 			$old = wc_get_order( $id );
 			if ( ! $old instanceof \WC_Order ) throw new \DomainException( __( 'Select your membership first.', 'dsa' ) );
 			$review = Membership_Account_Service::switch_review( $old, $variation );
 			if ( ! hash_equals( $review['expected'], $expected ) ) throw new \DomainException( __( 'The plan changed. Review the current terms again.', 'dsa' ) );
-			return self::synchronized( 'membership-groups', $old->get_customer_id(), static function () use ( $old, $review ): string {
+			return self::synchronized( 'membership-groups', $old->get_customer_id(), static function () use ( $old, $review, $checkout ): string {
 				$product = $review['product'];
 				$terms = $review['terms'];
 				$source = [ 'orderId'=>$old->get_id(), 'variationId'=>$product->get_id(), 'startsAt'=>$review['startsAt'] ];
@@ -202,7 +202,7 @@ final class Subscription_Billing_Service {
 						if ( $source !== $order->get_meta( self::SWITCH_SOURCE ) ) {
 							throw new \DomainException( __( 'There is already a replacement order for this membership.', 'dsa' ) );
 						}
-						if ( $pending ) return $order->get_view_order_url();
+						if ( $pending ) return $checkout ? $order->get_checkout_order_received_url() : $order->get_view_order_url();
 					}
 				}
 
@@ -242,7 +242,7 @@ final class Subscription_Billing_Service {
 				if ( Membership_Account_Service::can_cancel( $old ) ) self::stop_renewals( $old, $prior );
 				self::synchronized( 'order', $order->get_id(), static fn() => self::create_agreement( $order, $quote, $plan, true,
 					[ 'switchFrom'=>$old->get_id(), 'startsAt'=>$review['startsAt'] ] ) );
-				return $order->get_view_order_url();
+				return $checkout ? $order->get_checkout_order_received_url() : $order->get_view_order_url();
 			} );
 		} );
 	}
@@ -507,7 +507,20 @@ final class Subscription_Billing_Service {
 		return is_string( $id ) && preg_match( '/^[1-9][0-9]{0,14}$/D', $id ) ? (int) $id : 0;
 	}
 
-	private static function reconcile( string $payment_id, int $expected_order = 0, string $expected = '' ): void {
+	public static function confirm_checkout_payment( \WC_Order $order, string $payment, string $subscription, string $signature ): bool {
+		if ( ! Subscription_Checkout_Service::owns_order( $order )
+			|| ! Razorpay_Subscription_Provider::verifies_checkout( $payment, $subscription, $signature ) ) return false;
+		$agreement = $order->get_meta( Subscription_Renewal_Orders::AGREEMENT );
+		if ( empty( $agreement['checkoutConsentAt'] ) || $subscription !== $agreement['subscriptionId'] ) return false;
+		try {
+			self::reconcile( $payment, $order->get_id(), '', true );
+		} catch ( \RuntimeException $error ) {
+			// A signed authorization can precede capture. The webhook still owns eventual delivery.
+		}
+		return true;
+	}
+
+	private static function reconcile( string $payment_id, int $expected_order = 0, string $expected = '', bool $buyer = false ): void {
 		$payment = Razorpay_Subscription_Provider::payment( $payment_id );
 		$invoice_id = $payment['invoice_id'] ?? null;
 		if ( ! $invoice_id ) {
@@ -524,13 +537,14 @@ final class Subscription_Billing_Service {
 		$id = self::native_order_id( $subscription );
 		if ( $expected_order && $expected_order !== $id ) throw new \DomainException( 'This payment belongs to another order.' );
 		if ( ! $id ) return;
-		self::synchronized( 'order', $id, static function () use ( $id, $subscription, $payment, $invoice, $expected_order, $expected ): void {
+		self::synchronized( 'order', $id, static function () use ( $id, $subscription, $payment, $invoice, $expected_order, $expected, $buyer ): void {
 			if ( ! self::available() ) throw new \RuntimeException( 'Subscription processing is unavailable.' );
-			if ( $expected_order ) self::require_review( $id, $payment['id'], true, $expected );
+			if ( $expected_order && ! $buyer ) self::require_review( $id, $payment['id'], true, $expected );
 			$order = wc_get_order( $id );
 			$agreement = $order ? $order->get_meta( Subscription_Renewal_Orders::AGREEMENT ) : null;
 			if ( ! is_array( $agreement ) ) return;
 			$facts = self::charge( $agreement, $payment, $invoice );
+			if ( $buyer && ( ! Subscription_Checkout_Service::owns_order( $order ) || ! $facts['initial'] ) ) throw new \DomainException( 'This payment is unavailable for this checkout.' );
 			if ( $facts['initial'] && ! hash_equals( $agreement['fingerprint'], self::order_fingerprint( $order ) ) ) {
 				throw new \DomainException( 'The initial order changed after the test approval was prepared.' );
 			}

@@ -23,6 +23,16 @@ final class Razorpay_Subscription_Provider {
 		return is_array( $settings ) ? $settings : [];
 	}
 
+	public static function checkout_key(): string {
+		return self::available() ? (string) self::settings()['key_id'] : '';
+	}
+
+	public static function verifies_checkout( string $payment_id, string $subscription_id, string $signature ): bool {
+		if ( ! self::available() || ! self::id( $payment_id, 'pay' ) || ! self::id( $subscription_id, 'sub' )
+			|| ! preg_match( '/^[a-f0-9]{64}$/D', $signature ) ) return false;
+		return hash_equals( hash_hmac( 'sha256', $payment_id . '|' . $subscription_id, self::settings()['key_secret'] ), $signature );
+	}
+
 	public static function id( mixed $value, string $prefix ): bool {
 		return is_string( $value ) && (bool) preg_match( '/^' . preg_quote( $prefix, '/' ) . '_[A-Za-z0-9]{1,48}$/D', $value );
 	}

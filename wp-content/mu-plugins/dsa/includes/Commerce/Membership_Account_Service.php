@@ -59,7 +59,7 @@ final class Membership_Account_Service {
 			'status'=>array_keys( wc_get_order_statuses() ),
 			'limit'=>10, 'page'=>$page, 'paginate'=>true,
 		] );
-		$items = array_values( array_filter( array_map( [ self::class, 'status' ], $orders->orders ) ) );
+		$items = array_values( array_filter( array_map( [ self::class, 'projection' ], $orders->orders ) ) );
 		return [ 'page'=>$page, 'hasMore'=>$page < $orders->max_num_pages, 'memberships'=>$items ];
 	}
 
@@ -71,17 +71,37 @@ final class Membership_Account_Service {
 			$list = self::listing( $page++ );
 			foreach ( $list['memberships'] as $membership ) {
 				if ( ! $membership['active'] && 'scheduled' !== $membership['status'] ) continue;
-				$order = wc_get_order( $membership['orderId'] );
-				if ( ! $order ) continue;
-				$cards[] = $membership + [
-					'name'=>Membership_Directory::plan_names( $order ) ?: __( 'Membership', 'dsa' ),
-					'paidThroughLabel'=>wp_date( get_option( 'date_format' ), $membership['paidThrough'] ),
-					'startsLabel'=>$membership['startsAt'] ? wp_date( get_option( 'date_format' ), $membership['startsAt'] ) : '',
-				];
+				$cards[] = $membership;
 				if ( count( $cards ) === 6 ) return $cards;
 			}
 		} while ( $list['hasMore'] );
 		return $cards;
+	}
+
+	public static function projection( \WC_Order $order, bool $controls = false ): array {
+		$item = self::status( $order );
+		if ( ! $item ) return [];
+		$date = get_option( 'date_format' );
+		$item += [
+			'name'=>Membership_Directory::plan_names( $order ) ?: __( 'Membership', 'dsa' ),
+			'paidThroughLabel'=>$item['paidThrough'] ? wp_date( $date, $item['paidThrough'] ) : '',
+			'startsLabel'=>$item['startsAt'] ? wp_date( $date, $item['startsAt'] ) : '',
+		];
+		if ( ! $controls ) return $item;
+		$item['actions'] = [];
+		if ( $item['canCancel'] ) $item['actions'][] = [ 'action'=>'cancel','label'=>__( 'Stop renewals', 'dsa' ),
+			'message'=>__( 'Keep paid access and stop future automatic charges.', 'dsa' ), 'expected'=>self::cancellation( $order )['expected'] ];
+		foreach ( [ 'pause'=>'canPause', 'resume'=>'canResume' ] as $action=>$cap ) {
+			if ( $item[ $cap ] ) $item['actions'][] = [ 'action'=>$action,
+				'label'=>'pause' === $action ? __( 'Pause renewals', 'dsa' ) : __( 'Resume renewals', 'dsa' ),
+				'message'=>'pause' === $action ? __( 'Keep paid access and pause future automatic charges.', 'dsa' ) : __( 'Allow automatic charges to resume for this plan.', 'dsa' ),
+				'expected'=>self::pause_review( $order, 'pause' === $action ) ];
+		}
+		foreach ( self::switches( $order ) as $variation=>$review ) {
+			$item['actions'][] = [ 'action'=>'switch','variation'=>$variation,'label'=>$review['label'],
+				'message'=>$review['message'],'expected'=>$review['expected'] ];
+		}
+		return $item;
 	}
 
 	public static function cancellation( \WC_Order $order ): array {
@@ -161,19 +181,15 @@ final class Membership_Account_Service {
 				$variation, $plan, $source['startsAt'], $amount, $terms ] ), wp_salt( 'nonce' ) ) ];
 	}
 
-	private function render_plan_switches( \WC_Order $order ): void {
+	private static function switches( \WC_Order $order ): array {
 		$source = self::switch_source( $order );
-		if ( ! $source || ! ( $parent = wc_get_product( $source['line']['productId'] ) ) || ! $parent->is_type( 'variable' ) ) return;
-		$first = true;
+		if ( ! $source || ! ( $parent = wc_get_product( $source['line']['productId'] ) ) || ! $parent->is_type( 'variable' ) ) return [];
+		$options = [];
 		foreach ( $parent->get_children() as $variation ) {
 			try {
 				$review = self::review_variation( $order, $variation, $source );
 			} catch ( \DomainException $error ) {
 				continue;
-			}
-			if ( $first ) {
-				$first = false;
-				echo '<p>' . esc_html__( 'Confirming a switch stops current renewals. Your paid access continues through the current term even if you leave Razorpay before paying for the next term.', 'dsa' ) . '</p>';
 			}
 			$terms = $review['terms'];
 			$prompt = sprintf( __( 'Switch to %1$s starting %2$s. Stop the current renewals and authorize %3$s now for the next term, then %4$s every %5$d months.', 'dsa' ),
@@ -181,7 +197,18 @@ final class Membership_Account_Service {
 				wp_strip_all_tags( wc_price( $review['firstChargeMinor'] / 100, [ 'currency'=>'INR' ] ) ),
 				wp_strip_all_tags( wc_price( $terms['renewalMinor'] / 100, [ 'currency'=>'INR' ] ) ), $terms['intervalMonths'] );
 			$label = sprintf( __( 'Switch to %d months', 'dsa' ), $terms['firstTermMonths'] );
-			$this->billing_form( $order, self::SWITCH_PLAN, $review['expected'], $prompt, $label, $variation );
+			$options[ $variation ] = [ 'expected'=>$review['expected'], 'message'=>$prompt, 'label'=>$label ];
+		}
+		return $options;
+	}
+
+	private function render_plan_switches( \WC_Order $order ): void {
+		$options = self::switches( $order );
+		if ( $options ) {
+			echo '<p>' . esc_html__( 'Your current paid access continues if you leave Razorpay before paying for the next term.', 'dsa' ) . '</p>';
+		}
+		foreach ( $options as $variation=>$option ) {
+			$this->billing_form( $order, self::SWITCH_PLAN, $option['expected'], $option['message'], $option['label'], $variation );
 		}
 	}
 

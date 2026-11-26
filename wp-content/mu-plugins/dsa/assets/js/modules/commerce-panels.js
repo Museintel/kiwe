@@ -376,6 +376,9 @@ function renderCartPanelItem( item ) {
 		'<span>' + ( price ? escapeHtml( price ) : '' ) + '</span>',
 		weight ? '<small class="dsa-cart-panel__weight">' + escapeHtml( weight ) + '</small>' : '',
 		stockBadge ? '<em class="dsa-cart-panel__stock-badge is-' + escapeHtml( stockBadge.type || 'alert' ) + '">' + escapeHtml( stockBadge.label ) + '</em>' : '',
+		key && Array.isArray( item.termOptions ) && item.termOptions.length ? '<label>Membership term <select data-dsa-cart-term="' + escapeHtml( key ) + '">'
+			+ item.termOptions.map( option => '<option value="' + escapeHtml( option.id ) + '"' + ( Number( option.id ) === Number( variationId ) ? ' selected' : '' )
+				+ '>' + escapeHtml( option.label ) + '</option>' ).join( '' ) + '</select></label>' : '',
 		'</span>',
 		quantityControls && key ? '<span class="dsa-cart-panel__quantity dsa-quantity" data-dsa-keep-open><button type="button" data-dsa-cart-quantity="' + escapeHtml( key ) + '"' + itemMeta + ' data-dsa-cart-next="' + escapeHtml( Math.max( 0, quantity - 1 ) ) + '" aria-label="Decrease quantity">&minus;</button><strong>' + escapeHtml( quantity || 1 ) + '</strong><button type="button" data-dsa-cart-quantity="' + escapeHtml( key ) + '"' + itemMeta + ' data-dsa-cart-next="' + escapeHtml( Math.min( maxQuantity, quantity + 1 ) ) + '" aria-label="Increase quantity"' + plusDisabled + '>+</button></span>' : '<span class="dsa-cart-panel__quantity-label dsa-quantity">Qty ' + escapeHtml( quantity || 1 ) + '</span>',
 	].join( '' );

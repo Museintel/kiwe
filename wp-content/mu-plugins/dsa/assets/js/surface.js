@@ -4594,7 +4594,7 @@
 
 		const profileActive = overlayRoot
 			&& ! overlayRoot.hidden
-			&& ( overlayRoot.querySelector( '[data-dsa-profile-panel]' ) || ( dockContext && dockContext.dataset.dsaContext === 'profile' ) );
+			&& ( overlayRoot.querySelector( '[data-dsa-profile-panel], .dsa-account-view' ) || ( dockContext && dockContext.dataset.dsaContext === 'profile' ) );
 		if ( ! profileActive ) {
 			return false;
 		}
@@ -4607,7 +4607,7 @@
 			return true;
 		}
 
-		openAccountView( accountButton.dataset.dsaAccountView );
+		openAccountView( accountButton.dataset.dsaAccountView, Number( accountButton.dataset.dsaMembershipOrder || 0 ), Number( accountButton.dataset.dsaMembershipPage || 1 ) );
 		return true;
 	}
 
@@ -4621,7 +4621,7 @@
 			const rail = panel.querySelector( '[data-dsa-active-memberships]' );
 			if ( rail && rail.isConnected ) {
 				const memberships = response.activeMemberships || [];
-				rail.innerHTML = renderMembershipRail( memberships, response.shopUrl, response.accountUrl );
+				rail.innerHTML = renderMembershipRail( memberships, response.shopUrl );
 				rail.hidden = ! memberships.length;
 				if ( memberships.length && target.isConnected ) target.hidden = false;
 			}
@@ -4630,7 +4630,7 @@
 		} );
 	}
 
-	function renderMembershipRail( memberships, shopUrl, accountUrl ) {
+	function renderMembershipRail( memberships, shopUrl ) {
 		if ( ! memberships.length ) return '';
 		function group( items, label ) {
 			if ( ! items.length ) return '';
@@ -4641,12 +4641,12 @@
 					+ ( membership.startsLabel ? '<small>Starts ' + escapeHtml( membership.startsLabel ) + '</small>' : '' )
 					+ '<small>Access through ' + escapeHtml( membership.paidThroughLabel ) + '</small>'
 					+ ( billing ? '<small>' + billing + '</small>' : '' )
-					+ '<a href="' + escapeHtml( membership.url ) + '">Manage membership</a></article>';
+					+ '<button type="button" data-dsa-account-view="memberships" data-dsa-membership-order="' + escapeHtml( membership.orderId ) + '">Manage membership</button></article>';
 				} ).join( '' ) + '</div>';
 		}
 		return group( memberships.filter( item => item.active ), 'Active memberships' )
 			+ group( memberships.filter( item => item.status === 'scheduled' ), 'Scheduled memberships' )
-			+ ( accountUrl ? '<a class="dsa-recent-orders__all" href="' + escapeHtml( accountUrl ) + '">View all memberships</a>' : '' )
+			+ '<button type="button" class="dsa-recent-orders__all" data-dsa-account-view="memberships">View all memberships</button>'
 			+ ( shopUrl ? '<a class="dsa-recent-orders__all" href="' + escapeHtml( shopUrl ) + '">Change plan</a>' : '' );
 	}
 
@@ -4845,6 +4845,24 @@
 
 				surfaceFeedback( 'quantity' );
 				updateCartQuantity( button.dataset.dsaCartQuantity, button.dataset.dsaCartNext, panel, button );
+			} );
+		} );
+		panel.querySelectorAll( '[data-dsa-cart-term]' ).forEach( function ( select ) {
+			select.addEventListener( 'change', function () {
+				const key = select.dataset.dsaCartTerm;
+				const variationId = Number( select.value );
+				enqueueCartMutation( function () {
+					const sequence = nextCartSequence();
+					setCartPanelBusy( panel, true );
+					return dsaPost( '/cart/change-term', { key: key, variationId: variationId } ).then( function ( response ) {
+						applyCartPayload( response, { rerender: true, cartMutation: true, sequence: sequence } );
+						applyWooCartFragments( response, 'updated_cart_totals' );
+					} );
+				} ).catch( function ( error ) {
+					const message = panel.querySelector( '[data-dsa-cart-message]' );
+					if ( message ) message.textContent = error.message;
+					select.value = Array.from( select.options ).find( option => option.defaultSelected )?.value || '';
+				} ).finally( function () { setCartPanelBusy( panel, false ); } );
 			} );
 		} );
 
@@ -5372,7 +5390,7 @@
 
 		if ( busy && panel.contains( document.activeElement ) ) panel.dsaCartFocus = document.activeElement;
 		panel.classList.toggle( 'is-updating', Boolean( busy ) );
-		panel.querySelectorAll( '[data-dsa-cart-quantity], [data-dsa-cart-add], [data-dsa-cart-claim]' ).forEach( function ( button ) {
+		panel.querySelectorAll( '[data-dsa-cart-quantity], [data-dsa-cart-add], [data-dsa-cart-claim], [data-dsa-cart-term]' ).forEach( function ( button ) {
 			button.disabled = Boolean( busy );
 		} );
 		if ( ! busy ) {
@@ -6287,9 +6305,10 @@
 			} );
 	}
 
-	function openAccountView( view ) {
+	function openAccountView( view, membershipOrder, membershipPage ) {
 		const title = {
 			orders: 'Orders',
+			memberships: 'Memberships',
 			downloads: 'Downloads',
 			addresses: 'Addresses',
 			password: 'Reset password',
@@ -6300,7 +6319,17 @@
 		const contentSequence = overlayContentSequence;
 		bindAccountBack();
 
-		if ( view === 'orders' ) {
+		if ( view === 'memberships' ) {
+			const query = String( data.restUrl ).includes( '?' ) ? '&' : '?';
+			dsaGet( '/account/memberships' + query + ( membershipOrder ? 'orderId=' + membershipOrder : 'page=' + ( membershipPage || 1 ) ) )
+				.then( function ( response ) {
+					const body = renderAccountMemberships( response );
+					if ( replaceOverlayContent( renderAccountShell( title, body, view ), { reason: 'account_memberships', module: getSurfaceModule( 'profile' ), label: title, lifecycleSequence: lifecycleSequence, contentSequence: contentSequence } ) ) {
+						bindAccountBack();
+						bindMembershipActions( membershipOrder, response.membership );
+					}
+				} ).catch( function ( error ) { renderAccountError( error, lifecycleSequence, contentSequence ); } );
+		} else if ( view === 'orders' ) {
 			dsaGet( '/account/orders' ).then( function ( response ) {
 				if ( replaceOverlayContent( renderAccountShell( title, renderOrders( response.orders || [] ), view ), { reason: 'account_orders', module: getSurfaceModule( 'profile' ), label: title, lifecycleSequence: lifecycleSequence, contentSequence: contentSequence } ) ) {
 					bindAccountBack();
@@ -6327,6 +6356,52 @@
 			bindAccountBack();
 			bindPasswordReset();
 		}
+	}
+
+	function renderAccountMemberships( response ) {
+		const shop = response.shopUrl ? '<a class="dsa-recent-orders__all" href="' + escapeHtml( response.shopUrl ) + '">Change plan</a>' : '';
+		const item = response.membership;
+		if ( item ) {
+			return '<h3>' + escapeHtml( item.name ) + '</h3>'
+				+ ( item.startsLabel ? '<p>Starts ' + escapeHtml( item.startsLabel ) + '</p>' : '' )
+				+ ( item.paidThroughLabel ? '<p>Paid through ' + escapeHtml( item.paidThroughLabel ) + '</p>' : '' )
+				+ '<p role="status" data-dsa-membership-message></p>'
+				+ ( item.actions || [] ).map( function ( action, index ) {
+					return '<form data-dsa-membership-action="' + index + '"><label><input type="checkbox" required> '
+						+ escapeHtml( action.message ) + '</label> <button type="submit">' + escapeHtml( action.label ) + '</button></form>';
+				} ).join( '' )
+				+ '<button type="button" data-dsa-account-view="memberships">View all memberships</button>' + shop;
+		}
+		const entries = ( response.memberships || [] ).map( function ( member ) {
+			return '<li><button type="button" data-dsa-account-view="memberships" data-dsa-membership-order="' + escapeHtml( member.orderId )
+				+ '">' + escapeHtml( member.name ) + '</button> <small>' + escapeHtml( member.status ) + '</small></li>';
+		} ).join( '' );
+		const page = Number( response.page ) || 1;
+		return ( entries ? '<ul>' + entries + '</ul>' : '<p>No memberships on this page.</p>' )
+			+ ( page > 1 ? '<button type="button" data-dsa-account-view="memberships" data-dsa-membership-page="' + ( page - 1 ) + '">Previous</button>' : '' )
+			+ ( response.hasMore ? '<button type="button" data-dsa-account-view="memberships" data-dsa-membership-page="' + ( page + 1 ) + '">More memberships</button>' : '' ) + shop;
+	}
+
+	function bindMembershipActions( id, item ) {
+		const view = overlayRoot.querySelector( '.dsa-account-view' );
+		if ( ! view ) return;
+		view.addEventListener( 'click', event => handleAccountContextClick( event, view ) );
+		view.addEventListener( 'submit', function ( event ) {
+			const form = event.target.closest( '[data-dsa-membership-action]' );
+			const action = form && item?.actions?.[ Number( form.dataset.dsaMembershipAction ) ];
+			if ( ! action ) return;
+			event.preventDefault();
+			const button = form.querySelector( 'button' );
+			button.disabled = true;
+			dsaPost( '/account/membership-action', { orderId: id, action: action.action, variation: action.variation || 0, expected: action.expected } )
+				.then( function ( response ) {
+					if ( response.checkoutUrl && new URL( response.checkoutUrl, location.href ).origin === location.origin ) location.assign( response.checkoutUrl );
+					else if ( view.isConnected ) openAccountView( 'memberships', id );
+				} ).catch( function ( error ) {
+					button.disabled = false;
+					view.querySelector( '[data-dsa-membership-message]' ).textContent = error.message;
+				} );
+		} );
 	}
 
 	function renderAccountShell( title, body, view ) {

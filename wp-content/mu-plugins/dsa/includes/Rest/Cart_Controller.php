@@ -75,6 +75,39 @@ final class Cart_Controller {
 				'permission_callback' => [ $this, 'can_mutate_cart' ],
 			]
 		);
+		register_rest_route( 'dsa/v1', '/cart/change-term', [
+			'methods'=>'POST', 'callback'=>[ $this, 'change_term' ], 'permission_callback'=>[ $this, 'can_mutate_cart' ],
+		] );
+	}
+
+	public function change_term( WP_REST_Request $request ) {
+		if ( ! $this->load_cart() || ! $this->rate_limit( 'update' ) ) return new WP_Error( 'kiwe_cart_busy', __( 'Try the cart again in a moment.', 'dsa' ), [ 'status'=>429 ] );
+		$cart = WC()->cart;
+		$cart->get_cart();
+		$key = $request->get_param( 'key' );
+		$item = is_string( $key ) && preg_match( '/^[a-f0-9]{32}$/D', $key ) ? $cart->get_cart_item( $key ) : null;
+		$id = absint( $request->get_param( 'variationId' ) );
+		if ( ! $item || ! in_array( $id, array_column( Cart_Payload_Service::subscription_term_options( $item ), 'id' ), true )
+			|| $id === (int) $item['variation_id'] ) return new WP_Error( 'kiwe_cart_term', __( 'Refresh your cart and select an available term.', 'dsa' ), [ 'status'=>409 ] );
+		$variation = wc_get_product( $id );
+		if ( ! $variation instanceof \WC_Product_Variation ) return new WP_Error( 'kiwe_cart_term', __( 'This term is no longer available.', 'dsa' ), [ 'status'=>409 ] );
+		$parent = $variation->get_parent_id();
+		$attributes = $variation->get_variation_attributes();
+		// Custom line data can encode add-ons or a different price. Keep those rows intact.
+		$native = [ 'key','product_id','variation_id','variation','quantity','data','data_hash','line_tax_data','line_subtotal','line_subtotal_tax','line_total','line_tax' ];
+		if ( array_diff( array_keys( $item ), $native ) || $cart->find_product_in_cart( $cart->generate_cart_id( $parent, $id, $attributes ) )
+			|| ! apply_filters( 'woocommerce_add_to_cart_validation', true, $parent, 1, $id, $attributes, [] ) ) {
+			return new WP_Error( 'kiwe_cart_term', __( 'This cart line cannot change terms here.', 'dsa' ), [ 'status'=>409 ] );
+		}
+		$new = $cart->add_to_cart( $parent, 1, $id, $attributes );
+		if ( ! $new || ! $cart->remove_cart_item( $key ) ) {
+			if ( $new ) $cart->remove_cart_item( $new );
+			return new WP_Error( 'kiwe_cart_term', __( 'The term could not change. Your original selection remains in the cart.', 'dsa' ), [ 'status'=>409 ] );
+		}
+		unset( $cart->removed_cart_contents[ $key ] );
+		$cart->calculate_totals();
+		$cart->set_session();
+		return rest_ensure_response( [ 'ok'=>true, 'cart'=>$this->cart_data(), 'fragments'=>$this->cart_fragments(), 'cart_hash'=>$cart->get_cart_hash() ] );
 	}
 
 	public function can_read_cart(): bool {

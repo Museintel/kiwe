@@ -1,3 +1,10 @@
+## 8.0.0-rc.503 (2026-11-26, candidate)
+
+- Keep subscription authorization and the verified Razorpay payment return in the website checkout.
+- Open membership history, cancellation, pause, resume, and longer-term review in Profile.
+- Show one account email editor in Profile.
+- Let shoppers replace supported membership variations in the Cart sheet before reviewing the new total and billing terms.
+
 ## 8.0.0-rc.502 (2026-11-26, candidate)
 
 - Add Hide Dock selectively in native App Settings and portable Dock profiles. Keep authored viewport attributes active by default.

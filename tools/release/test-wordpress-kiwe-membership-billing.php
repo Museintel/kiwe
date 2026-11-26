@@ -434,14 +434,27 @@ try {
     $newPayment = $furnish('switch'.$newId, 54000, null, null);
     $provider['invoices/inv_switch'.$newId]['subscription_id'] = 'sub_switch'.$newId;
     $provider['invoices/inv_switch'.$newId]['paid_at'] = $newAgreement['createdAt'];
+    $newSubscription = 'sub_switch'.$newId;
+    $signature = hash_hmac('sha256', $newPayment.'|'.$newSubscription, 'fake-key-for-isolated-transport');
+    wp_set_current_user($other);
+    $assert(!Billing::confirm_checkout_payment($new,$newPayment,$newSubscription,$signature),'The return cannot settle another buyer’s order.');
+    wp_set_current_user($member);
+    $assert(!Billing::confirm_checkout_payment($new,$newPayment,$newSubscription,str_repeat('0',64)),'The return rejects an invalid Razorpay signature.');
+    $assert(Billing::confirm_checkout_payment($new,$newPayment,$newSubscription,$signature)
+        && wc_get_order($newId)->is_paid(),'A verified Razorpay return settles the original Woo payment.');
     wp_set_current_user(0);
-    $assert($webhook('payment.captured',$payload($newPayment))->get_status() === 200,'A verified capture prepays the scheduled term.');
+    $assert($webhook('payment.captured',$payload($newPayment))->get_status() === 200,'The webhook safely repeats the capture after the buyer return.');
     wp_set_current_user($member);
     $new = wc_get_order($newId);
     $future = Receipts::paid_period($new);
     $assert(!$future['active'] && $future['status'] === 'scheduled' && $future['startsAt'] === $startsAt
         && Receipts::paid_period($new,$startsAt)['active'] && !Receipts::paid_period(wc_get_order($oldId),$startsAt)['active'],
         'Paid access transfers at the saved boundary without overlapping the original term.');
+    $memberView = new WP_REST_Request('GET','/dsa/v1/account/memberships');
+    $memberView->set_query_params(['orderId'=>$oldId]);
+    $assert(rest_do_request($memberView)->get_data()['membership']['orderId'] === $oldId,'The Profile detail reads the buyer’s membership without a Woo account page.');
+    wp_set_current_user($other);
+    $assert(rest_do_request($memberView)->get_status() === 404,'Profile cannot open another buyer’s membership detail.');
 
     echo wp_json_encode(['verified'=>true,'hpos'=>$hpos,'checks'=>count($passed),'fixtureSearch'=>$fixture,'members'=>count($list['people']),
         'staffId'=>$staff,'editorId'=>$editor,'memberId'=>$member,'orderId'=>$membershipOrderId]), PHP_EOL;

@@ -275,6 +275,7 @@ final class Cart_Payload_Service {
 				'key'           => sanitize_text_field( (string) $cart_item_key ),
 				'productId'     => (int) ( $item['product_id'] ?? 0 ),
 				'variationId'   => (int) ( $item['variation_id'] ?? 0 ),
+				'termOptions'   => self::subscription_term_options( $item ),
 				'title'         => wp_strip_all_tags( html_entity_decode( $product->get_name(),ENT_QUOTES | ENT_HTML5,'UTF-8' ) ),
 				'weight'        => $this->product_weight( $product ),
 				'quantity'      => $quantity,
@@ -289,6 +290,26 @@ final class Cart_Payload_Service {
 		}
 
 		return $items;
+	}
+
+	public static function subscription_term_options( array $item ): array {
+		$current = $item['data'] ?? null;
+		if ( ! $current instanceof \WC_Product_Variation || ! class_exists( Subscription_Product_Service::class )
+			|| 1 !== (int) ( $item['quantity'] ?? 0 ) || ! is_array( Subscription_Product_Service::terms( $current ) ) ) return [];
+		$parent = wc_get_product( $current->get_parent_id() );
+		if ( ! $parent || ! $parent->is_type( 'variable' ) || count( $parent->get_children() ) > 30 ) return [];
+		$options = [];
+		foreach ( $parent->get_children() as $id ) {
+			$variation = wc_get_product( $id );
+			if ( ! $variation instanceof \WC_Product_Variation || ! $variation->is_purchasable() || ! $variation->is_in_stock()
+				|| ! Subscription_Product_Service::supported_for_checkout( $variation ) ) continue;
+			$terms = Subscription_Product_Service::terms( $variation );
+			if ( ! is_array( $terms ) || ! Subscription_Checkout_Service::plan_id( $terms ) ) continue;
+			$attributes = $variation->get_variation_attributes();
+			if ( ! $attributes || in_array( '', $attributes, true ) ) continue;
+			$options[] = [ 'id'=>$id, 'label'=>wp_strip_all_tags( wc_get_formatted_variation( $variation, true, true, false ) ) ];
+		}
+		return count( $options ) > 1 && in_array( $current->get_id(), array_column( $options, 'id' ), true ) ? $options : [];
 	}
 
 	private function product_weight( $product ): string {

@@ -175,7 +175,6 @@ function renderPrototypeProfile( payload ) {
 	const copy = profileCopy( payload );
 	const hasWoo = Boolean( payload.hasWoo );
 	const displayName = user.displayName || user.userLogin || copy.accountLabel;
-	const email = user.email || '';
 	const points = user.kiwePoints ?? user.points ?? payload.points ?? null;
 	const savedCount = payload.savedCount ?? null;
 	const orderCount = payload.orderCount ?? null;
@@ -191,7 +190,7 @@ function renderPrototypeProfile( payload ) {
 		'</div>',
 		'<div class="kiwe-profile-v2027__identity">',
 		'<label class="kiwe-profile-v2027__avatar"><span aria-hidden="true">' + escapeHtml( userInitials( user ) ) + '</span><img src="' + escapeHtml( user.avatar || '' ) + '" alt="" data-dsa-profile-avatar><input type="file" accept="image/*" data-dsa-avatar-input><em>Change photo</em></label>',
-		'<span class="kiwe-profile-v2027__person"><small>' + escapeHtml( copy.accountLabel ) + '</small><strong>' + escapeHtml( displayName ) + '</strong><em>' + escapeHtml( email ) + '</em>' + verificationStatus( user ) + guestApplicationControl( user, hasWoo ) + '</span>',
+			'<span class="kiwe-profile-v2027__person"><small>' + escapeHtml( copy.accountLabel ) + '</small><strong>' + escapeHtml( displayName ) + '</strong>' + verificationStatus( user ) + guestApplicationControl( user, hasWoo ) + '</span>',
 		'<button class="dsa-panel__button kiwe-profile-v2027__edit" type="button" data-dsa-profile-edit aria-expanded="false">' + escapeHtml( copy.editLabel ) + '</button>',
 		'</div>',
 		'<div class="kiwe-profile-v2027__edit-region" data-dsa-profile-edit-region hidden>',

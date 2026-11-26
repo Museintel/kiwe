@@ -21,6 +21,8 @@ final class Account_Controller {
 	public function routes(): void {
 		foreach ( [
 			'/account/orders'    => [ 'methods' => 'GET', 'callback' => 'orders' ],
+			'/account/memberships' => [ 'methods' => 'GET', 'callback' => 'memberships' ],
+			'/account/membership-action' => [ 'methods' => 'POST', 'callback' => 'membership_action' ],
 			'/account/downloads' => [ 'methods' => 'GET', 'callback' => 'downloads' ],
 			'/account/addresses' => [ 'methods' => 'GET', 'callback' => 'addresses' ],
 			'/account/profile'   => [ 'methods' => 'POST', 'callback' => 'update_profile' ],
@@ -29,8 +31,8 @@ final class Account_Controller {
 			'/account/avatar'    => [ 'methods' => 'POST', 'callback' => 'update_avatar' ],
 			'/account/password-reset' => [ 'methods' => 'POST', 'callback' => 'password_reset' ],
 		] as $route => $args ) {
-			if ( ! $this->phonekey_enabled && 'orders' !== $args['callback'] ) continue;
-			if ( in_array( $args['callback'], [ 'orders','downloads','addresses','update_address' ], true ) && ! \DSA\Apps\Store_App_Service::enabled() ) continue;
+			if ( ! $this->phonekey_enabled && ! in_array( $args['callback'], [ 'orders','memberships','membership_action' ], true ) ) continue;
+			if ( in_array( $args['callback'], [ 'orders','memberships','membership_action','downloads','addresses','update_address' ], true ) && ! \DSA\Apps\Store_App_Service::enabled() ) continue;
 			register_rest_route(
 				'dsa/v1',
 				$route,
@@ -305,7 +307,7 @@ final class Account_Controller {
 
 		$membership = \DSA\Commerce\Membership_Account_Service::class;
 		$summary = [ 'orders'=>$data ];
-		if ( '1' === $request?->get_param( 'memberships' ) && class_exists( $membership ) && ( $active = $membership::active_cards() ) ) {
+		if ( 1 === absint( $request?->get_param( 'memberships' ) ) && class_exists( $membership ) && ( $active = $membership::active_cards() ) ) {
 			$summary['activeMemberships'] = $active;
 			$summary['shopUrl'] = esc_url_raw( wc_get_page_permalink( 'shop' ) );
 			$summary['accountUrl'] = esc_url_raw( wc_get_page_permalink( 'myaccount' ) ) . '#kiwe-memberships';
@@ -313,6 +315,52 @@ final class Account_Controller {
 		$response = new WP_REST_Response( $summary, 200 );
 		$response->header( 'Cache-Control', 'private, no-store' );
 		return $response;
+	}
+
+	public function memberships( WP_REST_Request $request ) {
+		$service = \DSA\Commerce\Membership_Account_Service::class;
+		if ( ! class_exists( $service ) || ! $service::available() ) return new WP_Error( 'kiwe_membership_unavailable', __( 'Memberships are unavailable.', 'dsa' ), [ 'status'=>403 ] );
+		$page = max( 1, min( 1000, absint( $request->get_param( 'page' ) ) ) );
+		$id = absint( $request->get_param( 'orderId' ) );
+		if ( $id ) {
+			$order = wc_get_order( $id );
+			$item = $order instanceof \WC_Order ? $service::projection( $order, true ) : [];
+			if ( ! $item ) return new WP_Error( 'kiwe_membership_missing', __( 'This membership is unavailable.', 'dsa' ), [ 'status'=>404 ] );
+			$data = [ 'membership'=>$item ];
+		} else {
+			$data = $service::listing( $page );
+		}
+		$response = new WP_REST_Response( $data + [ 'shopUrl'=>wc_get_page_permalink( 'shop' ) ], 200 );
+		$response->header( 'Cache-Control', 'private, no-store' );
+		return $response;
+	}
+
+	public function membership_action( WP_REST_Request $request ) {
+		$service = \DSA\Commerce\Membership_Account_Service::class;
+		$billing = \DSA\Commerce\Subscription_Billing_Service::class;
+		$id = absint( $request->get_param( 'orderId' ) );
+		$order = function_exists( 'wc_get_order' ) ? wc_get_order( $id ) : null;
+		if ( ! class_exists( $service ) || ! $order instanceof \WC_Order || ! $service::owns( $order ) ) {
+			return new WP_Error( 'kiwe_membership_missing', __( 'This membership is unavailable.', 'dsa' ), [ 'status'=>404 ] );
+		}
+		$expected = $request->get_param( 'expected' );
+		try {
+			if ( ! is_string( $expected ) || ! preg_match( '/^[a-f0-9]{64}$/D', $expected ) ) throw new \DomainException();
+			$action = $request->get_param( 'action' );
+			if ( 'switch' === $action ) {
+				$return = $billing::switch_own_plan( $id, absint( $request->get_param( 'variation' ) ), $expected, true );
+				return new WP_REST_Response( [ 'checkoutUrl'=>$return ], 200, [ 'Cache-Control'=>'private, no-store' ] );
+			}
+			match ( $action ) {
+				'cancel' => $billing::cancel_own_subscription( $id, $expected ),
+				'pause', 'resume' => $billing::change_own_pause( $id, 'pause' === $action, $expected ),
+				default => throw new \DomainException(),
+			};
+			$fresh = wc_get_order( $id );
+			return new WP_REST_Response( [ 'membership'=>$service::projection( $fresh, true ) ], 200, [ 'Cache-Control'=>'private, no-store' ] );
+		} catch ( \Throwable $error ) {
+			return new WP_Error( 'kiwe_membership_review', __( 'Review your current membership before trying again.', 'dsa' ), [ 'status'=>409 ] );
+		}
 	}
 
 	public function downloads(): WP_REST_Response {

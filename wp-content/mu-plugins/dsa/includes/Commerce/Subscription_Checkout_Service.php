@@ -29,6 +29,12 @@ final class Subscription_Checkout_Service {
 		add_action( 'woocommerce_after_checkout_validation', [ $this, 'validate_checkout' ], 100, 2 );
 		add_action( 'woocommerce_order_details_after_order_table', [ $this, 'account_status' ] );
 		if ( ! self::enabled() ) return;
+		add_action( 'rest_api_init', [ $this, 'checkout_return_route' ] );
+		add_action( 'woocommerce_thankyou_' . Subscription_Renewal_Orders::GATEWAY, [ $this, 'render_authorization' ] );
+		add_filter( 'woocommerce_thankyou_order_received_text', static function ( $text, $order ) {
+			return $order instanceof \WC_Order && Subscription_Renewal_Orders::GATEWAY === $order->get_payment_method()
+				&& $order->has_status( 'on-hold' ) ? __( 'Your subscription payment is awaiting confirmation.', 'dsa' ) : $text;
+		}, 20, 2 );
 		add_filter( 'woocommerce_payment_gateways', [ $this, 'register_gateway' ] );
 		add_filter( 'woocommerce_available_payment_gateways', [ $this, 'available_gateways' ], 100 );
 		add_filter( 'woocommerce_cart_needs_payment', [ $this, 'needs_payment' ], 100 );
@@ -219,7 +225,7 @@ final class Subscription_Checkout_Service {
 			return [ 'result'=>'failure' ];
 		}
 		WC()->cart->empty_cart();
-		return [ 'result'=>'success', 'redirect'=>self::continuation( $agreement ) ?: $order->get_view_order_url() ];
+		return [ 'result'=>'success', 'redirect'=>$order->get_checkout_order_received_url() ];
 	}
 
 	private static function continuation( array $agreement ): string {
@@ -228,13 +234,86 @@ final class Subscription_Checkout_Service {
 		return Razorpay_Subscription_Provider::authorization_url( $agreement['authorizationUrl'] ?? '' );
 	}
 
+	public function checkout_return_route(): void {
+		register_rest_route( 'dsa/v1', '/checkout/subscription/(?P<id>[1-9][0-9]*)', [
+			'methods'=>'POST',
+			'permission_callback'=>static fn( $request ) => is_user_logged_in() && \DSA\Utilities\Origin_Checker::mutation_allowed( $request ),
+			'callback'=>static function ( \WP_REST_Request $request ) {
+				$order = wc_get_order( (int) $request['id'] );
+				try {
+					if ( $order instanceof \WC_Order && Subscription_Billing_Service::confirm_checkout_payment( $order,
+						(string) $request['payment'], (string) $request['subscription'], (string) $request['signature'] ) ) {
+						$response = rest_ensure_response( [ 'returnUrl'=>$order->get_checkout_order_received_url() ] );
+						$response->header( 'Cache-Control', 'private, no-store' );
+						return $response;
+					}
+				} catch ( \DomainException $error ) {
+					// Keep order and provider mismatch details private.
+				}
+				return new \WP_Error( 'kiwe_subscription_confirmation', __( 'We could not verify this authorization. Check your order before trying again.', 'dsa' ), [ 'status'=>403 ] );
+			},
+		] );
+	}
+
+	public function render_authorization( int $id ): void {
+		$order = wc_get_order( $id );
+		if ( ! $order instanceof \WC_Order || ! self::owns_order( $order ) || $order->is_paid() || ! $order->has_status( 'on-hold' ) ) return;
+		$agreement = $order->get_meta( Subscription_Renewal_Orders::AGREEMENT );
+		if ( empty( $agreement['checkoutConsentAt'] ) || ! self::continuation( $agreement ) ) {
+			echo '<p>' . esc_html__( 'Your subscription is awaiting confirmation.', 'dsa' ) . '</p>';
+			return;
+		}
+		$options = [
+			'key'=>Razorpay_Subscription_Provider::checkout_key(), 'subscription_id'=>$agreement['subscriptionId'],
+			'name'=>get_bloginfo( 'name' ), 'description'=>Membership_Directory::plan_names( $order ),
+			'prefill'=>[ 'name'=>$order->get_formatted_billing_full_name(), 'email'=>$order->get_billing_email(), 'contact'=>$order->get_billing_phone() ],
+		];
+		wp_enqueue_script( 'kiwe-subscription-razorpay', 'https://checkout.razorpay.com/v1/checkout.js', [], null, true );
+		$script = <<<'JS'
+(function () {
+	const button = document.getElementById('kiwe-subscription-authorize');
+	const message = document.getElementById('kiwe-subscription-confirmation');
+	if (!button || !message) return;
+	button.addEventListener('click', function () {
+		if (typeof window.Razorpay !== 'function') { message.textContent = 'Razorpay could not load. Try again.'; return; }
+		button.disabled = true;
+		const checkout = new window.Razorpay(Object.assign({}, kiweSubscription.options, {
+			modal: { ondismiss: function () { button.disabled = false; } },
+			handler: async function (payment) {
+				message.textContent = 'Confirming your subscription…';
+				try {
+					const response = await fetch(kiweSubscription.endpoint, {
+						method: 'POST', credentials: 'same-origin',
+						headers: {'Content-Type':'application/json','X-WP-Nonce':kiweSubscription.nonce,'X-Kiwe-Mutation':'1'},
+						body: JSON.stringify({payment: payment.razorpay_payment_id, subscription: payment.razorpay_subscription_id, signature: payment.razorpay_signature})
+					});
+					const result = await response.json();
+					if (response.ok && result.returnUrl && new URL(result.returnUrl, location.href).origin === location.origin) {
+						location.replace(result.returnUrl);
+						return;
+					}
+				} catch (error) {}
+				message.textContent = 'Check this order again before attempting another payment.';
+			}
+		}));
+		checkout.open();
+	});
+})();
+JS;
+		wp_add_inline_script( 'kiwe-subscription-razorpay', 'const kiweSubscription = ' . wp_json_encode( [
+			'options'=>$options, 'endpoint'=>rest_url( 'dsa/v1/checkout/subscription/' . $id ), 'nonce'=>wp_create_nonce( 'wp_rest' ),
+		], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT ) . ";\n" . $script );
+		echo '<p><button id="kiwe-subscription-authorize" type="button" class="button">' . esc_html__( 'Authorize subscription with Razorpay', 'dsa' ) . '</button></p>';
+		echo '<p id="kiwe-subscription-confirmation" aria-live="polite"></p>';
+	}
+
 	public function account_status( \WC_Order $order ): void {
 		if ( ! self::owns_order( $order ) || ! $order->has_status( 'on-hold' ) ) return;
 		$agreement = $order->get_meta( Subscription_Renewal_Orders::AGREEMENT );
 		if ( empty( $agreement['checkoutConsentAt'] ) ) return;
 		$url = self::continuation( $agreement );
 		if ( $url ) {
-			printf( '<p><a class="button" href="%s">%s</a></p>', esc_url( $url ), esc_html__( 'Continue subscription approval', 'dsa' ) );
+			printf( '<p><a class="button" href="%s">%s</a></p>', esc_url( $order->get_checkout_order_received_url() ), esc_html__( 'Continue subscription approval', 'dsa' ) );
 			return;
 		}
 		echo '<p>' . esc_html__( 'Your subscription order is recorded. Check back here for approval or contact the store about this order.', 'dsa' ) . '</p>';
