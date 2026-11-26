@@ -1,6 +1,7 @@
 <?php
 declare(strict_types=1);
 require __DIR__.'/test-workflow-apps.php';
+require_once __DIR__.'/../../wp-content/mu-plugins/dsa/includes/Commerce/Checkout_Offers.php';
 
 function wp_timezone(){return new DateTimeZone($GLOBALS['couponZone']??'Asia/Kolkata');}
 function get_post_type_object($name){return (object)['cap'=>(object)['create_posts'=>'edit_shop_coupons']];}
@@ -11,6 +12,7 @@ class WC_Coupon {
  public array $values;public int $id;
  public function __construct($id=0){$this->id=is_string($id)?wc_get_coupon_id_by_code($id):$id;$this->values=$GLOBALS['couponValues'][$this->id]??$GLOBALS['couponDefaults'];if($this->values['limit_usage_to_x_items']===0)$this->values['limit_usage_to_x_items']=null;}
  public function get_id(){return $this->id;}
+ public function get_meta($key){foreach($this->values['custom'] as $meta)if($meta['key']===$key)return $meta['value'];return '';}
  public function get_meta_data(){return array_map(static fn($v)=>new class($v){public function __construct(public array $v){}public function get_data(){return $this->v;}},$this->values['custom']);}
  public function __call($name,$args){$key=substr($name,4);if(str_starts_with($name,'get_'))return $this->values[$key];if(str_starts_with($name,'set_')){$this->values[$key]=$key==='date_expires'&&$args[0]!==null?new DateTimeImmutable('@'.$args[0]):$args[0];return;}throw new RuntimeException('Unknown fake coupon operation');}
  public function save(){if(!empty($GLOBALS['refuseCoupon']))return 0;$GLOBALS['writes']++;if(!$this->id)$this->id=count($GLOBALS['couponValues'])+300;$GLOBALS['posts'][$this->id]=(object)['ID'=>$this->id,'post_type'=>'shop_coupon','post_status'=>$this->values['status']??'publish'];if(!empty($GLOBALS['alterCoupon']))$this->values['minimum_amount']='99';$GLOBALS['couponValues'][$this->id]=$this->values;return $this->id;}

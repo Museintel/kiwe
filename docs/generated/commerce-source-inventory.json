@@ -4319,7 +4319,7 @@
     },
     {
       "source": "wp-content/mu-plugins/dsa/includes/Commerce/Checkout_Offers.php",
-      "sha256": "3e30a126b4908e5ba6dfc9704260dc07ffd17ae8bf522d1df22ddff41736637d",
+      "sha256": "d5a20d2d076cbd0c176311450e402917e565e00ce82d1527480f6db2571b64e5",
       "symbols": [
         {
           "kind": "metadata",
@@ -4444,32 +4444,32 @@
         {
           "kind": "method",
           "name": "query_options",
-          "line": 199
+          "line": 200
         },
         {
           "kind": "method",
           "name": "run_query",
-          "line": 204
+          "line": 205
         },
         {
           "kind": "method",
           "name": "loop_id",
-          "line": 216
+          "line": 217
         },
         {
           "kind": "method",
           "name": "tags",
-          "line": 220
+          "line": 221
         },
         {
           "kind": "method",
           "name": "render_tag",
-          "line": 229
+          "line": 230
         },
         {
           "kind": "method",
           "name": "render_content",
-          "line": 242
+          "line": 243
         }
       ]
     },
