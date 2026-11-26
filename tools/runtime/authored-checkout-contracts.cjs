@@ -27,7 +27,13 @@ async function run() {
  const cod = control({kiweCheckoutPay: 'cod'});
  const renewal = control({kiweCheckoutConsent: 'renewal'});
  const terms = control({kiweCheckoutConsent: 'terms'});
- const coupon = {...control(), addEventListener() {}, querySelector: () => ({value: 'FIXTURE'})};
+ const couponEvents = {};
+ const coupon = {
+  ...control(),
+  matches: selector => selector === '.brxe-woocommerce-checkout-coupon',
+  addEventListener: (name, handler, capture) => { couponEvents[name] = {handler, capture}; },
+  querySelector: () => ({value: 'FIXTURE'}),
+ };
  const page = {
   ...control(),
   addEventListener: (name, handler) => { events[name] = handler; },
@@ -84,12 +90,19 @@ async function run() {
  assert.equal(requests.length, 0);
  assert.match(status.textContent, /agree to automatic renewals/);
  await click(renewal);
- const apply = control();
- apply.hasAttribute = name => name === 'data-kiwe-checkout-apply-coupon';
- await click(apply);
+ let capturedCoupon = false;
+ assert.equal(couponEvents.click.capture, true);
+ couponEvents.click.handler({
+  target: {closest: selector => selector === 'button[name="apply_coupon"]'},
+  preventDefault() {},
+  stopImmediatePropagation() { capturedCoupon = true; },
+ });
+ await settle();
+ assert.equal(capturedCoupon, true);
  assert.equal(total.textContent, '₹275');
  assert.equal(renewal.getAttribute('aria-pressed'), 'false');
  assert.equal(requests[0][1].coupon_code, 'FIXTURE');
+ assert.equal(requests[0][1].billing_email, 'test@example.invalid');
  await click(renewal);
  await click(subscription);
  assert.equal(requests[1][1].payment_method, 'kiwe_razorpay_subscription');

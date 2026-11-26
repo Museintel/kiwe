@@ -346,8 +346,12 @@ final class Bricks_Integration {
 	public function add_dynamic_tags( array $tags ): array {
 		// Native authoring data is independent of optional DSA runtime switches.
 		$existing = array_filter( array_column( $tags, 'name' ), 'is_string' );
+		$definitions = self::base_dynamic_tag_definitions();
+		// Keep old layouts renderable. Only offer the compatibility tags when Bricks lacks the native tag.
+		if ( in_array( '{woo_cart_order_total}', $existing, true ) ) unset( $definitions['kiwe_checkout_total'] );
+		if ( in_array( '{woo_url}', $existing, true ) ) unset( $definitions['kiwe_checkout_terms_url'] );
 
-		foreach ( self::base_dynamic_tag_definitions() + $this->nav_menu_tag_definitions() + $this->tag_group_definitions() + ($this->commerce_bindings()?->definitions() ?? []) + ($this->context_collections()?->definitions() ?? []) as $name => $label ) {
+		foreach ( $definitions + $this->nav_menu_tag_definitions() + $this->tag_group_definitions() + ($this->commerce_bindings()?->definitions() ?? []) + ($this->context_collections()?->definitions() ?? []) as $name => $label ) {
 			if ( in_array( '{' . $name . '}', $existing, true ) ) {
 				continue;
 			}

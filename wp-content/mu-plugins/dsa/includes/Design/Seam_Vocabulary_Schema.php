@@ -239,13 +239,19 @@ final class Seam_Vocabulary_Schema {
 					'checkoutReview' => [
 						'status' => 'live',
 						'authority' => 'woocommerce-native-checkout',
-						'dynamicTags' => [ '{kiwe_checkout_address}', '{kiwe_checkout_total}', '{kiwe_checkout_renewal}', '{kiwe_checkout_terms_url}' ],
+						'dynamicTags' => [ '{kiwe_checkout_address}', '{kiwe_checkout_renewal}' ],
+						'nativeRecipes' => [
+							'total' => 'Use the Bricks {woo_cart_order_total} when the target supports it. Set data-kiwe-checkout-value="total" on its text element to refresh it after a checkout change. Otherwise use {kiwe_checkout_total}.',
+							'terms' => 'Use the Bricks {woo_url:terms} when available. Otherwise use {kiwe_checkout_terms_url}.',
+							'coupon' => 'Enable and use the native Bricks Checkout Coupon element in its current location. Mark it with data-kiwe-checkout-coupon to use the Checkout DSA session and refresh the review.',
+						],
 						'attributes' => [
 							[ 'attribute'=>'data-kiwe-checkout', 'purpose'=>'Root Bricks container on the Store checkout page. Put native Bricks headings, text tags, controls and the status element inside it.' ],
 							[ 'attribute'=>'data-kiwe-checkout-pay', 'values'=>[ 'upi','card','netbanking','wallet','razorpay','cod','subscription','free' ], 'purpose'=>'Place the order with the currently available Woo gateway. Hidden when ineligible. The Razorpay gateway owns payment authorization.' ],
 							[ 'attribute'=>'data-kiwe-checkout-consent', 'values'=>[ 'terms','renewal' ], 'purpose'=>'Accessible toggle button. Include aria-pressed="false". Only applicable consents appear. A changed recurring quote resets approval.' ],
-							[ 'attribute'=>'data-kiwe-checkout-coupon', 'purpose'=>'Coupon section containing a text input named coupon_code and an apply button. WooCommerce applies and validates coupons.' ],
+							[ 'attribute'=>'data-kiwe-checkout-coupon', 'purpose'=>'Mark the native Bricks Checkout Coupon element. WooCommerce applies and validates coupons using the current Checkout DSA details.' ],
 							[ 'attribute'=>'data-kiwe-checkout-apply-coupon', 'purpose'=>'Apply the coupon and refresh the native total and renewal quote.' ],
+							[ 'attribute'=>'data-kiwe-checkout-value', 'values'=>[ 'total' ], 'purpose'=>'Refresh the text of the Bricks cart total element after address and coupon changes.' ],
 							[ 'attribute'=>'data-kiwe-checkout-status', 'purpose'=>'Message container with role=status. Receives payment and coupon notices.' ],
 						],
 					],

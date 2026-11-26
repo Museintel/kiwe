@@ -1,3 +1,8 @@
+## 8.0.0-rc.506 (2026-11-26, candidate)
+
+- Prefer native Bricks checkout coupon, cart total and terms controls where supported. Preserve existing checkout layouts.
+- Apply a native Bricks coupon using the current Checkout DSA session and refresh the total and renewal quote.
+
 ## 8.0.0-rc.505 (2026-11-26, candidate)
 
 - Author a checkout review in Bricks with Kiwe address, total, and recurring-term bindings. Fill private values from the current checkout session.

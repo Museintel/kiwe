@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "version": "8.0.0-rc.505",
+  "version": "8.0.0-rc.506",
   "algorithm": "sha256",
   "file_count": 1055,
   "files": {
@@ -297,8 +297,8 @@
       "sha256": "3fba86300eaf6dbec7d27b7d8230d41a9b55f633e1af7e84337ff93981099e08"
     },
     "assets/js/checkout-experience.js": {
-      "bytes": 10377,
-      "sha256": "ed888f2e237f1a7cde5c8674386ae1017cf36024f300e947f26a617545a4f4c8"
+      "bytes": 11059,
+      "sha256": "0c61b00bda8e42c4a1aa57506427667a39308e08aabcc0947424cc99239f0420"
     },
     "assets/js/commerce-app.js": {
       "bytes": 304281,
@@ -425,8 +425,8 @@
       "sha256": "21a4e3666dad3ade9cc96b78e64de4a96de5f41f506842ffc3570cb111f5361e"
     },
     "assets/js/public-contract.js": {
-      "bytes": 43590,
-      "sha256": "1e352e4b785575d3fd31750adc7cdb7f398f1283f9b1166d4d79ec15e8ffbd8e"
+      "bytes": 44219,
+      "sha256": "9aef67500e0632072295f09949de76079920761160bd9cd94a0c4dad2e0d2397"
     },
     "assets/js/public-preview.js": {
       "bytes": 8668,
@@ -522,7 +522,7 @@
     },
     "dsa.php": {
       "bytes": 4536,
-      "sha256": "985fa7e897776324f41edef54f11007a871ddd1d06eec77ea91edfe216d4818f"
+      "sha256": "b43d2560a446fd9f5922f1204989c96055454e47691b0b1c5dd945e0d88145a5"
     },
     "framework-system/HANDOFF-LITE.md": {
       "bytes": 4119,
@@ -1425,8 +1425,8 @@
       "sha256": "ed8220e07ee40468dfd8a30ef54c6ece7ed265b7bec145e3ab3eb6842083d263"
     },
     "includes/Bricks/Bricks_Integration.php": {
-      "bytes": 137644,
-      "sha256": "4e631af99376c09c1e4fc6a33559f2b6442d0778ef608a0b3592b12abc353513"
+      "bytes": 137986,
+      "sha256": "ce1c1e1572e9d3e89f9330208a4c2f6c7b63d8508afaf664e46d6180fa321e1c"
     },
     "includes/Bricks/Clean_Conversion_Test_Service.php": {
       "bytes": 23620,
@@ -1677,8 +1677,8 @@
       "sha256": "c3fb591495c82f340ebb69ecb3d7cda203ecf6332608f1c3d760bd408a2bd7c6"
     },
     "includes/Design/Seam_Vocabulary_Schema.php": {
-      "bytes": 26214,
-      "sha256": "8fee1c74dc711fa5eab11bee1c1a39f8a8d711fe6a61111e42f35ff2caa75c88"
+      "bytes": 26907,
+      "sha256": "123b91b3799f8b37396310230afa3c2cd06f9a379c7c4b407b4d0cdbbe515825"
     },
     "includes/Design/Token_Schema.php": {
       "bytes": 8257,

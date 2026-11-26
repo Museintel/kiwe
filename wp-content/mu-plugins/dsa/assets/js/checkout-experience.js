@@ -233,6 +233,20 @@
 			event.stopImmediatePropagation();
 			run( applyCoupon, 'Checking coupon…' );
 		}, true );
+		if ( coupon && coupon.matches( '.brxe-woocommerce-checkout-coupon' ) ) {
+			// Bricks styles this control; its classic handler expects an on-page billing form.
+			function useCheckoutSession( event ) {
+				event.preventDefault();
+				event.stopImmediatePropagation();
+				run( applyCoupon, 'Checking coupon…' );
+			}
+			coupon.addEventListener( 'click', function ( event ) {
+				if ( event.target.closest( 'button[name="apply_coupon"]' ) ) useCheckoutSession( event );
+			}, true );
+			coupon.addEventListener( 'keydown', function ( event ) {
+				if ( event.key === 'Enter' && event.target.matches( 'input[name="coupon_code"]' ) ) useCheckoutSession( event );
+			}, true );
+		}
 		window.addEventListener( 'dsa:checkout:draft-applied', refresh );
 		if ( ! status ) return;
 		updateControls();
