@@ -192,7 +192,7 @@ final class Checkout_Offers {
 				$owned = Membership_Directory::paid_product_ids( get_current_user_id() );
 				if ( isset( $owned[$plan] ) ) $state = [ 'state'=>'unavailable' ];
 				elseif ( isset( $in_cart[$plan] ) ) $state = [ 'state'=>'in-cart' ];
-				elseif ( $product->is_type( 'simple' ) ) {
+				elseif ( $product->is_type( 'simple' ) || ( $product->is_type( 'variation' ) && ! in_array( '', $product->get_variation_attributes(), true ) ) ) {
 					$state = $product->is_purchasable() && $product->is_in_stock()
 						? [ 'state'=>'join', 'productId'=>$plan ] : [ 'state'=>'unavailable' ];
 				} else {

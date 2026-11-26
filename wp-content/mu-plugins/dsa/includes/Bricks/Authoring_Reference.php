@@ -33,7 +33,7 @@ final class Authoring_Reference {
 		}
 		if ( class_exists( \DSA\Commerce\Checkout_Offers::class ) && Store_App_Service::enabled() ) {
 			$rows[] = [ __( 'Query Loop → Kiwe Checkout offers', 'dsa' ), '{kiwe_checkout_offer_title}, {kiwe_checkout_offer_description}, {kiwe_checkout_offer_id}', __( 'Choose which WooCommerce coupons to list using Show in checkout offers. Use a native Accordion or Popup to reveal the list and a native Button on each card.', 'dsa' ) ];
-			$rows[] = [ __( 'Offer Button on an authored checkout', 'dsa' ), 'data-kiwe-checkout-offer="{kiwe_checkout_offer_id}"', __( 'Place this on a native Bricks Button inside the checkout offers loop. Style [data-kiwe-offer-state="applied"] for applied offers. The button applies a regular coupon, adds a simple membership or links to plan options. Paid members receive the benefit automatically through the end of their paid term.', 'dsa' ) ];
+			$rows[] = [ __( 'Offer Button on an authored checkout', 'dsa' ), 'data-kiwe-checkout-offer="{kiwe_checkout_offer_id}"', __( 'Place this on a native Bricks Button inside the checkout offers loop. Style [data-kiwe-offer-state="applied"] for applied offers. The button applies a regular coupon, adds a specific membership plan or links to plan options. Paid members receive the benefit automatically through the end of their paid term.', 'dsa' ) ];
 		}
 		return $rows;
 	}
