@@ -72,6 +72,7 @@ async function run() {
  vm.runInNewContext(source, context);
  await settle();
  assert.equal(address.textContent, 'Demo Street');
+ assert.equal(status.textContent, '');
  assert.equal(upi.hidden, true);
  assert.equal(cod.hidden, true);
  assert.equal(subscription.hidden, false);

@@ -119,12 +119,11 @@
 					const key = output.dataset.kiweCheckoutValue;
 					output.textContent = data[key] || ( key === 'address' ? 'Add your address' : key === 'total' ? '–' : '' );
 				} );
-				if ( data.sharedAgreement ) {
-					announce( 'These plans share one billing agreement. Buy them separately to manage renewals independently.' );
-				}
 				if ( ! data.available ) announce( 'Checkout details are unavailable. Open the address editor to continue.' );
 				else if ( data.empty ) announce( 'Your cart is empty.' );
+				else if ( data.sharedAgreement ) announce( 'These plans share one billing agreement. Buy them separately to manage renewals independently.' );
 				else if ( ! Object.keys( data.methods ).length && ! data.renewal ) announce( 'No payment method is available for this cart.' );
+				else announce( '' );
 			} ).catch( function () {
 				if ( order !== revision ) return;
 				review = null;
@@ -165,7 +164,7 @@
 				if ( Array.isArray( value ) ) value.forEach( item => fields.append( key + '[]', item ) );
 				else fields.set( key, value );
 			} );
-			review.shipping.forEach( ( rate, index ) => fields.set( 'shipping_method[' + index + ']', rate ) );
+			Object.entries( review.shipping ).forEach( ( [ index, rate ] ) => fields.set( 'shipping_method[' + index + ']', rate ) );
 			fields.set( 'woocommerce-process-checkout-nonce', review.checkoutNonce );
 			fields.set( 'payment_method', review.methods[choice] );
 			fields.set( 'kiwe_checkout_method', choice );

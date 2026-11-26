@@ -99,7 +99,7 @@ final class Checkout_Experience_Service {
 			'total'=>self::plain( $cart->get_total() ), 'renewal'=>$terms['summary'] ?? $terms['message'] ?? '',
 			'sharedAgreement'=>! empty( $terms['sharedAgreement'] ),
 			'subscriptionQuote'=>$terms['quote'] ?? '', 'methods'=>empty( $methods ) ? (object) [] : $methods,
-			'fields'=>$values, 'shipping'=>array_values( (array) WC()->session->get( 'chosen_shipping_methods', [] ) ),
+			'fields'=>$values, 'shipping'=>(array) WC()->session->get( 'chosen_shipping_methods', [] ),
 			'termsRequired'=>wc_terms_and_conditions_checkbox_enabled(),
 			'coupons'=>wc_coupons_enabled(), 'checkoutUrl'=>\WC_AJAX::get_endpoint( 'checkout' ),
 			'couponUrl'=>\WC_AJAX::get_endpoint( 'apply_coupon' ),

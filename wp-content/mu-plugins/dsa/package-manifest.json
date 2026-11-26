@@ -297,8 +297,8 @@
       "sha256": "3fba86300eaf6dbec7d27b7d8230d41a9b55f633e1af7e84337ff93981099e08"
     },
     "assets/js/checkout-experience.js": {
-      "bytes": 10338,
-      "sha256": "94654cb87c1f856b9b52c48b26128fc94ce57b5d79786b91ed339e1d4f8e382c"
+      "bytes": 10377,
+      "sha256": "ed888f2e237f1a7cde5c8674386ae1017cf36024f300e947f26a617545a4f4c8"
     },
     "assets/js/commerce-app.js": {
       "bytes": 304281,
@@ -1545,8 +1545,8 @@
       "sha256": "e61e4fc3e756dade76ca708958440ddc6077837fbd6376cd3e348f4b87c8a681"
     },
     "includes/Commerce/Checkout_Experience_Service.php": {
-      "bytes": 7995,
-      "sha256": "58b185f5081651ab736908895997a23009d1711ee0193559e66ac53174837e42"
+      "bytes": 7979,
+      "sha256": "25d92de70d2a9d969ebfa89419697ac48d650082e217704dccffa3c4c68296c2"
     },
     "includes/Commerce/Checkout_Field_Service.php": {
       "bytes": 1155,
