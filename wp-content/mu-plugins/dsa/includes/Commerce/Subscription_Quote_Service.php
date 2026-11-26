@@ -127,7 +127,7 @@ final class Subscription_Quote_Service {
 			? 'group:' . $line['membershipGroup'] : 'product:' . (int) $line['productId'], $lines ) ) );
 	}
 
-	public static function assert_groups_available( int $customer, array $lines ): void {
+	public static function assert_groups_available( int $customer, array $lines, int $replaced_order = 0 ): void {
 		$groups = self::groups( $lines );
 		$products = array_column( $lines, 'productId' );
 		$page = 1;
@@ -137,6 +137,7 @@ final class Subscription_Quote_Service {
 				'status'=>array_keys( wc_get_order_statuses() ), 'limit'=>20, 'page'=>$page++,
 			] );
 			foreach ( $orders as $order ) {
+				if ( $replaced_order && $replaced_order === $order->get_id() ) continue;
 				$agreement = $order->get_meta( Subscription_Renewal_Orders::AGREEMENT );
 				if ( ! is_array( $agreement['lines'] ?? null ) || ! Subscription_Renewal_Orders::owned_by( $customer, $order )
 					|| ( ! array_intersect( $groups, self::groups( $agreement['lines'] ) )

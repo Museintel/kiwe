@@ -150,19 +150,28 @@ final class Subscription_Renewal_Orders {
 			|| $order->get_transaction_id() !== $initial['paymentId'] ) return [];
 		$until = 0;
 		$ended = 0;
+		$scheduled = 0;
 		$now = $at ?? time();
 		foreach ( [ $order, ...self::children( $order ) ] as $receipt ) {
 			$charge = $receipt->get_meta( self::CHARGE );
 			if ( ! is_array( $charge ) || ! $receipt->is_paid() || $receipt->get_customer_id() !== $agreement['customerId']
 				|| $receipt->get_transaction_id() !== $charge['paymentId']
-				|| $charge['refundedMinor'] >= $charge['amountMinor'] || Subscription_Quote_Service::minor( (string) $receipt->get_total_refunded() ) >= $charge['amountMinor']
-				|| ( ! $include_future && $charge['startsAt'] > $now ) ) continue;
+				|| $charge['refundedMinor'] >= $charge['amountMinor'] || Subscription_Quote_Service::minor( (string) $receipt->get_total_refunded() ) >= $charge['amountMinor'] ) continue;
+			if ( ! $include_future && $charge['startsAt'] > $now ) {
+				if ( $receipt === $order && ! empty( $agreement['switchFrom'] ) ) $scheduled = $charge['endsAt'];
+				continue;
+			}
 			if ( $charge['endsAt'] <= $now ) $ended = max( $ended, $charge['endsAt'] );
 			else $until = max( $until, $charge['endsAt'] );
 		}
 		$provider = $agreement['providerStatus'] ?? '';
-		$state = 'cancelled' === $provider ? 'cancelled' : ( $until > 0 ? ( 'paused' === $provider ? 'paused' : 'active' ) : 'expired' );
-		return [ 'status'=>$state, 'active'=>$until > 0, 'paidThrough'=>$until ?: $ended, 'products'=>array_map( static fn( $line )=>[
+		$state = match ( true ) {
+			$scheduled > 0 && ! $until => 'scheduled',
+			'cancelled' === $provider => 'cancelled',
+			$until > 0 => 'paused' === $provider ? 'paused' : 'active',
+			default => 'expired',
+		};
+		return [ 'status'=>$state, 'active'=>$until > 0, 'paidThrough'=>$until ?: ( $scheduled ?: $ended ), 'startsAt'=>$scheduled ? $initial['startsAt'] : 0, 'products'=>array_map( static fn( $line )=>[
 			'productId'=>$line['productId'], 'variationId'=>$line['variationId'], 'name'=>$line['name'],
 		], $agreement['lines'] ) ];
 	}
@@ -175,9 +184,13 @@ final class Subscription_Renewal_Orders {
 			'active'=>__( 'Membership active', 'dsa' ),
 			'paused'=>__( 'Membership renewals paused', 'dsa' ),
 			'cancelled'=>__( 'Membership cancelled', 'dsa' ),
+			'scheduled'=>__( 'Membership scheduled', 'dsa' ),
 			default=>__( 'Membership expired', 'dsa' ),
 		};
 		echo '<p class="kiwe-membership-status">' . esc_html( $label ) . '</p>';
+		if ( 'scheduled' === $membership['status'] ) {
+			echo '<p>' . esc_html( sprintf( __( 'Starts on %s', 'dsa' ), wp_date( get_option( 'date_format' ), $membership['startsAt'] ) ) ) . '</p>';
+		}
 		if ( $membership['active'] ) {
 			echo '<p>' . esc_html( sprintf( __( 'Access through %s', 'dsa' ), wp_date( get_option( 'date_format' ), $membership['paidThrough'] ) ) ) . '</p>';
 		}

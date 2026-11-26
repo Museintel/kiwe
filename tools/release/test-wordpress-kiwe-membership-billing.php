@@ -93,9 +93,10 @@ add_filter('pre_http_request', static function ($reply, $args, $url) use (&$prov
     if ('subscriptions' === $resource && 'POST' === $args['method']) {
         ++$networkWrites;
         $accepted = json_decode($args['body'], true, flags: JSON_THROW_ON_ERROR);
-        $provider['subscriptions/'.$subscriptionId] = $accepted + ['id'=>$subscriptionId, 'status'=>'created','short_url'=>'https://rzp.io/i/kiwefixture'];
+        $createdId = 'plan_FixtureUpgrade' === $accepted['plan_id'] ? 'sub_switch'.$accepted['notes']['kiwe_order'] : $subscriptionId;
+        $provider['subscriptions/'.$createdId] = $accepted + ['id'=>$createdId, 'status'=>'created','short_url'=>'https://rzp.io/i/kiwefixture'];
         if ($uncertain) return new WP_Error('lost_fixture_response', 'Provider accepted the request before the response was lost.');
-        $resource .= '/' . $subscriptionId;
+        $resource .= '/' . $createdId;
     }
     if (('subscriptions/'.$subscriptionId.'/cancel') === $resource && 'POST' === $args['method']) {
         ++$cancelWrites;
@@ -103,6 +104,11 @@ add_filter('pre_http_request', static function ($reply, $args, $url) use (&$prov
         $resource = 'subscriptions/'.$subscriptionId;
         $provider[$resource]['status'] = 'cancelled';
         if ($loseCancellation) return new WP_Error('lost_cancel_response', 'The fixture lost the cancellation response.');
+    }
+    if (str_ends_with($resource, '/cancel') && ('subscriptions/'.$subscriptionId.'/cancel') !== substr($key,4) && 'POST' === $args['method']) {
+        ++$cancelWrites;
+        $resource = substr($resource,0,-7);
+        if (isset($provider[$resource])) $provider[$resource]['status'] = 'cancelled';
     }
     foreach (['pause'=>'paused','resume'=>'active'] as $action=>$state) {
         if (('subscriptions/'.$subscriptionId.'/'.$action) !== $resource || 'POST' !== $args['method']) continue;
@@ -353,6 +359,89 @@ try {
     $allOrders = array_column((new DSA\Access\Commerce_App_Service())->workspace('orders')['orders'], null, 'id');
     $assert(isset($allOrders[$membershipOrderId]) && !isset($allOrders[$refunded->get_refunds()[0]->get_id()]),
         'Daily Orders remains available after a refund and includes the actual refunded order.');
+
+    define('KIWE_RAZORPAY_CHECKOUT_TEST_PLANS', ['54000:6'=>'plan_FixtureUpgrade']);
+    $provider['plans/plan_FixtureUpgrade'] = ['id'=>'plan_FixtureUpgrade','period'=>'monthly','interval'=>6,'item'=>['amount'=>54000,'currency'=>'INR']];
+    $family = new WC_Product_Variable();
+    $family->set_name('Variable switch fixture '.$fixture);
+    $family->set_status('publish');
+    $family->save();
+    $terms = [];
+    foreach ([3=>300,6=>540] as $months=>$price) {
+        $variation = new WC_Product_Variation();
+        $variation->set_parent_id($family->get_id());
+        $variation->set_status('publish');
+        $variation->set_virtual(true);
+        $variation->set_tax_status('none');
+        $variation->set_regular_price((string)$price);
+        $variation->set_price((string)$price);
+        Products::write($variation,['renewalMinor'=>$price*100,'intervalMonths'=>$months,'firstTermMonths'=>$months,'membershipGroup'=>'switch-'.$fixture]);
+        $variation->save();
+        $terms[$months] = $variation;
+    }
+    WC_Product_Variable::sync($family);
+    $old = wc_create_order(['status'=>'pending','customer_id'=>$member,'created_via'=>'kiwe-billing-fixture']);
+    $old->set_currency('INR');
+    $old->set_payment_method(Receipts::GATEWAY);
+    $old->add_product($terms[3],1);
+    $old->calculate_totals();
+    $oldId = $old->get_id();
+    $startsAt = time() + 70 * DAY_IN_SECONDS;
+    $sourceSubscription = 'sub_switchSource'.$oldId;
+    $sourceAgreement = DSA\Commerce\Subscription_Quote_Service::snapshot($old) + [
+        'orderId'=>$oldId,'customerId'=>$member,'planId'=>'plan_SwitchSource','cycles'=>12,'reference'=>'switch-'.$fixture,
+        'createdAt'=>time()-DAY_IN_SECONDS,'firstRenewalAt'=>$startsAt,
+        'subscriptionId'=>$sourceSubscription,'providerStatus'=>'active',
+    ];
+    $old->update_meta_data(Receipts::AGREEMENT,$sourceAgreement);
+    $old->update_meta_data(Receipts::CHARGE,[
+        'invoiceId'=>'inv_switchSource'.$oldId,'paymentId'=>'pay_switchSource'.$oldId,'initial'=>true,'amountMinor'=>30000,
+        'refundedMinor'=>0,'startsAt'=>time()-DAY_IN_SECONDS,'endsAt'=>$startsAt,
+    ]);
+    $old->save();
+    $old->payment_complete('pay_switchSource'.$oldId);
+    $provider['subscriptions/'.$sourceSubscription] = [
+        'id'=>$sourceSubscription,'status'=>'active','notes'=>['kiwe_order'=>(string)$oldId,'kiwe_agreement'=>'switch-'.$fixture],
+        'plan_id'=>'plan_SwitchSource','start_at'=>$startsAt,'total_count'=>12,'quantity'=>1,
+    ];
+    $switch = $ops['store.membership.switch'];
+    $switchInput = ['orderId'=>$oldId,'variationId'=>$terms[6]->get_id()];
+    wp_set_current_user($other);
+    $assert(!$switch['permission']($switchInput),'Another buyer cannot replace a membership.');
+    wp_set_current_user($member);
+    $assert('required' === $switch['approval'] && $switch['permission']($switchInput),'A longer published term needs the buyer’s own exact review.');
+    $expected = $switch['prepare']($switchInput)['nativeExpected'];
+    $beforeCalls = [$networkWrites,$cancelWrites];
+    try {
+        Billing::switch_own_plan($oldId,$terms[6]->get_id(),str_repeat('0',64));
+        throw new LogicException('A stale switch was accepted.');
+    } catch (DomainException $error) {
+        $assert($beforeCalls === [$networkWrites,$cancelWrites],'An invalid review changes no provider state.');
+    }
+    $uncertain = false;
+    $url = Billing::switch_own_plan($oldId,$terms[6]->get_id(),$expected);
+    $newId = (int) $accepted['notes']['kiwe_order'];
+    $new = wc_get_order($newId);
+    $newAgreement = $new->get_meta(Receipts::AGREEMENT);
+    $assert($newId !== $oldId && $newAgreement['switchFrom'] === $oldId && $newAgreement['startsAt'] === $startsAt
+        && $new->get_view_order_url() === $url && $accepted['addons'][0]['item']['amount'] === 54000,
+        'A reviewed switch records the next term on a new native prepaid order.');
+    $assert(Billing::switch_own_plan($oldId,$terms[6]->get_id(),$expected) === $url
+        && [$networkWrites,$cancelWrites] === [1+$beforeCalls[0],1+$beforeCalls[1]],
+        'A repeated switch resumes the same replacement and cancels the old mandate only once.');
+    $assert(Receipts::paid_period(wc_get_order($oldId))['active'] && !$new->is_paid(),
+        'Cancelling the old mandate preserves current service while the next order awaits payment.');
+    $newPayment = $furnish('switch'.$newId, 54000, null, null);
+    $provider['invoices/inv_switch'.$newId]['subscription_id'] = 'sub_switch'.$newId;
+    $provider['invoices/inv_switch'.$newId]['paid_at'] = $newAgreement['createdAt'];
+    wp_set_current_user(0);
+    $assert($webhook('payment.captured',$payload($newPayment))->get_status() === 200,'A verified capture prepays the scheduled term.');
+    wp_set_current_user($member);
+    $new = wc_get_order($newId);
+    $future = Receipts::paid_period($new);
+    $assert(!$future['active'] && $future['status'] === 'scheduled' && $future['startsAt'] === $startsAt
+        && Receipts::paid_period($new,$startsAt)['active'] && !Receipts::paid_period(wc_get_order($oldId),$startsAt)['active'],
+        'Paid access transfers at the saved boundary without overlapping the original term.');
 
     echo wp_json_encode(['verified'=>true,'hpos'=>$hpos,'checks'=>count($passed),'fixtureSearch'=>$fixture,'members'=>count($list['people']),
         'staffId'=>$staff,'editorId'=>$editor,'memberId'=>$member,'orderId'=>$membershipOrderId]), PHP_EOL;

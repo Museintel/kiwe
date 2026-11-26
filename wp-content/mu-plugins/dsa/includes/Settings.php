@@ -102,6 +102,7 @@ final class Settings {
 	public function fresh_install_defaults(): array {
 		$settings = $this->disable_boolean_tree( $this->defaults() );
 		$settings['app']['show_install_actions'] = true;
+		$settings['dock']['hide_selectively'] = true;
 		$settings['site_graph'] = [
 			'enabled' => true,
 			'mode'    => 'read_only',
@@ -385,6 +386,7 @@ final class Settings {
 				'dock'                => [
 					'visible'             => true,
 					'reveal_on_scroll'    => false,
+					'hide_selectively'    => true,
 					'hide_frontend_admin_bar' => true,
 					'style'               => 'phonekey',
 					'presentation'        => 'dock',

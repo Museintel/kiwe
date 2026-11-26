@@ -38,6 +38,8 @@ To keep the Dock hidden for the full time a hero or reading section is visible, 
 
 Use `data-dsa-hide-dock="cover"` when the Dock should appear as the viewport reveals the next section alongside a full-height hero. The first-scroll setting and other Dock visibility settings still apply, and separate header launchers remain accessible.
 
+In **Kiwe → Account → Settings → Dock**, **Hide Dock selectively** controls whether these attributes take effect on the site. The switch starts on so existing authored sections keep working. Turn it off to ignore the attributes across the site. The portable Dock profile and the existing AppShell MCP operation accept this choice as `dock.hide_selectively`.
+
 A cosmetic header search needs **name** `data-dsa-open-module`, **value** `search`, on the form, its wrapper or the input. Kiwe makes it a keyboard-accessible launcher, keeps its decorative fields read-only and opens the real Search screen. The same attribute in a Bricks raw HTML element's native Attributes panel reaches its first visual root automatically. No HTML editing or frontend script is needed. An ordinary, unmarked search input remains editable.
 
 A custom notification icon needs **name** `data-dsa-open-module`, **value** `notifications`. The badge includes unseen updates and pending benefits; opening the inbox clears passive updates while eligible actions remain counted until resolved. On the native Woo checkout page, an unresolved action gives the bell a silent ring animation (disabled for reduced motion). Kiwe supplies the badge and behavior on HTML, SVG and image icons, including late-loaded elements. Use the separate `data-kiwe-notifications` trigger for alert-channel preferences.

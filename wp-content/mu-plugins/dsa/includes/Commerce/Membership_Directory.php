@@ -89,7 +89,7 @@ final class Membership_Directory {
 					}
 				} );
 			}
-			$kind = $charge['initial'] ? 'started' : 'renewed';
+			$kind = $charge['initial'] ? ( ! empty( $charge['startsAt'] ) && $charge['startsAt'] > time() ? 'scheduled' : 'started' ) : 'renewed';
 			self::notify( $original, $kind, (string) $receipt->get_id() );
 			$args = [ $original->get_id(), $charge['endsAt'] ];
 			if ( $charge['endsAt'] > time() && function_exists( 'as_has_scheduled_action' )
@@ -113,6 +113,7 @@ final class Membership_Directory {
 		if ( ! $order->get_date_paid() ) return;
 		$label = match ( $kind ) {
 			'started'=>__( 'Membership started', 'dsa' ),
+			'scheduled'=>__( 'Membership scheduled', 'dsa' ),
 			'renewed'=>__( 'Membership automatically renewed', 'dsa' ),
 			'cancelled'=>__( 'Membership cancelled', 'dsa' ),
 			'expired'=>__( 'Membership expired', 'dsa' ),

@@ -26,6 +26,10 @@ $save=function($changes)use($service){return $service->update(['expected'=>$serv
 $storedBeforeReveal=$store;
 unset($store['dsa_settings']['dock']['reveal_on_scroll']);
 check($service->snapshot()['choices']['dock']['reveal_on_scroll']===false&&!isset($store['dsa_settings']['dock']['reveal_on_scroll']),'An existing site gets immediate Dock visibility without a read-time write');
+unset($store['dsa_settings']['dock']['hide_selectively']);
+check($service->snapshot()['choices']['dock']['hide_selectively']===true&&!isset($store['dsa_settings']['dock']['hide_selectively']),'An existing site keeps its viewport attributes without a read-time write');
+$selective=$save(['dock'=>['hide_selectively'=>false]]);
+check(!is_wp_error($selective)&&$service->export_profile($selective)['choices']['dock']['hide_selectively']===false,'The native save and portable profile preserve an explicit selective-hide Off choice');
 $result=$save(['dock'=>['reveal_on_scroll'=>true]]);
 check(!is_wp_error($result)&&$result['choices']['dock']['reveal_on_scroll']===true,'The native Dock writer enables scroll reveal independently');
 $result=$save(['dock'=>['mobile_horizontal_position'=>'center']]);

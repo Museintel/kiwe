@@ -4632,15 +4632,21 @@
 
 	function renderMembershipRail( memberships, shopUrl, accountUrl ) {
 		if ( ! memberships.length ) return '';
-		return '<div class="dsa-recent-orders__head"><strong>Active memberships</strong></div>'
-			+ '<div class="dsa-recent-orders__rail">' + memberships.map( function ( membership ) {
+		function group( items, label ) {
+			if ( ! items.length ) return '';
+			return '<div class="dsa-recent-orders__head"><strong>' + label + '</strong></div>'
+				+ '<div class="dsa-recent-orders__rail">' + items.map( function ( membership ) {
 				const billing = membership.status === 'cancelled' ? 'Renewals stopped' : membership.status === 'paused' ? 'Renewals paused' : '';
 				return '<article class="dsa-recent-order"><div><strong>' + escapeHtml( membership.name ) + '</strong></div>'
+					+ ( membership.startsLabel ? '<small>Starts ' + escapeHtml( membership.startsLabel ) + '</small>' : '' )
 					+ '<small>Access through ' + escapeHtml( membership.paidThroughLabel ) + '</small>'
 					+ ( billing ? '<small>' + billing + '</small>' : '' )
 					+ '<a href="' + escapeHtml( membership.url ) + '">Manage membership</a></article>';
-			} ).join( '' ) + '</div>'
-			+ ( accountUrl ? '<a class="dsa-recent-orders__all" href="' + escapeHtml( accountUrl ) + '">View memberships</a>' : '' )
+				} ).join( '' ) + '</div>';
+		}
+		return group( memberships.filter( item => item.active ), 'Active memberships' )
+			+ group( memberships.filter( item => item.status === 'scheduled' ), 'Scheduled memberships' )
+			+ ( accountUrl ? '<a class="dsa-recent-orders__all" href="' + escapeHtml( accountUrl ) + '">View all memberships</a>' : '' )
 			+ ( shopUrl ? '<a class="dsa-recent-orders__all" href="' + escapeHtml( shopUrl ) + '">Change plan</a>' : '' );
 	}
 

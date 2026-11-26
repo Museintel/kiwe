@@ -180,6 +180,33 @@ final class MCP_Store_Provider {
    'current'=>$pauseReview,
    'execute'=>static fn($a,$expected)=>['resultJson'=>Native::json(Subscription_Billing_Service::change_own_pause($a['orderId'],$a['action']==='pause',$expected))],
   ];
+  $switchReview=static function(array $input):array {
+   $order=wc_get_order($input['orderId']);
+   if(!$order instanceof \WC_Order)throw new \DomainException('Select your membership first.');
+   return Membership_Account_Service::switch_review($order,$input['variationId']);
+  };
+  $selfSwitch=[
+   'scope'=>'store.membership.self.write','label'=>'Review a longer term for your own membership',
+   'effect'=>'write','approval'=>'required','accessVersion'=>1,
+   'inputSchema'=>self::object(['orderId'=>self::integer(1),'variationId'=>self::integer(1)],['orderId','variationId']),
+   'outputSchema'=>$result,'discoverPermission'=>static fn()=>$available()&&Subscription_Checkout_Service::enabled(),
+   'permission'=>static function(array $input)use($available,$switchReview):bool {
+    if(!$available())return false;
+    try{$switchReview($input);return true;}
+    catch(\DomainException|\RuntimeException){return false;}
+   },
+   'prepare'=>static function(array $input)use($switchReview):array {
+    $review=$switchReview($input);
+    return Native::plan('Stop current renewals and prepare a replacement order for Razorpay authorization',
+     $review['expected'],['orderId'=>$input['orderId']],
+     ['plan'=>$review['product']->get_name(),'startsAt'=>$review['startsAt'],'currency'=>'INR','firstChargeMinor'=>$review['firstChargeMinor'],
+      'renewalMinor'=>$review['terms']['renewalMinor'],'intervalMonths'=>$review['terms']['intervalMonths']],true);
+   },
+   'current'=>static fn(array $input)=>$switchReview($input)['expected'],
+   'execute'=>static fn(array $input,string $expected)=>['resultJson'=>Native::json([
+    'url'=>Subscription_Billing_Service::switch_own_plan($input['orderId'],$input['variationId'],$expected),
+   ])],
+  ];
   $pageAllowed=static fn($a)=>class_exists(Membership_Content_Service::class)&&Membership_Content_Service::can_manage_page($a['pageId']);
   $pageDiscover=static fn()=>current_user_can('manage_woocommerce')&&current_user_can('publish_pages')
    && \DSA\Apps\Store_App_Service::supports_memberships()&&! \DSA\Access\Team_Workspace_Service::suspended(get_current_user_id());
@@ -195,7 +222,8 @@ final class MCP_Store_Provider {
    'current'=>static fn($a)=>Membership_Content_Service::settings($a['pageId'])['expected'],
    'execute'=>static fn($a,$expected)=>['resultJson'=>Native::json(Membership_Content_Service::change($a['pageId'],$a['memberOnly'],$expected))],
   ];
-  return ['store.membership.self'=>$selfRead,'store.membership.cancel'=>$selfCancel,'store.membership.renewals'=>$selfPause,'store.membership.page.access'=>$page];
+  return ['store.membership.self'=>$selfRead,'store.membership.cancel'=>$selfCancel,'store.membership.renewals'=>$selfPause,
+   'store.membership.switch'=>$selfSwitch,'store.membership.page.access'=>$page];
  }
 
  private static function group(array $a): array{

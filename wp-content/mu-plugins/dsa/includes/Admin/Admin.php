@@ -7233,6 +7233,9 @@ final class Admin {
 					<p>
 						<input type="hidden" name="dock[reveal_on_scroll]" value="0">
 						<label><input type="checkbox" name="dock[reveal_on_scroll]" value="1" <?php checked( ! empty( $dock['reveal_on_scroll'] ) ); ?>> <?php esc_html_e( 'Show the Dock after the first scroll', 'dsa' ); ?></label>
+						<input type="hidden" name="dock[hide_selectively]" value="0">
+						<label><input type="checkbox" name="dock[hide_selectively]" value="1" <?php checked( $dock['hide_selectively'] ?? true ); ?>> <?php esc_html_e( 'Hide Dock selectively', 'dsa' ); ?></label>
+						<p class="description"><?php esc_html_e( 'Hide the Dock while sections tagged with data-dsa-hide-dock are in view.', 'dsa' ); ?></p>
 					</p>
 					<ul class="dsa-dock-order" data-dsa-dock-order>
 						<?php foreach ( $order as $id ) : ?>

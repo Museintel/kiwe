@@ -78,14 +78,14 @@ final class Dock_Workspace_Service {
 	}
 	/** Each field describes its existing native storage and accepted input type. */
 	public function fields(): array {
-		$dock = [ 'visible'=>'bool', 'reveal_on_scroll'=>'bool', 'enabled_items'=>'map', 'item_order'=>'order', 'focus_item'=>'item', 'menu_nav_ids'=>'menus', 'menu_label'=>'text', 'menu_context_title'=>'text',
+		$dock = [ 'visible'=>'bool', 'reveal_on_scroll'=>'bool', 'hide_selectively'=>'bool', 'enabled_items'=>'map', 'item_order'=>'order', 'focus_item'=>'item', 'menu_nav_ids'=>'menus', 'menu_label'=>'text', 'menu_context_title'=>'text',
 			'phonekey_visibility'=>[ 'all','visitors','users','customers','admins' ], 'presentation'=>[ 'dock','navbar' ], 'shape'=>[ 'pill','box','square' ], 'material'=>[ 'glass','solid' ],
 			'split_style'=>'bool', 'hide_frontend_admin_bar'=>'bool', 'menu_context_enabled'=>'bool' ];
 		foreach ( [ 'desktop','tablet','mobile' ] as $device ) $dock += [ $device.'_orientation'=>[ 'auto','vertical','horizontal' ], $device.'_vertical_edge'=>[ 'left','right' ], $device.'_vertical_position'=>[ 'center','bottom' ], $device.'_horizontal_edge'=>[ 'top','bottom' ], $device.'_horizontal_position'=>[ 'left','center','right' ], $device.'_horizontal_vertical_position'=>[ 'center','bottom' ] ];
 		return [ 'dock'=>$dock, 'style'=>[ 'active_theme_id'=>'theme', 'mode'=>[ 'classic','sheet' ], 'sheet_position'=>[ 'bottom','right','left' ], 'sheet_animation'=>[ 'slide','soft','snap' ], 'sheet_backdrop'=>[ 'blur','fade' ], 'sheet_spacing'=>[ 'edge','inset' ], 'sheet_duration_ms'=>'duration', 'sheet_max_height'=>'height', 'sheet_width_percent'=>'width', 'sheet_side_max_width'=>'sidewidth' ], 'dsa_theme'=>[ 'active_color'=>'color', 'hover_color'=>'color' ], 'commerce'=>[ 'cart_surface_enabled'=>'bool', 'cart_quantity_controls'=>'bool' ] ];
 	}
 	private function profile_fields(): array {
-		$dock = [ 'visible', 'reveal_on_scroll', 'presentation', 'shape', 'material', 'split_style', 'focus_item', 'item_order', 'enabled_items' ];
+		$dock = [ 'visible', 'reveal_on_scroll', 'hide_selectively', 'presentation', 'shape', 'material', 'split_style', 'focus_item', 'item_order', 'enabled_items' ];
 		foreach ( [ 'desktop', 'tablet', 'mobile' ] as $device ) {
 			foreach ( [ 'orientation', 'vertical_edge', 'vertical_position', 'horizontal_edge', 'horizontal_position', 'horizontal_vertical_position' ] as $field ) {
 				$dock[] = $device . '_' . $field;

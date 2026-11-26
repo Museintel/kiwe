@@ -96,7 +96,7 @@ final class Subscription_Checkout_Service {
 	private function consent_token( array $quote, int $customer ): string {
 		return hash_hmac( 'sha256', serialize( [
 			$customer, WC()->cart->get_cart_hash(), Subscription_Quote_Service::terms_digest( $quote, WC()->cart ),
-			self::plan_id( $quote ), Subscription_Billing_Service::CYCLES,
+			self::plan_id( $quote ), Subscription_Billing_Service::cycles( $quote['intervalMonths'] ),
 		] ), wp_salt( 'nonce' ) );
 	}
 

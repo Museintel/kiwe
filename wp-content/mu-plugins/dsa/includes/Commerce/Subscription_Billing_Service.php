@@ -12,6 +12,12 @@ final class Subscription_Billing_Service {
 	public const ROUTE = '/razorpay/subscriptions';
 	public const CYCLES = 12;
 	public const EXPIRY_HOOK = 'dsa_expire_subscription_checkout';
+	private const SWITCH_ORDER = '_kiwe_membership_switch_order_v1';
+	private const SWITCH_SOURCE = '_kiwe_membership_switch_source_v1';
+
+	public static function cycles( int $interval ): int {
+		return min( self::CYCLES, intdiv( 120, max( 1, $interval ) ) );
+	}
 
 	public static function available(): bool {
 		return Store_App_Service::enabled() && Store_App_Service::supports_memberships()
@@ -57,7 +63,7 @@ final class Subscription_Billing_Service {
 			'Prepare the Razorpay Test Mode first charge and recurring approval',
 			Authoring_Service::digest( [ self::order_fingerprint( $order ), $order->get_status(), $agreement, $plan_id, $quote ] ),
 			[ 'orderId'=>$id, 'state'=>$agreement ? 'agreement-recorded' : 'unpaid' ],
-			$quote + [ 'planId'=>$plan_id, 'cycles'=>self::CYCLES, 'mode'=>'test' ],
+			$quote + [ 'planId'=>$plan_id, 'cycles'=>$agreement['cycles'] ?? self::cycles( $quote['intervalMonths'] ), 'mode'=>'test' ],
 			true
 		);
 	}
@@ -96,24 +102,28 @@ final class Subscription_Billing_Service {
 	private static function begin( \WC_Order $order, array $quote, string $plan_id, bool $checkout = false ): array {
 		return self::synchronized( 'membership-groups', $order->get_customer_id(), static function () use ( $order, $quote, $plan_id, $checkout ): array {
 			Subscription_Quote_Service::assert_groups_available( $order->get_customer_id(), $quote['lines'] );
+			self::verify_plan( $quote, $plan_id );
 			return self::create_agreement( $order, $quote, $plan_id, $checkout );
 		} );
 	}
 
-	private static function create_agreement( \WC_Order $order, array $quote, string $plan_id, bool $checkout ): array {
+	private static function verify_plan( array $quote, string $plan_id ): void {
 		$plan = Razorpay_Subscription_Provider::plan( $plan_id );
 		if ( 'monthly' !== ( $plan['period'] ?? null ) || $quote['intervalMonths'] !== ( $plan['interval'] ?? null )
 			|| $quote['renewalMinor'] !== ( $plan['item']['amount'] ?? null ) || 'INR' !== ( $plan['item']['currency'] ?? null ) ) {
 			throw new \DomainException( 'The Razorpay plan must match the reviewed renewal price, currency and interval.' );
 		}
+	}
+
+	private static function create_agreement( \WC_Order $order, array $quote, string $plan_id, bool $checkout, array $switch = [] ): array {
 		Store_Checkout_Gate::remember_usage();
 		$created = time();
 		$agreement = $quote + [
-			'orderId'=>$order->get_id(), 'customerId'=>$order->get_customer_id(), 'planId'=>$plan_id, 'cycles'=>self::CYCLES,
+			'orderId'=>$order->get_id(), 'customerId'=>$order->get_customer_id(), 'planId'=>$plan_id, 'cycles'=>self::cycles( $quote['intervalMonths'] ),
 			'reference'=>bin2hex( random_bytes( 16 ) ), 'fingerprint'=>self::order_fingerprint( $order ),
-			'createdAt'=>$created, 'firstRenewalAt'=>self::add_months( $created, $quote['firstTermMonths'] ),
+			'createdAt'=>$created, 'firstRenewalAt'=>self::add_months( $switch['startsAt'] ?? $created, $quote['firstTermMonths'] ),
 			'approvalExpiresAt'=>$created + DAY_IN_SECONDS, 'subscriptionId'=>'', 'authorizationUrl'=>'', 'providerStatus'=>'',
-		];
+		] + $switch;
 		if ( $checkout ) {
 			$agreement['checkoutConsentAt'] = $created;
 			Subscription_Checkout_Service::remember_order( $order );
@@ -150,16 +160,90 @@ final class Subscription_Billing_Service {
 			if ( ! hash_equals( $review['expected'], $expected ) ) {
 				throw new \DomainException( __( 'This membership changed. Review it before stopping renewals.', 'dsa' ) );
 			}
-			$subscription = Razorpay_Subscription_Provider::subscription( $agreement['subscriptionId'] );
-			$agreement = self::bind( $order, $agreement, $subscription );
-			if ( ! in_array( $agreement['providerStatus'], [ 'cancelled', 'completed', 'expired' ], true ) ) {
-				$agreement = self::bind( $order, $agreement, Razorpay_Subscription_Provider::cancel( $agreement['subscriptionId'] ) );
-				if ( 'cancelled' !== $agreement['providerStatus'] ) {
-					throw new \RuntimeException( __( 'Razorpay is still confirming this cancellation. Check your membership again.', 'dsa' ) );
-				}
-			}
-			if ( 'cancelled' === $agreement['providerStatus'] ) Membership_Directory::notify( $order, 'cancelled', 'confirmed' );
+			self::stop_renewals( $order, $agreement );
 			return Membership_Account_Service::status( $order );
+		} );
+	}
+
+	private static function stop_renewals( \WC_Order $order, array $agreement ): void {
+		$subscription = Razorpay_Subscription_Provider::subscription( $agreement['subscriptionId'] );
+		$agreement = self::bind( $order, $agreement, $subscription, true );
+		if ( ! in_array( $agreement['providerStatus'], [ 'cancelled', 'completed', 'expired' ], true ) ) {
+			$agreement = self::bind( $order, $agreement, Razorpay_Subscription_Provider::cancel( $agreement['subscriptionId'] ) );
+			if ( 'cancelled' !== $agreement['providerStatus'] ) {
+				throw new \RuntimeException( __( 'Razorpay is still confirming this cancellation. Check your membership again.', 'dsa' ) );
+			}
+		}
+		if ( 'cancelled' === $agreement['providerStatus'] ) Membership_Directory::notify( $order, 'cancelled', 'confirmed' );
+	}
+
+	/** Preserve the original paid term and put the next term on a new native order. */
+	public static function switch_own_plan( int $id, int $variation, string $expected ): string {
+		return self::synchronized( 'order', $id, static function () use ( $id, $variation, $expected ): string {
+			$old = wc_get_order( $id );
+			if ( ! $old instanceof \WC_Order ) throw new \DomainException( __( 'Select your membership first.', 'dsa' ) );
+			$review = Membership_Account_Service::switch_review( $old, $variation );
+			if ( ! hash_equals( $review['expected'], $expected ) ) throw new \DomainException( __( 'The plan changed. Review the current terms again.', 'dsa' ) );
+			return self::synchronized( 'membership-groups', $old->get_customer_id(), static function () use ( $old, $review ): string {
+				$product = $review['product'];
+				$terms = $review['terms'];
+				$source = [ 'orderId'=>$old->get_id(), 'variationId'=>$product->get_id(), 'startsAt'=>$review['startsAt'] ];
+				$pending_id = (int) $old->get_meta( self::SWITCH_ORDER );
+				$order = $pending_id ? wc_get_order( $pending_id ) : null;
+				if ( $pending_id ) {
+					if ( ! $order instanceof \WC_Order || ! Subscription_Checkout_Service::owns_order( $order )
+						|| 'kiwe-plan-switch' !== $order->get_created_via() ) {
+						throw new \DomainException( __( 'Review the existing replacement order with the store.', 'dsa' ) );
+					}
+					$pending = $order->get_meta( Subscription_Renewal_Orders::AGREEMENT );
+					if ( 'expired' === ( $pending['providerStatus'] ?? '' ) && ! $order->get_date_paid() ) {
+						$order = null;
+					} else {
+						if ( $source !== $order->get_meta( self::SWITCH_SOURCE ) ) {
+							throw new \DomainException( __( 'There is already a replacement order for this membership.', 'dsa' ) );
+						}
+						if ( $pending ) return $order->get_view_order_url();
+					}
+				}
+
+				Subscription_Quote_Service::assert_groups_available( $old->get_customer_id(), [ [
+					'productId'=>$product->get_parent_id(), 'membershipGroup'=>$terms['membershipGroup'] ?? '',
+				] ], $old->get_id() );
+				self::verify_plan( $terms, $review['planId'] );
+				if ( ! $order ) {
+					$order = new \WC_Order();
+					$order->set_customer_id( $old->get_customer_id() );
+					$order->set_currency( 'INR' );
+					$order->set_created_via( 'kiwe-plan-switch' );
+					$order->set_address( $old->get_address( 'billing' ), 'billing' );
+					$order->set_status( 'checkout-draft' );
+					$order->update_meta_data( self::SWITCH_SOURCE, $source );
+					$order->save();
+					$old->update_meta_data( self::SWITCH_ORDER, $order->get_id() );
+					$old->save_meta_data();
+					$readback = wc_get_order( $old->get_id() );
+					if ( ! $readback || $order->get_id() !== (int) $readback->get_meta( self::SWITCH_ORDER ) ) {
+						throw new \RuntimeException( 'WooCommerce could not confirm the replacement order.' );
+					}
+				}
+				$order->set_payment_method( Subscription_Renewal_Orders::GATEWAY );
+				$order->remove_order_items( 'line_item' );
+				$order->add_product( $product, 1 );
+				$order->calculate_totals();
+				$order->set_status( 'pending' );
+				$order->save();
+				$quote = self::eligible_snapshot( $order, Subscription_Renewal_Orders::GATEWAY );
+				$plan = Subscription_Checkout_Service::plan_id( $quote );
+				if ( $review['firstChargeMinor'] !== $quote['firstChargeMinor'] || $review['planId'] !== $plan
+					|| $terms['firstTermMonths'] !== $quote['firstTermMonths'] || $terms['intervalMonths'] !== $quote['intervalMonths'] ) {
+					throw new \DomainException( __( 'The price or billing terms changed. Review the plan again.', 'dsa' ) );
+				}
+				$prior = $old->get_meta( Subscription_Renewal_Orders::AGREEMENT );
+				if ( Membership_Account_Service::can_cancel( $old ) ) self::stop_renewals( $old, $prior );
+				self::synchronized( 'order', $order->get_id(), static fn() => self::create_agreement( $order, $quote, $plan, true,
+					[ 'switchFrom'=>$old->get_id(), 'startsAt'=>$review['startsAt'] ] ) );
+				return $order->get_view_order_url();
+			} );
 		} );
 	}
 
@@ -477,7 +561,7 @@ final class Subscription_Billing_Service {
 			throw new \DomainException( 'The captured amount or invoice details do not match the agreed terms.' );
 		}
 		if ( $initial ) {
-			$starts = $paid_at;
+			$starts = max( $paid_at, $agreement['startsAt'] ?? 0 );
 			$ends = $agreement['firstRenewalAt'];
 			if ( $starts >= $ends ) throw new \DomainException( 'The first charge is outside the agreed first term.' );
 		} elseif ( ! is_int( $starts ) || ! is_int( $ends )

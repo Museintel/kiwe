@@ -1,3 +1,9 @@
+## 8.0.0-rc.502 (2026-11-26, candidate)
+
+- Add Hide Dock selectively in native App Settings and portable Dock profiles. Keep authored viewport attributes active by default.
+- Prepare a reviewed, prepaid longer membership term from the buyer’s native Woo order. Keep current access through the paid date, stop the original renewals, and require fresh Razorpay authorization for the replacement.
+- Show scheduled terms separately in Profile, add a paginated membership list, and expose the same plan review and approval through Store MCP.
+
 ## 8.0.0-rc.501 (2026-11-26, candidate)
 
 - List native membership purchases and automatic renewal receipts under Daily → Orders → Subscriptions and permission-scoped Store MCP.

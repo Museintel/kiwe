@@ -12,6 +12,7 @@ final class Membership_Account_Service {
 	private const ACTION = 'kiwe_stop_membership_renewals';
 	private const PAUSE = 'kiwe_pause_membership_renewals';
 	private const RESUME = 'kiwe_resume_membership_renewals';
+	private const SWITCH_PLAN = 'kiwe_switch_membership_plan';
 
 	public function register(): void {
 		add_action( 'woocommerce_account_dashboard', [ $this, 'render_account' ] );
@@ -45,6 +46,7 @@ final class Membership_Account_Service {
 		return [
 			'orderId'=>$order->get_id(), 'status'=>$period['status'], 'active'=>$period['active'],
 			'paidThrough'=>$period['paidThrough'], 'url'=>$order->get_view_order_url(), 'canCancel'=>$controls,
+			'startsAt'=>$period['startsAt'] ?? 0,
 			'canPause'=>$controls && 'active' === $agreement['providerStatus'],
 			'canResume'=>$controls && 'paused' === $agreement['providerStatus'],
 		];
@@ -68,12 +70,13 @@ final class Membership_Account_Service {
 		do {
 			$list = self::listing( $page++ );
 			foreach ( $list['memberships'] as $membership ) {
-				if ( ! $membership['active'] ) continue;
+				if ( ! $membership['active'] && 'scheduled' !== $membership['status'] ) continue;
 				$order = wc_get_order( $membership['orderId'] );
 				if ( ! $order ) continue;
 				$cards[] = $membership + [
 					'name'=>Membership_Directory::plan_names( $order ) ?: __( 'Membership', 'dsa' ),
 					'paidThroughLabel'=>wp_date( get_option( 'date_format' ), $membership['paidThrough'] ),
+					'startsLabel'=>$membership['startsAt'] ? wp_date( get_option( 'date_format' ), $membership['startsAt'] ) : '',
 				];
 				if ( count( $cards ) === 6 ) return $cards;
 			}
@@ -104,19 +107,87 @@ final class Membership_Account_Service {
 
 	public function render_account(): void {
 		if ( ! self::available() || ! get_user_meta( get_current_user_id(), Subscription_Renewal_Orders::JOINED, true ) ) return;
-		$list = self::listing();
+		$page = max( 1, min( 1000, absint( $_GET['kiwe_membership_page'] ?? 1 ) ) );
+		$list = self::listing( $page );
 		if ( ! $list['memberships'] ) return;
-		echo '<section id="kiwe-memberships" class="woocommerce-MyAccount-memberships"><h2>' . esc_html__( 'Recent memberships', 'dsa' ) . '</h2><ul>';
+		echo '<section id="kiwe-memberships" class="woocommerce-MyAccount-memberships"><h2>' . esc_html__( 'Your memberships', 'dsa' ) . '</h2><ul>';
 		foreach ( $list['memberships'] as $item ) {
 			$order = wc_get_order( $item['orderId'] );
 			$label = ( $order ? Membership_Directory::plan_names( $order ) : '' ) ?: sprintf( __( 'Membership order #%s', 'dsa' ), number_format_i18n( $item['orderId'] ) );
 			printf( '<li><a href="%s">%s</a></li>', esc_url( $item['url'] ), esc_html( $label ) );
 		}
-		echo '</ul></section>';
+		echo '</ul>';
+		foreach ( [ $page - 1=>__( 'Previous memberships', 'dsa' ), $page + 1=>__( 'More memberships', 'dsa' ) ] as $index=>$label ) {
+			if ( $index < 1 || ( $index > $page && ! $list['hasMore'] ) ) continue;
+			printf( '<p><a href="%s">%s</a></p>', esc_url( add_query_arg( 'kiwe_membership_page', $index, wc_get_page_permalink( 'myaccount' ) ) . '#kiwe-memberships' ), esc_html( $label ) );
+		}
+		echo '</section>';
+	}
+
+	private static function switch_source( \WC_Order $order ): array {
+		if ( ! self::owns( $order ) || ! Subscription_Checkout_Service::enabled() ) return [];
+		$agreement = $order->get_meta( Subscription_Renewal_Orders::AGREEMENT );
+		$lines = $agreement['lines'] ?? [];
+		$paid = Subscription_Renewal_Orders::paid_period( $order );
+		$covered = Subscription_Renewal_Orders::paid_period( $order, null, true );
+		if ( count( $lines ) !== 1 || empty( $lines[0]['variationId'] ) || 1 !== $lines[0]['quantity']
+			|| ! in_array( $agreement['providerStatus'], [ 'authenticated','active','paused','cancelled','completed' ], true )
+			|| empty( $paid['active'] ) || $paid['paidThrough'] < time() + DAY_IN_SECONDS
+			|| $covered['paidThrough'] !== $paid['paidThrough'] ) return [];
+		return [ 'agreement'=>$agreement, 'line'=>$lines[0], 'startsAt'=>$paid['paidThrough'] ];
+	}
+
+	public static function switch_review( \WC_Order $order, int $variation ): array {
+		return self::review_variation( $order, $variation, self::switch_source( $order ) );
+	}
+
+	private static function review_variation( \WC_Order $order, int $variation, array $source ): array {
+		$product = $source ? wc_get_product( $variation ) : null;
+		$parent = $product ? wc_get_product( $product->get_parent_id() ) : null;
+		$terms = $product ? Subscription_Product_Service::terms( $product ) : null;
+		$plan = is_array( $terms ) ? Subscription_Checkout_Service::plan_id( $terms ) : '';
+		if ( ! $product instanceof \WC_Product_Variation || ! $parent || ! $parent->is_type( 'variable' ) || ! $plan
+			|| $product->get_parent_id() !== $source['line']['productId'] || $product->get_id() === $source['line']['variationId']
+			|| 'publish' !== $parent->get_status() || 'publish' !== $product->get_status() || ! $product->is_purchasable()
+			|| ! $product->is_in_stock() || ! Subscription_Product_Service::supported_for_checkout( $product )
+			|| ( $terms['membershipGroup'] ?? '' ) !== ( $source['line']['membershipGroup'] ?? '' )
+			|| $terms['firstTermMonths'] <= $source['agreement']['firstTermMonths'] ) {
+			throw new \DomainException( __( 'This membership cannot switch to that term.', 'dsa' ) );
+		}
+		$amount = Subscription_Quote_Service::minor( (string) $product->get_price() );
+		if ( $amount < 100 ) throw new \DomainException( __( 'This membership is missing a purchase price.', 'dsa' ) );
+		return [ 'product'=>$product, 'terms'=>$terms, 'planId'=>$plan, 'startsAt'=>$source['startsAt'], 'firstChargeMinor'=>$amount,
+			'expected'=>hash_hmac( 'sha256', serialize( [ $order->get_id(), $order->get_customer_id(), $source['agreement']['reference'],
+				$variation, $plan, $source['startsAt'], $amount, $terms ] ), wp_salt( 'nonce' ) ) ];
+	}
+
+	private function render_plan_switches( \WC_Order $order ): void {
+		$source = self::switch_source( $order );
+		if ( ! $source || ! ( $parent = wc_get_product( $source['line']['productId'] ) ) || ! $parent->is_type( 'variable' ) ) return;
+		$first = true;
+		foreach ( $parent->get_children() as $variation ) {
+			try {
+				$review = self::review_variation( $order, $variation, $source );
+			} catch ( \DomainException $error ) {
+				continue;
+			}
+			if ( $first ) {
+				$first = false;
+				echo '<p>' . esc_html__( 'Confirming a switch stops current renewals. Your paid access continues through the current term even if you leave Razorpay before paying for the next term.', 'dsa' ) . '</p>';
+			}
+			$terms = $review['terms'];
+			$prompt = sprintf( __( 'Switch to %1$s starting %2$s. Stop the current renewals and authorize %3$s now for the next term, then %4$s every %5$d months.', 'dsa' ),
+				$review['product']->get_name(), wp_date( get_option( 'date_format' ), $review['startsAt'] ),
+				wp_strip_all_tags( wc_price( $review['firstChargeMinor'] / 100, [ 'currency'=>'INR' ] ) ),
+				wp_strip_all_tags( wc_price( $terms['renewalMinor'] / 100, [ 'currency'=>'INR' ] ) ), $terms['intervalMonths'] );
+			$label = sprintf( __( 'Switch to %d months', 'dsa' ), $terms['firstTermMonths'] );
+			$this->billing_form( $order, self::SWITCH_PLAN, $review['expected'], $prompt, $label, $variation );
+		}
 	}
 
 	public function render_cancellation( \WC_Order $order ): void {
 		if ( ! is_wc_endpoint_url( 'view-order' ) || ! self::status( $order ) ) return;
+		$this->render_plan_switches( $order );
 		if ( self::can_cancel( $order ) ) {
 			$review = self::cancellation( $order );
 			$this->billing_form( $order, self::ACTION, $review['expected'], __( 'Stop automatic renewals and keep access for the period already paid.', 'dsa' ), __( 'Stop renewals', 'dsa' ) );
@@ -130,21 +201,22 @@ final class Membership_Account_Service {
 		$shop = wc_get_page_permalink( 'shop' );
 		if ( $shop ) {
 			printf( '<p><a href="%s">%s</a></p>', esc_url( $shop ), esc_html__( 'Change plan', 'dsa' ) );
-			echo '<p>' . esc_html__( 'You can buy a separate membership now. To change plans in the same group, stop renewals and choose the new plan after paid access ends.', 'dsa' ) . '</p>';
+			echo '<p>' . esc_html__( 'Visit the shop for separate memberships. Eligible longer terms can be scheduled here to follow your current paid term.', 'dsa' ) . '</p>';
 		}
 	}
 
-	private function billing_form( \WC_Order $order, string $action, string $expected, string $prompt, string $label ): void {
+	private function billing_form( \WC_Order $order, string $action, string $expected, string $prompt, string $label, int $variation = 0 ): void {
 		printf( '<form method="post" action="%s"><input type="hidden" name="kiwe_membership_action" value="%s"><input type="hidden" name="expected" value="%s">',
 			esc_url( $order->get_view_order_url() ), esc_attr( $action ), esc_attr( $expected ) );
 		wp_nonce_field( $action . '_' . $order->get_id(), '_wpnonce', false );
+		if ( $variation ) printf( '<input type="hidden" name="variation" value="%d">', $variation );
 		echo '<p><label><input type="checkbox" name="confirm" value="yes" required> ' . esc_html( $prompt ) . '</label></p>';
 		echo '<button class="button" type="submit">' . esc_html( $label ) . '</button></form>';
 	}
 
 	public function handle_cancellation(): void {
 		$action = $_POST['kiwe_membership_action'] ?? '';
-		if ( 'POST' !== ( $_SERVER['REQUEST_METHOD'] ?? '' ) || ! in_array( $action, [ self::ACTION, self::PAUSE, self::RESUME ], true )
+		if ( 'POST' !== ( $_SERVER['REQUEST_METHOD'] ?? '' ) || ! in_array( $action, [ self::ACTION, self::PAUSE, self::RESUME, self::SWITCH_PLAN ], true )
 			|| ! is_wc_endpoint_url( 'view-order' ) ) return;
 		$id = absint( get_query_var( 'view-order' ) );
 		$order = $id ? wc_get_order( $id ) : null;
@@ -155,7 +227,12 @@ final class Membership_Account_Service {
 		$expected = $_POST['expected'] ?? '';
 		try {
 			if ( 'yes' !== ( $_POST['confirm'] ?? '' ) || ! is_string( $expected ) ) throw new \DomainException();
-			if ( self::ACTION === $action ) {
+			if ( self::SWITCH_PLAN === $action ) {
+				$target = Subscription_Billing_Service::switch_own_plan( $id, absint( $_POST['variation'] ?? 0 ), wp_unslash( $expected ) );
+				wc_add_notice( __( 'Review the replacement order and continue to Razorpay to authorize the next term.', 'dsa' ) );
+				wp_safe_redirect( $target, 303 );
+				exit;
+			} elseif ( self::ACTION === $action ) {
 				$result = Subscription_Billing_Service::cancel_own_subscription( $id, wp_unslash( $expected ) );
 				$notice = 'cancelled' === $result['status'] ? __( 'Automatic renewals stopped.', 'dsa' ) : __( 'This membership has no further renewals.', 'dsa' );
 			} else {
