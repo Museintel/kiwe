@@ -130,11 +130,11 @@ final class Checkout_Experience_Service {
 
 	public function assets(): void {
 		if ( ! self::checkout_page() ) return;
-		$base = dirname( __DIR__, 2 ) . '/assets/';
 		$url = plugin_dir_url( dirname( __DIR__, 2 ) . '/dsa.php' ) . 'assets/';
-		wp_enqueue_style( 'kiwe-checkout-experience', $url . 'css/checkout-experience.css', [], (string) filemtime( $base . 'css/checkout-experience.css' ) );
+		$version = \DSA\Apps\Runtime_Registry::provider( 'store' )['version'] ?? DSA_VERSION;
+		wp_enqueue_style( 'kiwe-checkout-experience', $url . 'css/checkout-experience.css', [], $version );
 		$dependencies = self::authored() ? [ 'dsa-surface' ] : [ 'jquery' ];
-		wp_enqueue_script( 'kiwe-checkout-experience', $url . 'js/checkout-experience.js', $dependencies, (string) filemtime( $base . 'js/checkout-experience.js' ), true );
+		wp_enqueue_script( 'kiwe-checkout-experience', $url . 'js/checkout-experience.js', $dependencies, $version, true );
 	}
 
 	public function body_classes( array $classes ): array {

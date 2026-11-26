@@ -4192,7 +4192,7 @@
     },
     {
       "source": "wp-content/mu-plugins/dsa/includes/Commerce/Checkout_Experience_Service.php",
-      "sha256": "25d92de70d2a9d969ebfa89419697ac48d650082e217704dccffa3c4c68296c2",
+      "sha256": "40121772c396e570678b94f1855fe055bdc4919812a42117bf1fdf691da9b027",
       "symbols": [
         {
           "kind": "method",

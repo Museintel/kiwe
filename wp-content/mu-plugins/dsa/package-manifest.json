@@ -1545,8 +1545,8 @@
       "sha256": "e61e4fc3e756dade76ca708958440ddc6077837fbd6376cd3e348f4b87c8a681"
     },
     "includes/Commerce/Checkout_Experience_Service.php": {
-      "bytes": 7979,
-      "sha256": "25d92de70d2a9d969ebfa89419697ac48d650082e217704dccffa3c4c68296c2"
+      "bytes": 7921,
+      "sha256": "40121772c396e570678b94f1855fe055bdc4919812a42117bf1fdf691da9b027"
     },
     "includes/Commerce/Checkout_Field_Service.php": {
       "bytes": 1155,
