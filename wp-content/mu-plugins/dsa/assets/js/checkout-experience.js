@@ -245,7 +245,9 @@
 				if ( ! cart?.addProduct ) throw new Error( 'The cart could not load. Try again.' );
 				await cart.addProduct( offer.productId, 'kiwe_checkout_offer', 1 );
 				await refresh();
-				announce( 'Membership added. This benefit starts once your payment is confirmed.' );
+				announce( review?.offers?.[id]?.state === 'applied'
+				? 'Membership added. The discount is included in this order.'
+				: 'Membership added. Review your updated order total.' );
 			}
 			if ( offer.state === 'choose' ) {
 				const destination = new URL( offer.url, window.location.href );

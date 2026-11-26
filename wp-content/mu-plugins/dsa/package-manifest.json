@@ -297,8 +297,8 @@
       "sha256": "3fba86300eaf6dbec7d27b7d8230d41a9b55f633e1af7e84337ff93981099e08"
     },
     "assets/js/checkout-experience.js": {
-      "bytes": 15249,
-      "sha256": "132b4bc66143a5dc97e571c3fb3e0b9a59d4f55dd1f3ce7ac64adc4c630b4a5e"
+      "bytes": 15344,
+      "sha256": "c5dd4b43d0d4cdf086b31ec977ebf5151ad97c6ee5c93f3b4fa914cff994c886"
     },
     "assets/js/commerce-app.js": {
       "bytes": 304655,
