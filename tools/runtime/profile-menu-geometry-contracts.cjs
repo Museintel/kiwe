@@ -14,12 +14,14 @@ const admin = read('wp-content/mu-plugins/dsa/includes/Admin/Admin.php');
 const dockSettings = read('wp-content/mu-plugins/dsa/includes/Dock/Dock_Settings_Service.php');
 const css = read('wp-content/mu-plugins/dsa/assets/css/surface.css');
 
-check('legacy and prototype profiles omit recent orders without commerce capability',
-	(profile.match(/hasWoo \? '<section class="dsa-recent-orders/g) || []).length === 2
+check('legacy and prototype profiles omit membership and order rails without commerce capability',
+	(profile.match(/hasWoo \? '<section [^\n]+ data-dsa-active-memberships hidden>/g) || []).length === 2
+	&& (profile.match(/hasWoo \? '<section [^\n]+ data-dsa-recent-orders/g) || []).length === 2
 	&& profile.includes('const hasWoo = Boolean( payload.hasWoo );')
 	&& (profile.match(/data-dsa-commerce="' \+ \( hasWoo \? '1' : '0' \) \+ '"/g) || []).length === 2
 	&& profile.includes("hasWoo ? metricCard( orderCount, 'Orders', 'orders' ) : ''")
-	&& surface.includes("if ( ! target || ! ( phonekey.cart && phonekey.cart.available ) ) return;")
+	&& surface.includes('hasWoo: Boolean( commerce.available )')
+	&& surface.includes('if ( ! target || ! commerce.available ) return;')
 );
 check('wide editorial profiles release the commerce column and rebalance by measured layout',
 	css.includes('.dsa-profile-panel[data-dsa-commerce="0"]')
