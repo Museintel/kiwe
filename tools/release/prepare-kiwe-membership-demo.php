@@ -1,7 +1,5 @@
 <?php
 /** Seed the private membership walkthrough without creating orders or talking to Razorpay. */
-declare(strict_types=1);
-
 use DSA\Apps\Store_App_Service as Store;
 use DSA\Commerce\Subscription_Product_Service as Terms;
 
