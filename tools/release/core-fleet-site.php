@@ -245,6 +245,12 @@ try {
         ];
     } elseif ($step === 'purge-local') {
         do_action('litespeed_purge_all');
+        if (function_exists('WP_Optimize')) {
+            $pageCache = WP_Optimize()->get_page_cache();
+            if ($pageCache->is_enabled() && !$pageCache->purge()) {
+                throw new RuntimeException('WP-Optimize could not purge its page cache.');
+            }
+        }
         $result = ['pageCachePurgeSent' => true];
     } elseif ($step === 'prepare-sql-backup') {
         $result = kiwe_fleet_write_sql_client($work);
