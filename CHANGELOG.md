@@ -1,4 +1,4 @@
-## Unreleased
+## 8.0.0-rc.501 (2026-11-26, candidate)
 
 - List native membership purchases and automatic renewal receipts under Daily → Orders → Subscriptions and permission-scoped Store MCP.
 - Show purchased plan names in membership notices to the buyer and eligible staff.
