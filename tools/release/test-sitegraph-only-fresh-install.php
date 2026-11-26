@@ -71,7 +71,7 @@ namespace {
 
 	$truthy   = kiwe_true_boolean_paths( $resolved );
 
-	$expected = array_merge( [ 'abandoned_cart.enabled', 'site_graph.enabled', 'search.bricks_bridge_enabled', 'commerce.checkout_surface_enabled', 'commerce.cart_show_fbt', 'dock.admin_dashboard_link_enabled', 'permissions.enabled', 'permissions.notifications_enabled', 'permissions.notification_preferences_enabled', 'permissions.pwa_enabled', 'service_worker', 'app.show_install_actions' ], array_map( static fn( $key ) => 'bricks.' . $key, array_keys( \DSA\Settings::automatic_bricks_settings() ) ) );
+	$expected = array_merge( [ 'abandoned_cart.enabled', 'site_graph.enabled', 'search.bricks_bridge_enabled', 'commerce.checkout_surface_enabled', 'commerce.cart_show_fbt', 'dock.admin_dashboard_link_enabled', 'dock.hide_selectively', 'permissions.enabled', 'permissions.notifications_enabled', 'permissions.notification_preferences_enabled', 'permissions.pwa_enabled', 'service_worker', 'app.show_install_actions' ], array_map( static fn( $key ) => 'bricks.' . $key, array_keys( \DSA\Settings::automatic_bricks_settings() ) ) );
 	sort( $truthy ); sort( $expected );
 	if ( $expected !== $truthy ) {
 		fwrite( STDERR, 'Fresh Kiwe install enabled unexpected boolean settings: ' . json_encode( $truthy ) . PHP_EOL );
