@@ -10,6 +10,7 @@ function control(data = {}) {
   dataset: data, hidden: false, disabled: false, textContent: '',
   hasAttribute: name => name === 'data-kiwe-checkout-consent' ? 'kiweCheckoutConsent' in data : name === 'data-kiwe-checkout-pay' && 'kiweCheckoutPay' in data,
   setAttribute: (name, value) => { attributes[name] = value; },
+  toggleAttribute: (name, present) => { if (present) attributes[name] = ''; else delete attributes[name]; },
   getAttribute: name => attributes[name],
  };
 }
@@ -51,6 +52,8 @@ async function run() {
   checkoutNonce: 'fixture', checkoutUrl: '/?wc-ajax=checkout', couponNonce: 'fixture', couponUrl: '/?wc-ajax=apply_coupon',
   termsRequired: true, coupons: true,
  };
+ let reviewFails = false;
+ let reviewReads = 0;
  const settle = async () => { for (let i = 0; i < 25; i++) await Promise.resolve(); };
  async function click(button) {
   events.click({target: {closest: () => button}, preventDefault() {}});
@@ -61,7 +64,11 @@ async function run() {
   window: {
    location: {href: base + '/checkout/', origin: base, assign: url => receipt.push(url)},
    addEventListener: (name, handler) => { events[name] = handler; },
-   DSA: {readCheckoutReview: async () => ({...review})},
+   DSA: {readCheckoutReview: async () => {
+    reviewReads++;
+    if (reviewFails) throw new Error('Temporary review failure');
+    return {...review};
+   }},
   },
   URL, URLSearchParams,
   DOMParser: class { parseFromString(text) { return {body: {textContent: text}}; } },
@@ -76,6 +83,9 @@ async function run() {
   },
  };
  vm.runInNewContext(source, context);
+ assert.equal(page.getAttribute('data-kiwe-checkout-ready'), undefined);
+ assert.equal(upi.hidden, true);
+ assert.equal(subscription.hidden, true);
  await settle();
  assert.equal(address.textContent, 'Demo Street');
  assert.equal(status.textContent, '');
@@ -122,7 +132,29 @@ async function run() {
  await click(cod);
  assert.equal(requests[3][1].payment_method, 'cod');
  assert.equal(requests[3][1].terms, 'on');
- console.log('Bricks checkout bindings, consent, coupon refresh and native payment dispatch passed.');
+ let completeCartUpdate;
+ const cartUpdate = new Promise(resolve => { completeCartUpdate = resolve; });
+ events['dsa:checkout:cart-updating']({detail: cartUpdate});
+ assert.equal(upi.hidden, false);
+ assert.equal(upi.disabled, true);
+ await click(upi);
+ assert.equal(requests.length, 4);
+ review.total = '₹550';
+ const beforeCartUpdate = reviewReads;
+ events['dsa:checkout:cart-updated']();
+ assert.equal(reviewReads, beforeCartUpdate);
+ completeCartUpdate();
+ await settle();
+ assert.equal(reviewReads, beforeCartUpdate + 1);
+ assert.equal(total.textContent, '₹550');
+ assert.equal(upi.disabled, false);
+ reviewFails = true;
+ events['dsa:checkout:cart-updated']();
+ await settle();
+ assert.equal(upi.hidden, true);
+ assert.equal(cod.hidden, true);
+ assert.match(status.textContent, /could not load/);
+ console.log('Bricks checkout bindings, payment visibility, live cart review, consent and native dispatch passed.');
 }
 
 run().catch(error => { console.error(error); process.exitCode = 1; });

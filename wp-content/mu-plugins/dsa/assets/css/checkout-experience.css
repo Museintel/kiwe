@@ -47,6 +47,7 @@
 	text-underline-offset: .2em;
 }
 
+[data-kiwe-checkout]:not([data-kiwe-checkout-ready]) :is([data-kiwe-checkout-pay], [data-kiwe-checkout-consent]),
 [data-kiwe-checkout] [hidden] {
 	display: none !important;
 }

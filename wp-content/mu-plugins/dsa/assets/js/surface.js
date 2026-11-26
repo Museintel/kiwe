@@ -5449,6 +5449,9 @@
 		cartMutationQueue = run.catch( function () {
 			return null;
 		} );
+		if ( isCurrentCheckoutPage() ) {
+			window.dispatchEvent( new CustomEvent( 'dsa:checkout:cart-updating', { detail: cartMutationQueue } ) );
+		}
 
 		return run;
 	}
@@ -5696,6 +5699,9 @@
 		}
 
 		refreshUniversalAddToCartEnhancers();
+		if ( cartChanged && isCurrentCheckoutPage() ) {
+			window.dispatchEvent( new CustomEvent( 'dsa:checkout:cart-updated' ) );
+		}
 	}
 
 	function applyWooCartFragments( response, eventName ) {

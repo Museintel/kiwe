@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "version": "8.0.0-rc.506",
+  "version": "8.0.0-rc.507",
   "algorithm": "sha256",
   "file_count": 1055,
   "files": {
@@ -41,8 +41,8 @@
       "sha256": "44203316dfd789233003cd9fde3fbd8020be34a25f7ca3a6a7662b53f18fd198"
     },
     "assets/css/checkout-experience.css": {
-      "bytes": 1452,
-      "sha256": "c654e25c4f773a75762b4b75967cdb006c67fccc4daf2ba7177908ab0cfd2e2b"
+      "bytes": 1566,
+      "sha256": "5c12f98c2e3dc04e57f7b9770b122df988822db9fece0c908b9a37e5fab9fe9c"
     },
     "assets/css/comments.css": {
       "bytes": 5813,
@@ -297,8 +297,8 @@
       "sha256": "3fba86300eaf6dbec7d27b7d8230d41a9b55f633e1af7e84337ff93981099e08"
     },
     "assets/js/checkout-experience.js": {
-      "bytes": 11059,
-      "sha256": "0c61b00bda8e42c4a1aa57506427667a39308e08aabcc0947424cc99239f0420"
+      "bytes": 11525,
+      "sha256": "bdabf34d5ae118583ab927f13515cd014e60a404491b6297234b1b2aa7f2b4f2"
     },
     "assets/js/commerce-app.js": {
       "bytes": 304281,
@@ -461,8 +461,8 @@
       "sha256": "0b7e10b4fe4b9649f92e360bfa96737f7d5d271d43cf5912aa140bf9ea5820c2"
     },
     "assets/js/surface.js": {
-      "bytes": 517520,
-      "sha256": "91a6bba0e5774ff9d0480e6e4e43ef79bdbdaa041d97887708d09f5108a54222"
+      "bytes": 517795,
+      "sha256": "fda6d38743c314c076b081471eb5f288b1076f56aadb7a3e930f6f5cd5725b70"
     },
     "assets/js/system-app.js": {
       "bytes": 14025,
@@ -522,7 +522,7 @@
     },
     "dsa.php": {
       "bytes": 4536,
-      "sha256": "b43d2560a446fd9f5922f1204989c96055454e47691b0b1c5dd945e0d88145a5"
+      "sha256": "f50f7f799db0a8979ca1c2aeb1c8bd0b92cbf271e45c8132df295d945475125f"
     },
     "framework-system/HANDOFF-LITE.md": {
       "bytes": 4119,

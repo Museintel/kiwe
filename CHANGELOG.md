@@ -1,3 +1,8 @@
+## 8.0.0-rc.507 (2026-11-26, candidate)
+
+- Show only confirmed payment methods on authored checkout pages, including on the first load.
+- Refresh the checkout total, payment methods and recurring quote after Cart DSA changes. Hold payment while cart changes are pending.
+
 ## 8.0.0-rc.506 (2026-11-26, candidate)
 
 - Prefer native Bricks checkout coupon, cart total and terms controls where supported. Preserve existing checkout layouts.

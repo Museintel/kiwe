@@ -83,6 +83,7 @@
 		let review = null;
 		let busy = false;
 		let refreshing = false;
+		let pendingCart = null;
 		let revision = 0;
 
 		function announce( message ) {
@@ -91,17 +92,19 @@
 
 		function updateControls() {
 			const ready = review && review.available && ! review.empty;
-			const disabled = busy || refreshing || ! ready;
+			const updating = busy || refreshing || Boolean( pendingCart );
+			const disabled = updating || ! ready;
+			page.toggleAttribute( 'data-kiwe-checkout-ready', Boolean( review ) );
 			payments.forEach( function ( button ) {
-				button.hidden = Boolean( review ) && ( ! ready || ! Object.hasOwn( review.methods, button.dataset.kiweCheckoutPay ) );
+				button.hidden = ! ready || ! Object.hasOwn( review.methods, button.dataset.kiweCheckoutPay );
 				if ( 'disabled' in button ) button.disabled = disabled;
 				button.setAttribute( 'aria-disabled', disabled ? 'true' : 'false' );
 			} );
 			consents.forEach( function ( control ) {
-				control.hidden = Boolean( review ) && !( control.dataset.kiweCheckoutConsent === 'terms' ? review.termsRequired : review.subscriptionQuote );
+				control.hidden = ! ready || !( control.dataset.kiweCheckoutConsent === 'terms' ? review.termsRequired : review.subscriptionQuote );
 			} );
 			if ( coupon ) coupon.hidden = Boolean( review ) && ( ! ready || ! review.coupons );
-			page.setAttribute( 'aria-busy', busy || refreshing ? 'true' : 'false' );
+			page.setAttribute( 'aria-busy', updating ? 'true' : 'false' );
 		}
 
 		function refresh() {
@@ -204,7 +207,7 @@
 		}
 
 		function run( action, message ) {
-			if ( busy || refreshing || ! review || ! review.available ) return;
+			if ( busy || refreshing || pendingCart || ! review || ! review.available ) return;
 			busy = true;
 			updateControls();
 			announce( message );
@@ -248,8 +251,18 @@
 			}, true );
 		}
 		window.addEventListener( 'dsa:checkout:draft-applied', refresh );
-		if ( ! status ) return;
-		updateControls();
+		window.addEventListener( 'dsa:checkout:cart-updating', function ( event ) {
+			const pending = pendingCart = event.detail;
+			updateControls();
+			pending.then( function () {
+				if ( pendingCart !== pending ) return;
+				pendingCart = null;
+				refresh();
+			} );
+		} );
+		window.addEventListener( 'dsa:checkout:cart-updated', function () {
+			if ( ! pendingCart ) refresh();
+		} );
 		refresh();
 	}
 } )();
