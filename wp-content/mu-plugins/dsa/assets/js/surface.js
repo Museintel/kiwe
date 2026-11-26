@@ -11264,8 +11264,10 @@
 			event.preventDefault();
 			event.stopPropagation();
 			openCheckoutSurface( { returnToPage: true, editDetails: true } );
-			return;
 		}
+	}, true );
+
+	document.addEventListener( 'click', function ( event ) {
 		const launcher = closestEventTarget( event, '[data-dsa-open-module]' );
 		if ( ! launcher || launcher.closest( '[data-dsa-surface]' ) ) return;
 		const moduleId = String( launcher.dataset.dsaOpenModule || '' );

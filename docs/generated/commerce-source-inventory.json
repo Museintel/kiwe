@@ -2781,7 +2781,7 @@
     },
     {
       "source": "wp-content/mu-plugins/dsa/includes/Bricks/Bricks_Integration.php",
-      "sha256": "bae28e55195397acb67172aef6e6e3a6defdc85f36900c8c43fd73a1281c1196",
+      "sha256": "4e631af99376c09c1e4fc6a33559f2b6442d0778ef608a0b3592b12abc353513",
       "symbols": [
         {
           "kind": "method",
@@ -3001,322 +3001,322 @@
         {
           "kind": "method",
           "name": "render_dynamic_content",
-          "line": 412
+          "line": 420
         },
         {
           "kind": "method",
           "name": "preserve_authored_html",
-          "line": 425
+          "line": 433
         },
         {
           "kind": "method",
           "name": "base_dynamic_tag_definitions",
-          "line": 453
+          "line": 461
         },
         {
           "kind": "method",
           "name": "add_bestseller_controls",
-          "line": 530
+          "line": 542
         },
         {
           "kind": "method",
           "name": "bestseller_query_vars",
-          "line": 537
+          "line": 549
         },
         {
           "kind": "method",
           "name": "bestseller_badge_value",
-          "line": 551
+          "line": 563
         },
         {
           "kind": "method",
           "name": "dynamic_tag_value",
-          "line": 561
+          "line": 573
         },
         {
           "kind": "method",
           "name": "design_context_tag_value",
-          "line": 667
+          "line": 679
         },
         {
           "kind": "method",
           "name": "current_team_member",
-          "line": 722
+          "line": 734
         },
         {
           "kind": "method",
           "name": "service_tag_value",
-          "line": 737
+          "line": 749
         },
         {
           "kind": "method",
           "name": "tag_group_definitions",
-          "line": 764
-        },
-        {
-          "kind": "method",
-          "name": "tag_group_value",
           "line": 776
         },
         {
           "kind": "method",
+          "name": "tag_group_value",
+          "line": 788
+        },
+        {
+          "kind": "method",
           "name": "product_nutrition_image_tag_value",
-          "line": 799
+          "line": 811
         },
         {
           "kind": "method",
           "name": "product_weight_tag_value",
-          "line": 807
+          "line": 819
         },
         {
           "kind": "method",
           "name": "nav_menu_tag_definitions",
-          "line": 829
+          "line": 841
         },
         {
           "kind": "method",
           "name": "nav_menu_tag_value",
-          "line": 848
+          "line": 860
         },
         {
           "kind": "method",
           "name": "logo_tag_value",
-          "line": 866
+          "line": 878
         },
         {
           "kind": "method",
           "name": "woo_store_option",
-          "line": 881
+          "line": 893
         },
         {
           "kind": "method",
           "name": "woo_store_country_state",
-          "line": 890
+          "line": 902
         },
         {
           "kind": "method",
           "name": "woo_locations_label",
-          "line": 907
+          "line": 919
         },
         {
           "kind": "method",
           "name": "country_list_label",
-          "line": 951
+          "line": 963
         },
         {
           "kind": "method",
           "name": "country_label",
-          "line": 965
+          "line": 977
         },
         {
           "kind": "method",
           "name": "state_label",
-          "line": 978
+          "line": 990
         },
         {
           "kind": "method",
           "name": "add_element_attributes",
-          "line": 991
+          "line": 1003
         },
         {
           "kind": "method",
           "name": "add_dsa_icon_launcher_controls",
-          "line": 1044
+          "line": 1056
         },
         {
           "kind": "method",
           "name": "add_context_action_controls",
-          "line": 1070
+          "line": 1082
         },
         {
           "kind": "method",
           "name": "add_search_bridge_controls",
-          "line": 1110
+          "line": 1122
         },
         {
           "kind": "method",
           "name": "observe_rendered_element",
-          "line": 1126
+          "line": 1138
         },
         {
           "kind": "method",
           "name": "bridge_html_launcher",
-          "line": 1169
+          "line": 1181
         },
         {
           "kind": "method",
           "name": "add_mini_cart_controls",
-          "line": 1186
+          "line": 1198
         },
         {
           "kind": "method",
           "name": "add_add_to_cart_control_group",
-          "line": 1766
+          "line": 1778
         },
         {
           "kind": "method",
           "name": "add_add_to_cart_controls",
-          "line": 1779
+          "line": 1791
         },
         {
           "kind": "method",
           "name": "add_linked_products_control_group",
-          "line": 1820
+          "line": 1832
         },
         {
           "kind": "method",
           "name": "add_linked_products_controls",
-          "line": 1829
+          "line": 1841
         },
         {
           "kind": "method",
           "name": "bridge_element_settings",
-          "line": 1854
+          "line": 1866
         },
         {
           "kind": "method",
           "name": "add_add_to_cart_attributes",
-          "line": 1912
+          "line": 1924
         },
         {
           "kind": "method",
           "name": "restore_mini_cart_context",
-          "line": 1952
+          "line": 1964
         },
         {
           "kind": "method",
           "name": "render_mini_cart_quantity",
-          "line": 1961
+          "line": 1973
         },
         {
           "kind": "method",
           "name": "render_mini_cart_recommendations",
-          "line": 2011
+          "line": 2023
         },
         {
           "kind": "method",
           "name": "render_mini_cart_product_rail",
-          "line": 2071
+          "line": 2083
         },
         {
           "kind": "method",
           "name": "render_mini_cart_offer_banners",
-          "line": 2118
+          "line": 2130
         },
         {
           "kind": "method",
           "name": "render_mini_cart_total_after_discount",
-          "line": 2158
+          "line": 2170
         },
         {
           "kind": "method",
           "name": "cart_offer_badge",
-          "line": 2180
+          "line": 2192
         },
         {
           "kind": "method",
           "name": "cart_offer_button_label",
-          "line": 2194
+          "line": 2206
         },
         {
           "kind": "method",
           "name": "cart_offer_headline",
-          "line": 2212
+          "line": 2224
         },
         {
           "kind": "method",
           "name": "cart_offer_subtext",
-          "line": 2242
+          "line": 2254
         },
         {
           "kind": "method",
           "name": "enqueue_mini_cart_adapter",
-          "line": 2256
+          "line": 2268
         },
         {
           "kind": "method",
           "name": "enqueue_add_to_cart_adapter",
-          "line": 2273
+          "line": 2285
         },
         {
           "kind": "method",
           "name": "frontend_console_debug_enabled",
-          "line": 2300
+          "line": 2312
         },
         {
           "kind": "method",
           "name": "classify_from_bricks_name",
-          "line": 2311
+          "line": 2323
         },
         {
           "kind": "method",
           "name": "bricks_config",
-          "line": 2353
-        },
-        {
-          "kind": "method",
-          "name": "commerce_config",
-          "line": 2359
-        },
-        {
-          "kind": "method",
-          "name": "mini_cart_settings",
           "line": 2365
         },
         {
           "kind": "method",
-          "name": "product_max_quantity",
-          "line": 2376
+          "name": "commerce_config",
+          "line": 2371
         },
         {
           "kind": "method",
-          "name": "stock_badge_html",
+          "name": "mini_cart_settings",
+          "line": 2377
+        },
+        {
+          "kind": "method",
+          "name": "product_max_quantity",
           "line": 2388
         },
         {
           "kind": "method",
+          "name": "stock_badge_html",
+          "line": 2400
+        },
+        {
+          "kind": "method",
           "name": "product_id_from_element",
-          "line": 2414
+          "line": 2426
         },
         {
           "kind": "method",
           "name": "cart_item_for_product",
-          "line": 2428
+          "line": 2440
         },
         {
           "kind": "method",
           "name": "add_to_cart_runtime_enabled",
-          "line": 2447
+          "line": 2459
         },
         {
           "kind": "method",
           "name": "mini_cart_css",
-          "line": 2455
+          "line": 2467
         },
         {
           "kind": "method",
           "name": "mini_cart_js",
-          "line": 2498
+          "line": 2510
         },
         {
           "kind": "metadata",
           "name": "_kiwe_nonce",
-          "line": 2563
+          "line": 2575
         },
         {
           "kind": "method",
           "name": "add_to_cart_css",
-          "line": 2663
+          "line": 2675
         },
         {
           "kind": "method",
           "name": "add_to_cart_js",
-          "line": 2691
+          "line": 2703
         },
         {
           "kind": "metadata",
           "name": "_kiwe_nonce",
-          "line": 2767
+          "line": 2779
         }
       ]
     },
@@ -4192,7 +4192,7 @@
     },
     {
       "source": "wp-content/mu-plugins/dsa/includes/Commerce/Checkout_Experience_Service.php",
-      "sha256": "7c9d07ac5c30548f1611efd32cfa7962aa1e9d320d5bc055c69edadf316d5e09",
+      "sha256": "25d92de70d2a9d969ebfa89419697ac48d650082e217704dccffa3c4c68296c2",
       "symbols": [
         {
           "kind": "method",
@@ -4201,63 +4201,108 @@
         },
         {
           "kind": "method",
-          "name": "register",
+          "name": "authored",
           "line": 14
+        },
+        {
+          "kind": "method",
+          "name": "register",
+          "line": 18
         },
         {
           "kind": "hook",
           "name": "wp_enqueue_scripts",
-          "line": 15
-        },
-        {
-          "kind": "hook",
-          "name": "template_redirect",
-          "line": 16
+          "line": 19
         },
         {
           "kind": "hook",
           "name": "body_class",
-          "line": 17
+          "line": 20
         },
         {
           "kind": "hook",
-          "name": "woocommerce_checkout_before_order_review",
-          "line": 18
+          "name": "template_redirect",
+          "line": 22
         },
         {
-          "kind": "method",
-          "name": "checkout_page",
-          "line": 21
+          "kind": "hook",
+          "name": "pre_do_shortcode_tag",
+          "line": 23
         },
         {
-          "kind": "method",
-          "name": "restore_shortcode_coupon",
+          "kind": "hook",
+          "name": "template_redirect",
           "line": 25
         },
         {
           "kind": "hook",
+          "name": "woocommerce_checkout_before_order_review",
+          "line": 26
+        },
+        {
+          "kind": "method",
+          "name": "checkout_page",
+          "line": 30
+        },
+        {
+          "kind": "method",
+          "name": "protect_review_page",
+          "line": 34
+        },
+        {
+          "kind": "method",
+          "name": "render_authored_template",
+          "line": 38
+        },
+        {
+          "kind": "method",
+          "name": "binding",
+          "line": 56
+        },
+        {
+          "kind": "method",
+          "name": "review",
+          "line": 65
+        },
+        {
+          "kind": "method",
+          "name": "address_text",
+          "line": 110
+        },
+        {
+          "kind": "method",
+          "name": "plain",
+          "line": 119
+        },
+        {
+          "kind": "method",
+          "name": "restore_shortcode_coupon",
+          "line": 123
+        },
+        {
+          "kind": "hook",
           "name": "woocommerce_before_checkout_form",
-          "line": 29
+          "line": 127
         },
         {
           "kind": "method",
           "name": "assets",
-          "line": 33
+          "line": 131
         },
         {
           "kind": "method",
           "name": "body_classes",
-          "line": 41
+          "line": 140
         },
         {
           "kind": "method",
           "name": "address_summary",
-          "line": 46
+          "line": 145
         },
         {
           "kind": "method",
           "name": "payment_choices",
-          "line": 56
+          "line": 155
         }
       ]
     },
@@ -4279,7 +4324,7 @@
     },
     {
       "source": "wp-content/mu-plugins/dsa/includes/Commerce/Checkout_Service.php",
-      "sha256": "0538e689528d208e1dfe851a4ac75c8ed53ad3d0532315c6e29179430b6763c4",
+      "sha256": "453be12b76ab89ba841610c4f2874e2940e25efd2232fd22d27c96d3cec1743e",
       "symbols": [
         {
           "kind": "method",
@@ -4359,212 +4404,212 @@
         {
           "kind": "method",
           "name": "contract",
-          "line": 57
+          "line": 58
         },
         {
           "kind": "method",
           "name": "save_draft",
-          "line": 108
+          "line": 109
         },
         {
           "kind": "method",
           "name": "checkout_value",
-          "line": 164
+          "line": 165
         },
         {
           "kind": "method",
           "name": "contact_checkout_value",
-          "line": 173
+          "line": 174
         },
         {
           "kind": "method",
           "name": "capture_subscriber",
-          "line": 184
+          "line": 185
         },
         {
           "kind": "method",
           "name": "capture_block_subscriber",
-          "line": 190
+          "line": 191
         },
         {
           "kind": "method",
           "name": "ship_to_different_address_checked",
-          "line": 195
+          "line": 196
         },
         {
           "kind": "method",
           "name": "merge_draft_into_posted_data",
-          "line": 204
+          "line": 205
         },
         {
           "kind": "method",
           "name": "capture_checkout_errors",
-          "line": 230
+          "line": 231
         },
         {
           "kind": "method",
           "name": "clear_after_order",
-          "line": 260
+          "line": 261
         },
         {
           "kind": "method",
           "name": "field_groups",
-          "line": 269
+          "line": 270
         },
         {
           "kind": "method",
           "name": "raw_checkout_fields",
-          "line": 306
+          "line": 307
         },
         {
           "kind": "method",
           "name": "field_contract",
-          "line": 329
+          "line": 330
         },
         {
           "kind": "method",
           "name": "field_options",
-          "line": 362
+          "line": 363
         },
         {
           "kind": "method",
           "name": "field_value",
-          "line": 386
+          "line": 387
         },
         {
           "kind": "method",
           "name": "sanitize_value",
-          "line": 396
+          "line": 397
         },
         {
           "kind": "method",
           "name": "validate_draft",
-          "line": 424
+          "line": 425
         },
         {
           "kind": "method",
           "name": "prime_customer_session",
-          "line": 468
+          "line": 469
         },
         {
           "kind": "method",
           "name": "persist_customer_address_drafts",
-          "line": 509
+          "line": 510
         },
         {
           "kind": "method",
           "name": "address_group_ready_for_persistence",
-          "line": 531
+          "line": 532
         },
         {
           "kind": "method",
           "name": "address_group_has_validation_errors",
-          "line": 557
+          "line": 558
         },
         {
           "kind": "method",
           "name": "persist_customer_address_group",
-          "line": 570
+          "line": 571
         },
         {
           "kind": "method",
           "name": "submitted_shipping_fields_have_values",
-          "line": 606
+          "line": 607
         },
         {
           "kind": "method",
           "name": "persist_customer_addresses",
-          "line": 621
+          "line": 622
         },
         {
           "kind": "method",
           "name": "customer_address_properties",
-          "line": 662
+          "line": 663
         },
         {
           "kind": "method",
           "name": "should_persist_shipping_address",
-          "line": 666
+          "line": 667
         },
         {
           "kind": "method",
           "name": "needs_shipping_address",
-          "line": 670
+          "line": 671
         },
         {
           "kind": "method",
           "name": "draft",
-          "line": 679
+          "line": 680
         },
         {
           "kind": "method",
           "name": "stored_errors",
-          "line": 692
+          "line": 693
         },
         {
           "kind": "method",
           "name": "set_session_value",
-          "line": 706
+          "line": 707
         },
         {
           "kind": "method",
           "name": "load_checkout",
-          "line": 712
+          "line": 713
         },
         {
           "kind": "method",
           "name": "prepare_cart_totals",
-          "line": 724
+          "line": 725
         },
         {
           "kind": "method",
           "name": "supported_type",
-          "line": 736
+          "line": 737
         },
         {
           "kind": "method",
           "name": "ship_to_different_address",
-          "line": 740
+          "line": 741
         },
         {
           "kind": "method",
           "name": "product_total",
-          "line": 745
+          "line": 746
         },
         {
           "kind": "method",
           "name": "can_create_account",
-          "line": 757
+          "line": 758
         },
         {
           "kind": "method",
           "name": "account_required",
-          "line": 761
+          "line": 762
         },
         {
           "kind": "method",
           "name": "identity_allowed",
-          "line": 765
+          "line": 766
         },
         {
           "kind": "method",
           "name": "create_account",
-          "line": 770
+          "line": 771
         },
         {
           "kind": "method",
           "name": "field_from_error_code",
-          "line": 779
+          "line": 780
         },
         {
           "kind": "method",
           "name": "humanize_key",
-          "line": 786
+          "line": 787
         },
         {
           "kind": "method",
           "name": "money_text",
-          "line": 791
+          "line": 792
         }
       ]
     },
@@ -5664,62 +5709,67 @@
     },
     {
       "source": "wp-content/mu-plugins/dsa/includes/Commerce/Razorpay_Checkout_Service.php",
-      "sha256": "7ef451feb488dcdcea8dfcd894451b899d41b05b20d9d1b4188787559899f7ae",
+      "sha256": "55ec16e7f9c2180ce855fdb09e45c18c5f72d3c030b238b618a48ac557826231",
       "symbols": [
         {
           "kind": "metadata",
           "name": "_kiwe_razorpay_checkout_method",
-          "line": 11
+          "line": 12
         },
         {
           "kind": "method",
           "name": "register",
-          "line": 14
-        },
-        {
-          "kind": "hook",
-          "name": "woocommerce_settings_api_form_fields_razorpay",
-          "line": 15
-        },
-        {
-          "kind": "hook",
-          "name": "woocommerce_payment_gateways",
           "line": 16
         },
         {
           "kind": "hook",
-          "name": "woocommerce_checkout_create_order",
+          "name": "woocommerce_settings_api_form_fields_razorpay",
           "line": 17
+        },
+        {
+          "kind": "hook",
+          "name": "woocommerce_payment_gateways",
+          "line": 18
+        },
+        {
+          "kind": "hook",
+          "name": "woocommerce_checkout_create_order",
+          "line": 19
         },
         {
           "kind": "method",
           "name": "can_choose",
-          "line": 20
+          "line": 22
         },
         {
           "kind": "method",
           "name": "gateway_fields",
-          "line": 32
+          "line": 34
+        },
+        {
+          "kind": "method",
+          "name": "configured_choices",
+          "line": 52
         },
         {
           "kind": "method",
           "name": "gateways",
-          "line": 43
+          "line": 58
         },
         {
           "kind": "method",
           "name": "record_choice",
-          "line": 51
+          "line": 66
         },
         {
           "kind": "method",
           "name": "receipt_method",
-          "line": 61
+          "line": 76
         },
         {
           "kind": "method",
           "name": "display_config",
-          "line": 68
+          "line": 83
         }
       ]
     },
@@ -7177,7 +7227,7 @@
     },
     {
       "source": "wp-content/mu-plugins/dsa/includes/Commerce/Subscription_Checkout_Service.php",
-      "sha256": "ed0d00e5b01aa4c0ff27a0016eceb61e64f83b99c4700ef8a5f33d28c5af9e5c",
+      "sha256": "8da0948ad09b7aa4d08daa9eab14d6e2970ee349d682b5847a6e9274ce31b710",
       "symbols": [
         {
           "kind": "metadata",
@@ -7286,58 +7336,63 @@
         },
         {
           "kind": "method",
-          "name": "payment_fields",
+          "name": "review",
           "line": 109
         },
         {
           "kind": "method",
+          "name": "payment_fields",
+          "line": 138
+        },
+        {
+          "kind": "method",
           "name": "months",
-          "line": 145
+          "line": 157
         },
         {
           "kind": "method",
           "name": "validate_checkout",
-          "line": 149
+          "line": 161
         },
         {
           "kind": "hook",
           "name": "shutdown",
-          "line": 190
+          "line": 202
         },
         {
           "kind": "method",
           "name": "release_checkout",
-          "line": 200
+          "line": 212
         },
         {
           "kind": "method",
           "name": "needs_payment",
-          "line": 207
+          "line": 219
         },
         {
           "kind": "method",
           "name": "process_payment",
-          "line": 211
+          "line": 223
         },
         {
           "kind": "method",
           "name": "continuation",
-          "line": 231
+          "line": 243
         },
         {
           "kind": "method",
           "name": "checkout_return_route",
-          "line": 237
+          "line": 249
         },
         {
           "kind": "method",
           "name": "render_authorization",
-          "line": 258
+          "line": 270
         },
         {
           "kind": "method",
           "name": "account_status",
-          "line": 310
+          "line": 322
         }
       ]
     },

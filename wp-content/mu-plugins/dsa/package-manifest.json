@@ -425,8 +425,8 @@
       "sha256": "21a4e3666dad3ade9cc96b78e64de4a96de5f41f506842ffc3570cb111f5361e"
     },
     "assets/js/public-contract.js": {
-      "bytes": 42250,
-      "sha256": "082d60f0d0f8e7e6d040ae7f3943a667c50302e8cd1fe49416bc23b2b478b432"
+      "bytes": 43590,
+      "sha256": "1e352e4b785575d3fd31750adc7cdb7f398f1283f9b1166d4d79ec15e8ffbd8e"
     },
     "assets/js/public-preview.js": {
       "bytes": 8668,
@@ -461,8 +461,8 @@
       "sha256": "0b7e10b4fe4b9649f92e360bfa96737f7d5d271d43cf5912aa140bf9ea5820c2"
     },
     "assets/js/surface.js": {
-      "bytes": 517460,
-      "sha256": "1313872d9509875b1a6c8506714c0783047b6106b14046b99be86a9a3ac70207"
+      "bytes": 517520,
+      "sha256": "91a6bba0e5774ff9d0480e6e4e43ef79bdbdaa041d97887708d09f5108a54222"
     },
     "assets/js/system-app.js": {
       "bytes": 14025,
