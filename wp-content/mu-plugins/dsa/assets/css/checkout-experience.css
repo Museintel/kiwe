@@ -51,3 +51,9 @@
 [data-kiwe-checkout] [hidden] {
 	display: none !important;
 }
+
+.kiwe-checkout-variation {
+	display: inline-flex;
+	flex-direction: column;
+	gap: .25em;
+}

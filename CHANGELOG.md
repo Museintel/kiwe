@@ -1,3 +1,8 @@
+## 8.0.0-rc.510 (2026-11-26, candidate)
+
+- Reuse Bricks' Cart contents loop, Dynamic fragment and Cart quantity element in authored checkout.
+- Switch eligible WooCommerce product variations and membership terms inside the order summary. Preserve quantity and refresh the totals, payment options and renewal consent.
+
 ## 8.0.0-rc.509 (2026-11-26, candidate)
 
 - Limit simple and variable products, including subscriptions, to one purchase per account from Kiwe Store or MCP.

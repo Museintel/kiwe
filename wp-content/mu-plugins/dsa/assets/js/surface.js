@@ -615,7 +615,11 @@
 	window.DSA.trust = trust;
 	window.DSA.protectedFlow = protectedFlow;
 	window.DSA.commerce = commerce;
-	window.DSA.cart = Object.assign( {}, window.DSA.cart || {}, { addProduct: addProductToCart } );
+	window.DSA.cart = Object.assign( {}, window.DSA.cart || {}, {
+		addProduct: addProductToCart,
+		setQuantity: setCartLineQuantity,
+		changeVariation: ( key, variationId ) => mutateCartLine( '/cart/change-variation', { key, variationId }, 'updated_cart_totals' ),
+	} );
 	window.DSA.surfaceTriggers = surfaceTriggers;
 	window.DSA.modules = moduleContract;
 	window.DSA.native = native;
@@ -4851,14 +4855,8 @@
 			select.addEventListener( 'change', function () {
 				const key = select.dataset.dsaCartTerm;
 				const variationId = Number( select.value );
-				enqueueCartMutation( function () {
-					const sequence = nextCartSequence();
-					setCartPanelBusy( panel, true );
-					return dsaPost( '/cart/change-term', { key: key, variationId: variationId } ).then( function ( response ) {
-						applyCartPayload( response, { rerender: true, cartMutation: true, sequence: sequence } );
-						applyWooCartFragments( response, 'updated_cart_totals' );
-					} );
-				} ).catch( function ( error ) {
+				setCartPanelBusy( panel, true );
+				mutateCartLine( '/cart/change-term', { key, variationId }, 'updated_cart_totals' ).catch( function ( error ) {
 					const message = panel.querySelector( '[data-dsa-cart-message]' );
 					if ( message ) message.textContent = error.message;
 					select.value = Array.from( select.options ).find( option => option.defaultSelected )?.value || '';
@@ -5325,27 +5323,9 @@
 	}
 
 	function updateCartQuantity( key, quantity, panel, button ) {
-		if ( ! key ) {
-			return;
-		}
-
-		let cartSequence = 0;
-		enqueueCartMutation( function () {
-			cartSequence = nextCartSequence();
-			setCartPanelBusy( panel, true );
-			return dsaPost( '/cart/item', {
-				key: key,
-				quantity: Number( quantity ) || 0,
-				productId: button ? button.dataset.dsaCartProduct || '' : '',
-				variationId: button ? button.dataset.dsaCartVariation || '' : '',
-			} );
-		} )
-			.then( function ( response ) {
-				if ( response.cart ) {
-					applyCartPayload( response, { rerender: true, cartMutation: true, sequence: cartSequence } );
-					applyWooCartFragments( response, Number( quantity ) <= 0 ? 'removed_from_cart' : 'updated_cart_totals' );
-				}
-			} )
+		if ( ! key ) return;
+		setCartPanelBusy( panel, true );
+		setCartLineQuantity( key, Number( quantity ) || 0, button?.dataset.dsaCartProduct, button?.dataset.dsaCartVariation )
 			.catch( function ( error ) {
 				const message = panel ? panel.querySelector( '[data-dsa-cart-message]' ) : null;
 
@@ -5358,6 +5338,23 @@
 			.finally( function () {
 				setCartPanelBusy( panel, false );
 			} );
+	}
+
+	function setCartLineQuantity( key, quantity, productId = '', variationId = '' ) {
+		return mutateCartLine( '/cart/item', { key, quantity, productId, variationId }, quantity <= 0 ? 'removed_from_cart' : 'updated_cart_totals' );
+	}
+
+	function mutateCartLine( endpoint, fields, eventName ) {
+		return enqueueCartMutation( function () {
+			const sequence = nextCartSequence();
+			return dsaPost( endpoint, fields ).then( function ( response ) {
+				if ( response.cart ) {
+					applyCartPayload( response, { rerender: true, cartMutation: true, sequence } );
+					applyWooCartFragments( response, eventName );
+				}
+				return response;
+			} );
+		} );
 	}
 
 	function claimCartUpsell( productId, panel, triggerId ) {

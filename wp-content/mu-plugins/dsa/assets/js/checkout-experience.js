@@ -76,6 +76,7 @@
 	function bindAuthoredCheckout( page ) {
 		const readReview = window.DSA && window.DSA.readCheckoutReview;
 		if ( ! readReview ) return;
+		const cart = window.DSA.cart;
 		const payments = Array.from( page.querySelectorAll( '[data-kiwe-checkout-pay]' ) );
 		const consents = Array.from( page.querySelectorAll( '[data-kiwe-checkout-consent]' ) );
 		const coupon = page.querySelector( '[data-kiwe-checkout-coupon]' );
@@ -249,6 +250,33 @@
 			}, true );
 			coupon.addEventListener( 'keydown', function ( event ) {
 				if ( event.key === 'Enter' && event.target.matches( 'input[name="coupon_code"]' ) ) useCheckoutSession( event );
+			}, true );
+		}
+		if ( cart?.setQuantity && cart?.changeVariation ) {
+			page.addEventListener( 'change', function ( event ) {
+				const field = event.target;
+				if ( ! field.closest( '[data-kiwe-checkout-cart]' ) ) return;
+				const variationKey = field.dataset.kiweCheckoutVariation;
+				const quantityKey = field.matches( '.brxe-woocommerce-cart-quantity input.qty' )
+					? field.name.match( /^cart\[([a-f0-9]{32})\]\[qty\]$/ )?.[1] : '';
+				if ( ! variationKey && ! quantityKey ) return;
+				event.stopImmediatePropagation();
+				const previous = variationKey
+					? Array.from( field.options ).find( option => option.defaultSelected )?.value : field.defaultValue;
+				const value = Number( field.value );
+				if ( busy || refreshing || pendingCart || field.value === '' || ! Number.isInteger( value ) || value < 0 ) {
+					field.value = previous;
+					return;
+				}
+				run( async function () {
+					try {
+						if ( variationKey ) await cart.changeVariation( variationKey, value );
+						else await cart.setQuantity( quantityKey, value );
+					} catch ( error ) {
+						field.value = previous;
+						throw error;
+					}
+				}, 'Updating your order…' );
 			}, true );
 		}
 		window.addEventListener( 'dsa:checkout:draft-applied', refresh );

@@ -78,38 +78,65 @@ final class Cart_Controller {
 		register_rest_route( 'dsa/v1', '/cart/change-term', [
 			'methods'=>'POST', 'callback'=>[ $this, 'change_term' ], 'permission_callback'=>[ $this, 'can_mutate_cart' ],
 		] );
+		register_rest_route( 'dsa/v1', '/cart/change-variation', [
+			'methods'=>'POST', 'callback'=>[ $this, 'change_variation' ], 'permission_callback'=>[ $this, 'can_mutate_cart' ],
+		] );
 	}
 
 	public function change_term( WP_REST_Request $request ) {
+		return $this->replace_variation( $request, true );
+	}
+
+	public function change_variation( WP_REST_Request $request ) {
+		return $this->replace_variation( $request, false );
+	}
+
+	private function replace_variation( WP_REST_Request $request, bool $terms_only ) {
 		if ( ! $this->load_cart() || ! $this->rate_limit( 'update' ) ) return new WP_Error( 'kiwe_cart_busy', __( 'Try the cart again in a moment.', 'dsa' ), [ 'status'=>429 ] );
 		$cart = WC()->cart;
 		$cart->get_cart();
 		$key = $request->get_param( 'key' );
 		$item = is_string( $key ) && preg_match( '/^[a-f0-9]{32}$/D', $key ) ? $cart->get_cart_item( $key ) : null;
 		$id = absint( $request->get_param( 'variationId' ) );
-		if ( ! $item || ! in_array( $id, array_column( Cart_Payload_Service::subscription_term_options( $item ), 'id' ), true )
-			|| $id === (int) $item['variation_id'] ) return new WP_Error( 'kiwe_cart_term', __( 'Refresh your cart and select an available term.', 'dsa' ), [ 'status'=>409 ] );
+		if ( ! $item || ! in_array( $id, array_column( Cart_Payload_Service::variation_options( $item, $terms_only ), 'id' ), true )
+			|| $id === (int) $item['variation_id'] ) return new WP_Error( 'kiwe_cart_term', __( 'Refresh your cart and select an available option.', 'dsa' ), [ 'status'=>409 ] );
 		$variation = wc_get_product( $id );
 		if ( ! $variation instanceof \WC_Product_Variation ) return new WP_Error( 'kiwe_cart_term', __( 'This term is no longer available.', 'dsa' ), [ 'status'=>409 ] );
 		$parent = $variation->get_parent_id();
 		$attributes = $variation->get_variation_attributes();
-		// Custom line data can encode add-ons or a different price. Keep those rows intact.
-		$native = [ 'key','product_id','variation_id','variation','quantity','data','data_hash','line_tax_data','line_subtotal','line_subtotal_tax','line_total','line_tax' ];
-		if ( array_diff( array_keys( $item ), $native ) || $cart->find_product_in_cart( $cart->generate_cart_id( $parent, $id, $attributes ) ) ) {
-			return new WP_Error( 'kiwe_cart_term', __( 'This cart line cannot change terms here.', 'dsa' ), [ 'status'=>409 ] );
+		if ( $cart->find_product_in_cart( $cart->generate_cart_id( $parent, $id, $attributes ) ) ) {
+			return new WP_Error( 'kiwe_cart_term', __( 'That option is already in your cart. Adjust its quantity or remove the other line first.', 'dsa' ), [ 'status'=>409 ] );
 		}
-		$validate = static fn() => apply_filters( 'woocommerce_add_to_cart_validation', true, $parent, 1, $id, $attributes, [] );
+		$quantity = (int) $item['quantity'];
+		$validate = static fn() => apply_filters( 'woocommerce_add_to_cart_validation', true, $parent, $quantity, $id, $attributes, [] );
 		$allowed = class_exists( \DSA\Commerce\Purchase_Limit_Service::class )
 			? \DSA\Commerce\Purchase_Limit_Service::allow_term_check( $key, $validate ) : $validate();
 		if ( ! $allowed ) {
-			return new WP_Error( 'kiwe_cart_term', $this->cart_error_message( __( 'This cart line cannot change terms here.', 'dsa' ) ), [ 'status'=>409 ] );
+			return new WP_Error( 'kiwe_cart_term', $this->cart_error_message( __( 'This cart line cannot change options here.', 'dsa' ) ), [ 'status'=>409 ] );
 		}
-		$new = $cart->add_to_cart( $parent, 1, $id, $attributes );
-		if ( ! $new || ! $cart->remove_cart_item( $key ) ) {
-			if ( $new ) $cart->remove_cart_item( $new );
-			return new WP_Error( 'kiwe_cart_term', __( 'The term could not change. Your original selection remains in the cart.', 'dsa' ), [ 'status'=>409 ] );
+		// WooCommerce validates stock against the replacement cart, without counting the original line twice.
+		$original = $cart->get_cart_contents();
+		$remaining = $original;
+		unset( $remaining[ $key ] );
+		$cart->set_cart_contents( $remaining );
+		$new = false;
+		try {
+			$new = $cart->add_to_cart( $parent, $quantity, $id, $attributes );
+		} finally {
+			if ( ! $new ) {
+				$cart->set_cart_contents( $original );
+				$cart->calculate_totals();
+				$cart->set_session();
+			}
 		}
-		unset( $cart->removed_cart_contents[ $key ] );
+		if ( ! $new ) return new WP_Error( 'kiwe_cart_term', $this->cart_error_message( __( 'The option could not change. Your original selection remains in the cart.', 'dsa' ) ), [ 'status'=>409 ] );
+		$revised = $cart->get_cart_contents();
+		$ordered = [];
+		foreach ( $original as $old_key => $old_item ) {
+			$position = $old_key === $key ? $new : $old_key;
+			if ( isset( $revised[ $position ] ) ) $ordered[ $position ] = $revised[ $position ];
+		}
+		$cart->set_cart_contents( $ordered + $revised );
 		$cart->calculate_totals();
 		$cart->set_session();
 		return rest_ensure_response( [ 'ok'=>true, 'cart'=>$this->cart_data(), 'fragments'=>$this->cart_fragments(), 'cart_hash'=>$cart->get_cart_hash() ] );

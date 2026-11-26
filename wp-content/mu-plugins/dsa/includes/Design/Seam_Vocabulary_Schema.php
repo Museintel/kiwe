@@ -239,11 +239,12 @@ final class Seam_Vocabulary_Schema {
 					'checkoutReview' => [
 						'status' => 'live',
 						'authority' => 'woocommerce-native-checkout',
-						'dynamicTags' => [ '{kiwe_checkout_address}', '{kiwe_checkout_renewal}' ],
+						'dynamicTags' => [ '{kiwe_checkout_address}', '{kiwe_checkout_renewal}', '{kiwe_cart_variation_selector}' ],
 						'nativeRecipes' => [
 							'total' => 'Use the Bricks {woo_cart_order_total} when the target supports it. Set data-kiwe-checkout-value="total" on its text element to refresh it after a checkout change. Otherwise use {kiwe_checkout_total}.',
 							'terms' => 'Use the Bricks {woo_url:terms} when available. Otherwise use {kiwe_checkout_terms_url}.',
 							'coupon' => 'Enable and use the native Bricks Checkout Coupon element in its current location. Mark it with data-kiwe-checkout-coupon to use the Checkout DSA session and refresh the review.',
+							'cart' => 'Use a Bricks Dynamic fragment with data-kiwe-checkout-cart. Inside it, use the native Cart contents loop, native Cart quantity element and cart tags. Add {kiwe_cart_variation_selector} inside the loop.',
 						],
 						'attributes' => [
 							[ 'attribute'=>'data-kiwe-checkout', 'purpose'=>'Root Bricks container on the Store checkout page. Put native Bricks headings, text tags, controls and the status element inside it.' ],
@@ -251,6 +252,7 @@ final class Seam_Vocabulary_Schema {
 							[ 'attribute'=>'data-kiwe-checkout-consent', 'values'=>[ 'terms','renewal' ], 'purpose'=>'Accessible toggle button. Include aria-pressed="false". Only applicable consents appear. A changed recurring quote resets approval.' ],
 							[ 'attribute'=>'data-kiwe-checkout-coupon', 'purpose'=>'Mark the native Bricks Checkout Coupon element. WooCommerce applies and validates coupons using the current Checkout DSA details.' ],
 							[ 'attribute'=>'data-kiwe-checkout-apply-coupon', 'purpose'=>'Apply the coupon and refresh the native total and renewal quote.' ],
+							[ 'attribute'=>'data-kiwe-checkout-cart', 'purpose'=>'Route native Bricks Cart quantity and Kiwe variation controls through the current checkout cart.' ],
 							[ 'attribute'=>'data-kiwe-checkout-value', 'values'=>[ 'total' ], 'purpose'=>'Refresh the text of the Bricks cart total element after address and coupon changes.' ],
 							[ 'attribute'=>'data-kiwe-checkout-status', 'purpose'=>'Message container with role=status. Receives payment and coupon notices.' ],
 						],

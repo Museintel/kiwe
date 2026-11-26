@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Kiwe
  * Description: MU loader for the Kiwe Surface and Auth plugin.
- * Version: 8.0.0-rc.509
+ * Version: 8.0.0-rc.510
  * Requires PHP: 8.2
  * Author: Kiwelauch
  *
@@ -16,7 +16,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'KIWE_MU_LOADER_VERSION', '8.0.0-rc.509' );
+define( 'KIWE_MU_LOADER_VERSION', '8.0.0-rc.510' );
 
 if ( ! function_exists( 'kiwe_mu_debug_log' ) ) {
 	function kiwe_mu_debug_log( $message, $context = [] ) {

@@ -35,6 +35,7 @@ final class Purchase_Limit_Service {
 	}
 
 	public function register(): void {
+		add_filter( 'woocommerce_is_sold_individually', [ $this, 'sold_individually' ], 10, 2 );
 		add_filter( 'woocommerce_add_to_cart_validation', [ $this, 'validate_add' ], 25, 4 );
 		add_filter( 'woocommerce_update_cart_validation', [ $this, 'validate_quantity' ], 25, 4 );
 		add_action( 'woocommerce_check_cart_items', [ $this, 'check_cart' ] );
@@ -44,6 +45,10 @@ final class Purchase_Limit_Service {
 		add_action( 'woocommerce_store_api_checkout_order_processed', [ $this, 'guard_store_order' ], 10 );
 		add_filter( 'woocommerce_order_needs_payment', [ $this, 'guard_order_payment' ], 30, 2 );
 		add_action( 'shutdown', [ $this, 'release_lock' ] );
+	}
+
+	public function sold_individually( bool $sold, \WC_Product $product ): bool {
+		return $sold || self::enabled( self::family( $product ) );
 	}
 
 	/** WooCommerce CRUD handles both native order storage implementations. */

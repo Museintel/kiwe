@@ -293,23 +293,46 @@ final class Cart_Payload_Service {
 	}
 
 	public static function subscription_term_options( array $item ): array {
+		return self::variation_options( $item, true );
+	}
+
+	public static function can_replace_variation( array $item ): bool {
+		$native = [ 'key','product_id','variation_id','variation','quantity','data','data_hash','line_tax_data','line_subtotal','line_subtotal_tax','line_total','line_tax' ];
+		return ( $item['data'] ?? null ) instanceof \WC_Product_Variation && ! array_diff( array_keys( $item ), $native );
+	}
+
+	public static function variation_options( array $item, bool $terms_only = false ): array {
 		$current = $item['data'] ?? null;
-		if ( ! $current instanceof \WC_Product_Variation || ! class_exists( Subscription_Product_Service::class )
-			|| 1 !== (int) ( $item['quantity'] ?? 0 ) || ! is_array( Subscription_Product_Service::terms( $current ) ) ) return [];
+		if ( ! $current instanceof \WC_Product_Variation || ! self::can_replace_variation( $item ) ) return [];
+		$recurring = class_exists( Subscription_Product_Service::class ) && is_array( Subscription_Product_Service::terms( $current ) );
+		$quantity = (int) ( $item['quantity'] ?? 0 );
+		if ( $quantity < 1 || ( $terms_only && ! $recurring ) || ( $recurring && 1 !== $quantity ) ) return [];
 		$parent = wc_get_product( $current->get_parent_id() );
 		if ( ! $parent || ! $parent->is_type( 'variable' ) || count( $parent->get_children() ) > 30 ) return [];
 		$options = [];
 		foreach ( $parent->get_children() as $id ) {
 			$variation = wc_get_product( $id );
 			if ( ! $variation instanceof \WC_Product_Variation || ! $variation->is_purchasable() || ! $variation->is_in_stock()
-				|| ! Subscription_Product_Service::supported_for_checkout( $variation ) ) continue;
-			$terms = Subscription_Product_Service::terms( $variation );
-			if ( ! is_array( $terms ) || ! Subscription_Checkout_Service::plan_id( $terms ) ) continue;
+				|| ! $variation->has_enough_stock( $quantity ) || ( $variation->is_sold_individually() && $quantity > 1 ) ) continue;
+			$terms = class_exists( Subscription_Product_Service::class ) ? Subscription_Product_Service::terms( $variation ) : null;
+			if ( $recurring ? ! Subscription_Product_Service::checkout_allowed( $variation, $terms ) : null !== $terms ) continue;
 			$attributes = $variation->get_variation_attributes();
 			if ( ! $attributes || in_array( '', $attributes, true ) ) continue;
 			$options[] = [ 'id'=>$id, 'label'=>wp_strip_all_tags( wc_get_formatted_variation( $variation, true, true, false ) ) ];
 		}
 		return count( $options ) > 1 && in_array( $current->get_id(), array_column( $options, 'id' ), true ) ? $options : [];
+	}
+
+	public static function variation_selector( array $item ): string {
+		$key = $item['key'] ?? '';
+		if ( ! is_string( $key ) || ! preg_match( '/^[a-f0-9]{32}$/D', $key ) || ! ( $options = self::variation_options( $item ) ) ) return '';
+		$id = (int) $item['variation_id'];
+		$html = '<label class="kiwe-checkout-variation">' . esc_html__( 'Option', 'dsa' )
+			. '<select data-kiwe-checkout-variation="' . esc_attr( $key ) . '">';
+		foreach ( $options as $option ) {
+			$html .= '<option value="' . esc_attr( $option['id'] ) . '"' . selected( $id, $option['id'], false ) . '>' . esc_html( $option['label'] ) . '</option>';
+		}
+		return $html . '</select></label>';
 	}
 
 	private function product_weight( $product ): string {
