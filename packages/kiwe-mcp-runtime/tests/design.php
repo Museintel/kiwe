@@ -34,6 +34,7 @@ namespace DSA {
 }
 namespace {
  define('ABSPATH',__DIR__.'/');define('DSA_VERSION','8.0.0-rc.485');$store=true;$revoked=false;$caps=['kiwe_manage_context'=>true,'manage_options'=>true];$nativeCalls=[];$nativeValue='original';$nativeText=str_repeat('ನಮಸ್ಕಾರ',1600);$checks=[];$homepageFixture=[];
+ function __($value,$domain=""){return $value;}
  function current_user_can($cap){return $GLOBALS['caps'][$cap]??false;}function get_current_user_id(){return 1;}function wp_json_encode($v,$flags=0){return json_encode($v,$flags);}
  class WP_Error {public function __construct(public string $code,public string $message=''){}}function is_wp_error($v){return $v instanceof WP_Error;}
  function wp_strip_all_tags($value){return strip_tags($value);}
@@ -42,7 +43,7 @@ namespace {
  function esc_url_raw($value,$protocols=[]){return str_starts_with($value,'https://')?$value:'';}
  function get_taxonomy($name){return in_array($name,['category','product_cat'],true)?(object)['name'=>$name,'public'=>true]:false;}
  function get_post_type_object($name){return in_array($name,['post','private_type','product'],true)?(object)['name'=>$name,'public'=>$name!=='private_type']:false;}
- $base=dirname(__DIR__,3).'/wp-content/mu-plugins/dsa/includes/';foreach(['Apps/Runtime_Contract','Apps/MCP_Provider_Contract','MCP/Schema','MCP/Operation_Registry','MCP/Bricks_Document_Provider','MCP/Design_Provider','MCP/Design_Service']as$name)require $base.$name.'.php';
+ $base=dirname(__DIR__,3).'/wp-content/mu-plugins/dsa/includes/';foreach(['Bricks/Authoring_Reference','Apps/Runtime_Contract','Apps/MCP_Provider_Contract','MCP/Schema','MCP/Operation_Registry','MCP/Bricks_Document_Provider','MCP/Design_Provider','MCP/Design_Service']as$name)require $base.$name.'.php';
  use DSA\MCP\{Design_Service as Service,Design_Provider as Provider,Schema};
  function check($ok,$why){if(!$ok)throw new \RuntimeException($why);$GLOBALS['checks'][$why]=true;}
  function deny($fn,$why){try{$fn();}catch(\RuntimeException){check(true,$why);return;}throw new \RuntimeException('Expected refusal '.$why);}

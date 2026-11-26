@@ -314,7 +314,10 @@ final class WordPress_Role_Access_Service {
 		}
 		if ( Workspace_Admin_Service::uses_workspace( wp_get_current_user() ) && current_user_can( 'manage_product_terms' ) && current_user_can( 'edit_products' ) ) $allowed[] = 'kiwe-product-categories';
 		if ( class_exists( Taxonomy_App_Service::class ) && Taxonomy_App_Service::enabled() && ( new Taxonomy_App_Service() )->tag_definitions() ) $allowed[] = Taxonomy_App_Service::TAGS_PAGE;
-		if ( Template_Workspace_Service::allowed() ) $allowed[] = Template_Workspace_Service::PAGE;
+		if ( Template_Workspace_Service::allowed() ) {
+			$allowed[] = Template_Workspace_Service::PAGE;
+			$allowed[] = Template_Workspace_Service::REFERENCE_PAGE;
+		}
 		if ( Analytics_Workspace_Service::allowed() ) $allowed[] = Analytics_Workspace_Service::PAGE;
 		if ( class_exists( Form_Workspace_Service::class ) && Form_Workspace_Service::allowed() ) $allowed[] = Form_Workspace_Service::PAGE;
 		foreach ( \DSA\Apps\Required_App_Service::IDS as $app ) if ( \DSA\Apps\Required_App_Service::allowed( $app ) ) $allowed[] = 'kiwe-' . $app . '-app';
@@ -501,7 +504,7 @@ final class WordPress_Role_Access_Service {
 			if ( 'admin.php' === $script && \DSA\Onboarding\Design_Context_Journey_Service::PAGE === $page ) return;
 			if ( 'admin-post.php' === $script && 'POST' === ( $_SERVER['REQUEST_METHOD'] ?? '' ) && 'kiwe_context_journey' === ( $_POST['action'] ?? '' ) ) return; // The handler checks nonce, current preference version and step authority.
 		}
-		if ( 'admin.php' === $script && Template_Workspace_Service::PAGE === $page && Template_Workspace_Service::allowed() ) return;
+		if ( 'admin.php' === $script && in_array( $page, [ Template_Workspace_Service::PAGE, Template_Workspace_Service::REFERENCE_PAGE ], true ) && Template_Workspace_Service::allowed() ) return;
 		if ( 'admin.php' === $script && Analytics_Workspace_Service::PAGE === $page && Analytics_Workspace_Service::allowed() ) return;
 		if ( class_exists( Form_Workspace_Service::class ) && 'admin.php' === $script && Form_Workspace_Service::PAGE === $page && Form_Workspace_Service::allowed() ) return;
 		if ( 'admin.php' === $script && Backup_Workspace_Service::PAGE === $page && Backup_Workspace_Service::allowed() ) return;

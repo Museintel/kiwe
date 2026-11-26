@@ -1,3 +1,7 @@
+## 8.0.0-rc.513 (2026-11-27, candidate)
+
+- Carry the native Bricks authoring reference and linked product control retirement into the membership checkout candidate.
+
 ## 8.0.0-rc.511 (2026-11-27, candidate)
 
 - Keep unpaid subscription products in Bricks catalogues and keep paid membership groups out of the signed-in shopper's results.

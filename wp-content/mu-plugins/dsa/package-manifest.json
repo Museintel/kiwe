@@ -1,8 +1,8 @@
 {
   "schema": 1,
-  "version": "8.0.0-rc.511",
+  "version": "8.0.0-rc.513",
   "algorithm": "sha256",
-  "file_count": 1057,
+  "file_count": 1058,
   "files": {
     "assets/css/admin.css": {
       "bytes": 19334,
@@ -522,7 +522,7 @@
     },
     "dsa.php": {
       "bytes": 4536,
-      "sha256": "eb4578b2543ac5cec7564427127cdc686b9237a15c7ce0b09f8cbf1526649294"
+      "sha256": "aa0091bca6357707eca23ac6b0680ed26ad24f4bbcdc6566a26e3c8d37871a83"
     },
     "framework-system/HANDOFF-LITE.md": {
       "bytes": 4119,
@@ -1065,8 +1065,8 @@
       "sha256": "5518ecbeded513cc29ae408953ea8545c206fad6dccb9db8b61c421c6fd77ae4"
     },
     "includes/Access/Template_Workspace_Service.php": {
-      "bytes": 9824,
-      "sha256": "d16a49a1b8efcb7ad557ba05bdf7a5ba9dd52d87057047bd2f20db73c112e44c"
+      "bytes": 10415,
+      "sha256": "d30d135df5b3b3b55a46a464d7f16ede8e17a0523c88527dde4f9ad84d8a37d4"
     },
     "includes/Access/Trash_Workspace_Service.php": {
       "bytes": 17350,
@@ -1081,8 +1081,8 @@
       "sha256": "2103d6aadabd5d934dab58e0ed3018b9454675d771e0990bb77467386a459a22"
     },
     "includes/Access/WordPress_Role_Access_Service.php": {
-      "bytes": 63837,
-      "sha256": "50cd1a5d7e38a7899d885c59d749c2341a147be6ab4d9deafd516a805fbe25ba"
+      "bytes": 63969,
+      "sha256": "601ae3ec64bf0bc23f0d263a94ef531807e1269fdeca4af5035ead97e472d30a"
     },
     "includes/Access/Workspace_Activity_Service.php": {
       "bytes": 18552,
@@ -1125,8 +1125,8 @@
       "sha256": "65140e5c7043f7c73b72fc4f0707e5ce00db1523d815581ac4350268fd9f4c7a"
     },
     "includes/Admin/Admin.php": {
-      "bytes": 657321,
-      "sha256": "88f83c6b605ddf710b2d1426a1d0093a0ee53527ec7399abb8d5918feaeac52e"
+      "bytes": 657380,
+      "sha256": "0b593cda55a39035069f76a1ad1d81c088624e6788630f2757f6901aa7b32b43"
     },
     "includes/Admin/Legacy_Settings.php": {
       "bytes": 12551,
@@ -1424,9 +1424,13 @@
       "bytes": 18538,
       "sha256": "ed8220e07ee40468dfd8a30ef54c6ece7ed265b7bec145e3ab3eb6842083d263"
     },
+    "includes/Bricks/Authoring_Reference.php": {
+      "bytes": 6769,
+      "sha256": "022e67c621f4d9e55a3a903580185cc9b5cc28bf8b81dd92663a270c119c4bf7"
+    },
     "includes/Bricks/Bricks_Integration.php": {
-      "bytes": 138491,
-      "sha256": "a6ea81c79c943b7860cae61482757848d7de50c5f2e6fc1034a160d4bcc77fe1"
+      "bytes": 136858,
+      "sha256": "6a788b49b6ea4befa2c67fffa3ff655a69ddd39fb12e8d88266ffe7096285664"
     },
     "includes/Bricks/Clean_Conversion_Test_Service.php": {
       "bytes": 23620,
@@ -1897,8 +1901,8 @@
       "sha256": "8e75b688fb960ebe5fa5eeac6b93e3d8405935e6c73a09bc835a7d3107715cba"
     },
     "includes/MCP/Design_Service.php": {
-      "bytes": 18816,
-      "sha256": "d93997812bb14ead39c4fb5310b14dba06a43ee8ec66d33816254e99d69c798c"
+      "bytes": 18884,
+      "sha256": "797f3be6c012217c725bf379da5055be65cdf1991ae76e2e29b3aa6d523d5fd5"
     },
     "includes/MCP/Engine.php": {
       "bytes": 18524,

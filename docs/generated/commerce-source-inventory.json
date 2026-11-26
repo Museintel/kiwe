@@ -407,7 +407,7 @@
     },
     {
       "source": "wp-content/mu-plugins/dsa/includes/Access/WordPress_Role_Access_Service.php",
-      "sha256": "50cd1a5d7e38a7899d885c59d749c2341a147be6ab4d9deafd516a805fbe25ba",
+      "sha256": "601ae3ec64bf0bc23f0d263a94ef531807e1269fdeca4af5035ead97e472d30a",
       "symbols": [
         {
           "kind": "method",
@@ -567,73 +567,73 @@
         {
           "kind": "method",
           "name": "guard_editorial_admin_route",
-          "line": 333
+          "line": 336
         },
         {
           "kind": "method",
           "name": "restricted_role",
-          "line": 396
+          "line": 399
         },
         {
           "kind": "method",
           "name": "guard_shop_manager_route",
-          "line": 421
+          "line": 424
         },
         {
           "kind": "method",
           "name": "redirect_to_posts",
-          "line": 444
+          "line": 447
         },
         {
           "kind": "method",
           "name": "menu_order",
-          "line": 449
+          "line": 452
         },
         {
           "kind": "method",
           "name": "toolbar",
-          "line": 456
+          "line": 459
         },
         {
           "kind": "method",
           "name": "guard_builder",
-          "line": 462
+          "line": 465
         },
         {
           "kind": "method",
           "name": "enforce_bricks_boundary",
-          "line": 467
+          "line": 470
         },
         {
           "kind": "method",
           "name": "bricks_access_column",
-          "line": 478
+          "line": 481
         },
         {
           "kind": "method",
           "name": "guard_client_route",
-          "line": 483
+          "line": 486
         },
         {
           "kind": "method",
           "name": "guard_ajax",
-          "line": 584
+          "line": 587
         },
         {
           "kind": "method",
           "name": "guard_rest",
-          "line": 604
+          "line": 607
         },
         {
           "kind": "method",
           "name": "deny",
-          "line": 702
+          "line": 705
         }
       ]
     },
     {
       "source": "wp-content/mu-plugins/dsa/includes/Admin/Admin.php",
-      "sha256": "88f83c6b605ddf710b2d1426a1d0093a0ee53527ec7399abb8d5918feaeac52e",
+      "sha256": "0b593cda55a39035069f76a1ad1d81c088624e6788630f2757f6901aa7b32b43",
       "symbols": [
         {
           "kind": "method",
@@ -1778,737 +1778,737 @@
         {
           "kind": "method",
           "name": "render_attributes_page",
-          "line": 6678
+          "line": 6679
         },
         {
           "kind": "method",
           "name": "render_package_proof_fragment",
-          "line": 6688
+          "line": 6689
         },
         {
           "kind": "method",
           "name": "render_database_page",
-          "line": 6731
+          "line": 6732
         },
         {
           "kind": "method",
           "name": "render_persistence_maintenance_panel",
-          "line": 6870
+          "line": 6871
         },
         {
           "kind": "method",
           "name": "render_developer_page",
-          "line": 6904
+          "line": 6905
         },
         {
           "kind": "metadata",
           "name": "_dsa_redirect",
-          "line": 7159
+          "line": 7160
         },
         {
           "kind": "method",
           "name": "render_dock_page",
-          "line": 7204
+          "line": 7205
         },
         {
           "kind": "method",
           "name": "render_theme_page",
-          "line": 7306
+          "line": 7307
         },
         {
           "kind": "metadata",
           "name": "_dsa_redirect",
-          "line": 7395
+          "line": 7396
         },
         {
           "kind": "method",
           "name": "save_dock_settings",
-          "line": 7605
+          "line": 7606
         },
         {
           "kind": "method",
           "name": "render_search_page",
-          "line": 7617
+          "line": 7618
         },
         {
           "kind": "metadata",
           "name": "_dsa_redirect",
-          "line": 7629
+          "line": 7630
         },
         {
           "kind": "method",
           "name": "render_menu_page",
-          "line": 7656
+          "line": 7657
         },
         {
           "kind": "method",
           "name": "save_menu_settings",
-          "line": 7725
+          "line": 7726
         },
         {
           "kind": "method",
           "name": "clear_search_cache",
-          "line": 7738
+          "line": 7739
         },
         {
           "kind": "method",
           "name": "render_secure_page",
-          "line": 7752
+          "line": 7753
         },
         {
           "kind": "metadata",
           "name": "_dsa_redirect",
-          "line": 7789
+          "line": 7790
         },
         {
           "kind": "method",
           "name": "render_email_page",
-          "line": 7882
+          "line": 7883
         },
         {
           "kind": "metadata",
           "name": "_dsa_redirect",
-          "line": 7901
+          "line": 7902
         },
         {
           "kind": "method",
           "name": "render_abandoned_cart_page",
-          "line": 7928
+          "line": 7929
         },
         {
           "kind": "metadata",
           "name": "_dsa_redirect",
-          "line": 7962
+          "line": 7963
         },
         {
           "kind": "form-field",
           "name": "abandoned_cart[manual_reminders_enabled]",
-          "line": 7964
+          "line": 7965
         },
         {
           "kind": "form-field",
           "name": "abandoned_cart[automatic_whatsapp_enabled]",
-          "line": 7964
+          "line": 7965
         },
         {
           "kind": "form-field",
           "name": "abandoned_cart[automatic_email_enabled]",
-          "line": 7964
+          "line": 7965
         },
         {
           "kind": "form-field",
           "name": "abandoned_cart[inactivity_minutes]",
-          "line": 7965
+          "line": 7966
         },
         {
           "kind": "form-field",
           "name": "abandoned_cart[heartbeat_minutes]",
-          "line": 7965
+          "line": 7966
         },
         {
           "kind": "form-field",
           "name": "abandoned_cart[cooldown_hours]",
-          "line": 7965
+          "line": 7966
         },
         {
           "kind": "form-field",
           "name": "abandoned_cart[max_reminders]",
-          "line": 7965
+          "line": 7966
         },
         {
           "kind": "form-field",
           "name": "abandoned_cart[automation_batch_limit]",
-          "line": 7965
+          "line": 7966
         },
         {
           "kind": "form-field",
           "name": "abandoned_cart[email_subject]",
-          "line": 7966
+          "line": 7967
         },
         {
           "kind": "form-field",
           "name": "abandoned_cart[email_message]",
-          "line": 7966
+          "line": 7967
         },
         {
           "kind": "form-field",
           "name": "abandoned_cart[channels][<?php echo esc_attr( $channel ); ?>][enabled]",
-          "line": 7967
+          "line": 7968
         },
         {
           "kind": "form-field",
           "name": "abandoned_cart[channels][<?php echo esc_attr( $channel ); ?>][webhook_url]",
-          "line": 7967
+          "line": 7968
         },
         {
           "kind": "form-field",
           "name": "abandoned_cart[channels][<?php echo esc_attr( $channel ); ?>][api_token]",
-          "line": 7967
+          "line": 7968
         },
         {
           "kind": "form-field",
           "name": "abandoned_cart[channels][<?php echo esc_attr( $channel ); ?>][sender]",
-          "line": 7967
+          "line": 7968
         },
         {
           "kind": "form-field",
           "name": "abandoned_cart[<?php echo esc_attr( $channel ); ?>_message]",
-          "line": 7967
+          "line": 7968
         },
         {
           "kind": "method",
           "name": "render_woocommerce_page",
-          "line": 7976
+          "line": 7977
         },
         {
           "kind": "metadata",
           "name": "_dsa_redirect",
-          "line": 8001
+          "line": 8002
         },
         {
           "kind": "form-field",
           "name": "commerce[cart_surface_enabled]",
-          "line": 8010
+          "line": 8011
         },
         {
           "kind": "form-field",
           "name": "commerce[cart_quantity_controls]",
-          "line": 8020
+          "line": 8021
         },
         {
           "kind": "form-field",
           "name": "commerce[cart_badges_enabled]",
-          "line": 8029
+          "line": 8030
         },
         {
           "kind": "form-field",
           "name": "commerce[stock_badge_alert_threshold]",
-          "line": 8039
+          "line": 8040
         },
         {
           "kind": "form-field",
           "name": "commerce[stock_badge_urgent_threshold]",
-          "line": 8043
+          "line": 8044
         },
         {
           "kind": "form-field",
           "name": "commerce[stock_badge_alert_text]",
-          "line": 8047
+          "line": 8048
         },
         {
           "kind": "form-field",
           "name": "commerce[stock_badge_urgent_text]",
-          "line": 8051
+          "line": 8052
         },
         {
           "kind": "form-field",
           "name": "commerce[cross_sells_enabled]",
-          "line": 8060
+          "line": 8061
         },
         {
           "kind": "form-field",
           "name": "commerce[linked_products_enabled]",
-          "line": 8069
-        },
-        {
-          "kind": "form-field",
-          "name": "commerce[commerce_recommendations_enabled]",
           "line": 8070
         },
         {
           "kind": "form-field",
-          "name": "commerce[cross_sells_product_panel_enabled]",
+          "name": "commerce[commerce_recommendations_enabled]",
           "line": 8071
         },
         {
           "kind": "form-field",
+          "name": "commerce[cross_sells_product_panel_enabled]",
+          "line": 8072
+        },
+        {
+          "kind": "form-field",
           "name": "commerce[fbt_title]",
-          "line": 8080
+          "line": 8081
         },
         {
           "kind": "form-field",
           "name": "commerce[fbt_max_products]",
-          "line": 8084
+          "line": 8085
         },
         {
           "kind": "form-field",
           "name": "commerce[fbt_show_out_of_stock]",
-          "line": 8087
+          "line": 8088
         },
         {
           "kind": "form-field",
           "name": "commerce[add_to_cart_mode]",
-          "line": 8098
+          "line": 8099
         },
         {
           "kind": "form-field",
           "name": "commerce[first_cart_confetti_enabled]",
-          "line": 8105
+          "line": 8106
         },
         {
           "kind": "form-field",
           "name": "commerce[co_purchase_daily_sync_enabled]",
-          "line": 8113
+          "line": 8114
         },
         {
           "kind": "form-field",
           "name": "commerce[co_purchase_daily_sync_depth]",
-          "line": 8118
+          "line": 8119
         },
         {
           "kind": "form-field",
           "name": "commerce[co_purchase_daily_sync_mode]",
-          "line": 8122
+          "line": 8123
         },
         {
           "kind": "form-field",
           "name": "commerce[bestseller_enabled]",
-          "line": 8140
+          "line": 8141
         },
         {
           "kind": "form-field",
           "name": "commerce[bestseller_limit]",
-          "line": 8145
+          "line": 8146
         },
         {
           "kind": "form-field",
           "name": "commerce[bestseller_parent_label]",
-          "line": 8149
+          "line": 8150
         },
         {
           "kind": "form-field",
           "name": "commerce[bestseller_parent_slug]",
-          "line": 8153
+          "line": 8154
         },
         {
           "kind": "form-field",
           "name": "commerce[bestseller_sync_on_order]",
-          "line": 8156
+          "line": 8157
         },
         {
           "kind": "form-field",
           "name": "commerce[cod_gate][enabled]",
-          "line": 8173
+          "line": 8174
         },
         {
           "kind": "form-field",
           "name": "commerce[cod_gate][strikes_to_block]",
-          "line": 8178
+          "line": 8179
         },
         {
           "kind": "form-field",
           "name": "commerce[cod_gate][trusted_skip_after_completed]",
-          "line": 8182
+          "line": 8183
         },
         {
           "kind": "form-field",
           "name": "commerce[cod_gate][regain]",
-          "line": 8186
+          "line": 8187
         },
         {
           "kind": "form-field",
           "name": "commerce[cod_gate][block_message]",
-          "line": 8193
+          "line": 8194
         },
         {
           "kind": "form-field",
           "name": "commerce[cod_gate][allow_unverified_on_failure]",
-          "line": 8196
+          "line": 8197
         },
         {
           "kind": "method",
           "name": "render_store_analytics_page",
-          "line": 8222
+          "line": 8223
         },
         {
           "kind": "method",
           "name": "render_store_manager_notice",
-          "line": 8299
+          "line": 8300
         },
         {
           "kind": "method",
           "name": "render_store_manager_tabs",
-          "line": 8319
+          "line": 8320
         },
         {
           "kind": "method",
           "name": "render_store_tab_funnel",
-          "line": 8335
+          "line": 8336
         },
         {
           "kind": "method",
           "name": "render_store_tab_search",
-          "line": 8389
+          "line": 8390
         },
         {
           "kind": "method",
           "name": "refresh_saved_report",
-          "line": 8408
+          "line": 8409
         },
         {
           "kind": "method",
           "name": "render_store_tab_saved",
-          "line": 8417
+          "line": 8418
         },
         {
           "kind": "method",
           "name": "render_app_adoption",
-          "line": 8484
+          "line": 8485
         },
         {
           "kind": "method",
           "name": "render_store_tab_assign",
-          "line": 8599
+          "line": 8600
         },
         {
           "kind": "method",
           "name": "render_store_tab_clear",
-          "line": 8627
+          "line": 8628
         },
         {
           "kind": "method",
           "name": "render_store_tab_memory",
-          "line": 8642
+          "line": 8643
         },
         {
           "kind": "method",
           "name": "render_store_tab_bulk_upsells",
-          "line": 8668
+          "line": 8669
         },
         {
           "kind": "method",
           "name": "render_store_tab_current_upsells",
-          "line": 8695
+          "line": 8696
         },
         {
           "kind": "method",
           "name": "render_store_tab_co_purchase",
-          "line": 8720
+          "line": 8721
         },
         {
           "kind": "method",
           "name": "render_store_tab_cart_events",
-          "line": 8756
+          "line": 8757
         },
         {
           "kind": "method",
           "name": "render_store_tab_bestseller",
-          "line": 8818
+          "line": 8819
         },
         {
           "kind": "method",
           "name": "render_store_source_fields",
-          "line": 8831
+          "line": 8832
         },
         {
           "kind": "method",
           "name": "render_store_category_checks",
-          "line": 8844
+          "line": 8845
         },
         {
           "kind": "method",
           "name": "render_bricks_page",
-          "line": 8861
+          "line": 8862
         },
         {
           "kind": "method",
           "name": "render_simple_admin_tabs",
-          "line": 8892
+          "line": 8893
         },
         {
           "kind": "method",
           "name": "assert_store_action",
-          "line": 8908
+          "line": 8909
         },
         {
           "kind": "method",
           "name": "redirect_store_manager",
-          "line": 8917
+          "line": 8918
         },
         {
           "kind": "method",
           "name": "clear_runtime_cache_records",
-          "line": 8930
+          "line": 8931
         },
         {
           "kind": "method",
           "name": "auth_capability",
-          "line": 8950
+          "line": 8951
         },
         {
           "kind": "method",
           "name": "secure_tabs",
-          "line": 8954
+          "line": 8955
         },
         {
           "kind": "method",
           "name": "render_secure_tab",
-          "line": 8973
+          "line": 8974
         },
         {
           "kind": "method",
           "name": "profile_payload",
-          "line": 8982
+          "line": 8983
         },
         {
           "kind": "method",
           "name": "sanitize_profile_settings",
-          "line": 9027
+          "line": 9028
         },
         {
           "kind": "method",
           "name": "framework_profile_payload",
-          "line": 9137
+          "line": 9138
         },
         {
           "kind": "method",
           "name": "framework_profile_tokens_input",
-          "line": 9157
+          "line": 9158
         },
         {
           "kind": "method",
           "name": "redirect_profile_error",
-          "line": 9171
+          "line": 9172
         },
         {
           "kind": "method",
           "name": "redirect_framework_profile_error",
-          "line": 9176
+          "line": 9177
         },
         {
           "kind": "method",
           "name": "redirect_theme_error",
-          "line": 9181
+          "line": 9182
         },
         {
           "kind": "method",
           "name": "framework_profile_error_message",
-          "line": 9186
+          "line": 9187
         },
         {
           "kind": "method",
           "name": "theme_error_message",
-          "line": 9212
+          "line": 9213
         },
         {
           "kind": "method",
           "name": "apply_theme_record_to_settings",
-          "line": 9228
+          "line": 9229
         },
         {
           "kind": "method",
           "name": "redirect_binding_plan_error",
-          "line": 9260
+          "line": 9261
         },
         {
           "kind": "method",
           "name": "binding_plan_error_message",
-          "line": 9265
+          "line": 9266
         },
         {
           "kind": "method",
           "name": "framework_binding_report",
-          "line": 9277
+          "line": 9278
         },
         {
           "kind": "method",
           "name": "profile_error_message",
-          "line": 9293
+          "line": 9294
         },
         {
           "kind": "method",
           "name": "sanitize_style_settings",
-          "line": 9306
+          "line": 9307
         },
         {
           "kind": "method",
           "name": "sanitize_visual_effects",
-          "line": 9310
+          "line": 9311
         },
         {
           "kind": "method",
           "name": "sanitize_diagnostics_settings",
-          "line": 9350
+          "line": 9351
         },
         {
           "kind": "method",
           "name": "sanitize_dock_settings",
-          "line": 9381
+          "line": 9382
         },
         {
           "kind": "method",
           "name": "sanitize_menu_settings",
-          "line": 9385
+          "line": 9386
         },
         {
           "kind": "method",
           "name": "sanitize_menu_locations",
-          "line": 9389
+          "line": 9390
         },
         {
           "kind": "method",
           "name": "sanitize_heading_levels",
-          "line": 9393
+          "line": 9394
         },
         {
           "kind": "method",
           "name": "sanitize_haptic_settings",
-          "line": 9397
+          "line": 9398
         },
         {
           "kind": "method",
           "name": "sanitize_search_settings",
-          "line": 9424
+          "line": 9425
         },
         {
           "kind": "method",
           "name": "dock_module_labels",
-          "line": 9477
+          "line": 9478
         },
         {
           "kind": "method",
           "name": "dock_custom_item_labels",
-          "line": 9491
+          "line": 9492
         },
         {
           "kind": "method",
           "name": "dock_custom_items_for_admin",
-          "line": 9495
+          "line": 9496
         },
         {
           "kind": "method",
           "name": "sanitize_dock_custom_items",
-          "line": 9499
+          "line": 9500
         },
         {
           "kind": "method",
           "name": "sanitize_dsa_theme",
-          "line": 9503
+          "line": 9504
         },
         {
           "kind": "method",
           "name": "sanitize_token_settings",
-          "line": 9507
+          "line": 9508
         },
         {
           "kind": "method",
           "name": "sanitize_theme_screen_settings",
-          "line": 9523
+          "line": 9524
         },
         {
           "kind": "method",
           "name": "sanitize_games_settings",
-          "line": 9531
+          "line": 9532
         },
         {
           "kind": "method",
           "name": "sanitize_schema_geo_settings",
-          "line": 9572
+          "line": 9573
         },
         {
           "kind": "method",
           "name": "sanitize_metrics_settings",
-          "line": 9576
+          "line": 9577
         },
         {
           "kind": "method",
           "name": "sanitize_permissions_settings",
-          "line": 9580
+          "line": 9581
         },
         {
           "kind": "method",
           "name": "sanitize_protected_flow_settings",
-          "line": 9584
+          "line": 9585
         },
         {
           "kind": "method",
           "name": "sanitize_secure_settings",
-          "line": 9596
+          "line": 9597
         },
         {
           "kind": "method",
           "name": "sanitize_ai_settings",
-          "line": 9600
+          "line": 9601
         },
         {
           "kind": "method",
           "name": "save_securetrack_ai_settings",
-          "line": 9656
+          "line": 9657
         },
         {
           "kind": "method",
           "name": "sanitize_cidr_lines",
-          "line": 9716
+          "line": 9717
         },
         {
           "kind": "method",
           "name": "sanitize_email_settings",
-          "line": 9735
+          "line": 9736
         },
         {
           "kind": "method",
           "name": "sanitize_abandoned_cart_settings",
-          "line": 9770
+          "line": 9771
         },
         {
           "kind": "method",
           "name": "sanitize_commerce_settings",
-          "line": 9821
+          "line": 9822
         },
         {
           "kind": "method",
           "name": "sanitize_cod_gate_settings",
-          "line": 9865
+          "line": 9866
         },
         {
           "kind": "method",
           "name": "sanitize_bricks_settings",
-          "line": 9879
+          "line": 9880
         },
         {
           "kind": "method",
           "name": "sanitize_link_hub_settings",
-          "line": 9884
+          "line": 9885
         },
         {
           "kind": "method",
           "name": "sanitize_app_settings",
-          "line": 9914
+          "line": 9915
         },
         {
           "kind": "method",
           "name": "social_link_labels",
-          "line": 9918
+          "line": 9919
         },
         {
           "kind": "method",
           "name": "sanitize_menu_items",
-          "line": 9929
+          "line": 9930
         },
         {
           "kind": "method",
           "name": "sanitize_transition_messages",
-          "line": 9933
+          "line": 9934
         },
         {
           "kind": "method",
           "name": "menu_items_for_admin",
-          "line": 9968
+          "line": 9969
         },
         {
           "kind": "method",
           "name": "nav_menu_options",
-          "line": 9992
+          "line": 9993
         },
         {
           "kind": "method",
           "name": "transition_messages_for_admin",
-          "line": 10007
+          "line": 10008
         },
         {
           "kind": "method",
           "name": "menu_targets",
-          "line": 10020
+          "line": 10021
         }
       ]
     },
@@ -2781,542 +2781,522 @@
     },
     {
       "source": "wp-content/mu-plugins/dsa/includes/Bricks/Bricks_Integration.php",
-      "sha256": "a6ea81c79c943b7860cae61482757848d7de50c5f2e6fc1034a160d4bcc77fe1",
+      "sha256": "6a788b49b6ea4befa2c67fffa3ff655a69ddd39fb12e8d88266ffe7096285664",
       "symbols": [
         {
           "kind": "method",
           "name": "__construct",
-          "line": 35
+          "line": 34
         },
         {
           "kind": "method",
           "name": "commerce_bindings",
-          "line": 42
+          "line": 41
         },
         {
           "kind": "method",
           "name": "context_collections",
-          "line": 47
+          "line": 46
         },
         {
           "kind": "method",
           "name": "is_active_theme",
-          "line": 53
+          "line": 52
         },
         {
           "kind": "method",
           "name": "native_woocommerce_defaults",
-          "line": 64
+          "line": 63
         },
         {
           "kind": "method",
           "name": "register",
-          "line": 70
+          "line": 69
         },
         {
           "kind": "hook",
           "name": "bricks_after_header",
-          "line": 79
+          "line": 78
         },
         {
           "kind": "hook",
           "name": "bricks/dynamic_tags_list",
-          "line": 80
+          "line": 79
         },
         {
           "kind": "hook",
           "name": "bricks/elements/",
-          "line": 84
+          "line": 83
         },
         {
           "kind": "hook",
           "name": "bricks/posts/query_vars",
-          "line": 86
+          "line": 85
         },
         {
           "kind": "hook",
           "name": "bricks/dynamic_data/render_tag",
-          "line": 87
+          "line": 86
         },
         {
           "kind": "hook",
           "name": "bricks/dynamic_data/render_content",
-          "line": 88
+          "line": 87
         },
         {
           "kind": "hook",
           "name": "bricks/elements/",
-          "line": 91
+          "line": 90
         },
         {
           "kind": "hook",
           "name": "bricks/posts/query_vars",
-          "line": 93
+          "line": 92
         },
         {
           "kind": "hook",
           "name": "sanitize_post_meta_",
-          "line": 96
+          "line": 95
         },
         {
           "kind": "hook",
           "name": "bricks/element/render_attributes",
-          "line": 98
+          "line": 97
         },
         {
           "kind": "hook",
           "name": "bricks/frontend/render_element",
-          "line": 99
+          "line": 98
         },
         {
           "kind": "hook",
           "name": "bricks/elements/filter-search/controls",
-          "line": 100
+          "line": 99
         },
         {
           "kind": "hook",
           "name": "bricks/elements/icon/controls",
-          "line": 101
+          "line": 100
         },
         {
           "kind": "hook",
           "name": "bricks/elements/",
-          "line": 103
+          "line": 102
         },
         {
           "kind": "hook",
           "name": "bricks/element/settings",
-          "line": 105
+          "line": 104
         },
         {
           "kind": "hook",
           "name": "bricks/elements/woocommerce-mini-cart/controls",
-          "line": 107
+          "line": 106
         },
         {
           "kind": "hook",
           "name": "bricks/elements/product-add-to-cart/control_groups",
-          "line": 108
+          "line": 107
         },
         {
           "kind": "hook",
           "name": "bricks/elements/product-add-to-cart/controls",
-          "line": 109
-        },
-        {
-          "kind": "hook",
-          "name": "bricks/elements/product-upsells/control_groups",
-          "line": 110
-        },
-        {
-          "kind": "hook",
-          "name": "bricks/elements/product-upsells/controls",
-          "line": 111
+          "line": 108
         },
         {
           "kind": "hook",
           "name": "bricks/element/set_root_attributes",
-          "line": 112
+          "line": 109
         },
         {
           "kind": "hook",
           "name": "woocommerce_before_mini_cart",
-          "line": 113
+          "line": 110
         },
         {
           "kind": "hook",
           "name": "woocommerce_widget_cart_item_quantity",
-          "line": 114
+          "line": 111
         },
         {
           "kind": "hook",
           "name": "woocommerce_widget_shopping_cart_before_buttons",
-          "line": 115
+          "line": 112
         },
         {
           "kind": "hook",
           "name": "wp_enqueue_scripts",
-          "line": 117
+          "line": 114
         },
         {
           "kind": "hook",
           "name": "added_post_meta",
-          "line": 118
+          "line": 115
         },
         {
           "kind": "hook",
           "name": "updated_post_meta",
-          "line": 119
+          "line": 116
         },
         {
           "kind": "method",
           "name": "activate_native_checkout_element_authority",
-          "line": 132
+          "line": 129
         },
         {
           "kind": "method",
           "name": "maybe_resolve_compiler_popup_meta",
-          "line": 162
+          "line": 159
         },
         {
           "kind": "hook",
           "name": "shutdown",
-          "line": 178
+          "line": 175
         },
         {
           "kind": "method",
           "name": "resolve_compiler_popup_references",
-          "line": 191
+          "line": 188
         },
         {
           "kind": "method",
           "name": "compiler_popup_references_in_value",
-          "line": 251
+          "line": 248
         },
         {
           "kind": "method",
           "name": "resolve_compiler_popup_value",
-          "line": 268
+          "line": 265
         },
         {
           "kind": "method",
           "name": "enqueue_studio_editor_companion",
-          "line": 294
+          "line": 291
         },
         {
           "kind": "method",
           "name": "is_bricks_builder_main",
-          "line": 335
+          "line": 332
         },
         {
           "kind": "method",
           "name": "add_dynamic_tags",
-          "line": 346
+          "line": 343
         },
         {
           "kind": "method",
           "name": "render_dynamic_tag",
-          "line": 375
+          "line": 373
         },
         {
           "kind": "method",
           "name": "render_dynamic_content",
-          "line": 430
+          "line": 428
         },
         {
           "kind": "method",
           "name": "preserve_authored_html",
-          "line": 443
+          "line": 441
         },
         {
           "kind": "method",
           "name": "base_dynamic_tag_definitions",
-          "line": 471
+          "line": 469
         },
         {
           "kind": "method",
           "name": "add_bestseller_controls",
-          "line": 553
+          "line": 551
         },
         {
           "kind": "method",
           "name": "bestseller_query_vars",
-          "line": 560
+          "line": 558
         },
         {
           "kind": "method",
           "name": "bestseller_badge_value",
-          "line": 574
+          "line": 572
         },
         {
           "kind": "method",
           "name": "dynamic_tag_value",
-          "line": 584
+          "line": 582
         },
         {
           "kind": "method",
           "name": "design_context_tag_value",
-          "line": 690
+          "line": 688
         },
         {
           "kind": "method",
           "name": "current_team_member",
-          "line": 745
+          "line": 743
         },
         {
           "kind": "method",
           "name": "service_tag_value",
-          "line": 760
+          "line": 758
         },
         {
           "kind": "method",
           "name": "tag_group_definitions",
-          "line": 787
+          "line": 785
         },
         {
           "kind": "method",
           "name": "tag_group_value",
-          "line": 799
+          "line": 797
         },
         {
           "kind": "method",
           "name": "product_nutrition_image_tag_value",
-          "line": 822
+          "line": 820
         },
         {
           "kind": "method",
           "name": "product_weight_tag_value",
-          "line": 830
+          "line": 828
         },
         {
           "kind": "method",
           "name": "nav_menu_tag_definitions",
-          "line": 852
+          "line": 850
         },
         {
           "kind": "method",
           "name": "nav_menu_tag_value",
-          "line": 871
+          "line": 869
         },
         {
           "kind": "method",
           "name": "logo_tag_value",
-          "line": 889
+          "line": 887
         },
         {
           "kind": "method",
           "name": "woo_store_option",
-          "line": 904
+          "line": 902
         },
         {
           "kind": "method",
           "name": "woo_store_country_state",
-          "line": 913
+          "line": 911
         },
         {
           "kind": "method",
           "name": "woo_locations_label",
-          "line": 930
+          "line": 928
         },
         {
           "kind": "method",
           "name": "country_list_label",
-          "line": 974
+          "line": 972
         },
         {
           "kind": "method",
           "name": "country_label",
-          "line": 988
+          "line": 986
         },
         {
           "kind": "method",
           "name": "state_label",
-          "line": 1001
+          "line": 999
         },
         {
           "kind": "method",
           "name": "add_element_attributes",
-          "line": 1014
+          "line": 1012
         },
         {
           "kind": "method",
           "name": "add_dsa_icon_launcher_controls",
-          "line": 1067
+          "line": 1065
         },
         {
           "kind": "method",
           "name": "add_context_action_controls",
-          "line": 1093
+          "line": 1091
         },
         {
           "kind": "method",
           "name": "add_search_bridge_controls",
-          "line": 1133
+          "line": 1131
         },
         {
           "kind": "method",
           "name": "observe_rendered_element",
-          "line": 1149
+          "line": 1147
         },
         {
           "kind": "method",
           "name": "bridge_html_launcher",
-          "line": 1192
+          "line": 1190
         },
         {
           "kind": "method",
           "name": "add_mini_cart_controls",
-          "line": 1209
+          "line": 1207
         },
         {
           "kind": "method",
           "name": "add_add_to_cart_control_group",
-          "line": 1789
+          "line": 1787
         },
         {
           "kind": "method",
           "name": "add_add_to_cart_controls",
-          "line": 1802
-        },
-        {
-          "kind": "method",
-          "name": "add_linked_products_control_group",
-          "line": 1843
-        },
-        {
-          "kind": "method",
-          "name": "add_linked_products_controls",
-          "line": 1852
+          "line": 1800
         },
         {
           "kind": "method",
           "name": "bridge_element_settings",
-          "line": 1877
+          "line": 1841
         },
         {
           "kind": "method",
           "name": "add_add_to_cart_attributes",
-          "line": 1935
+          "line": 1899
         },
         {
           "kind": "method",
           "name": "restore_mini_cart_context",
-          "line": 1975
+          "line": 1939
         },
         {
           "kind": "method",
           "name": "render_mini_cart_quantity",
-          "line": 1984
+          "line": 1948
         },
         {
           "kind": "method",
           "name": "render_mini_cart_recommendations",
-          "line": 2034
+          "line": 1998
         },
         {
           "kind": "method",
           "name": "render_mini_cart_product_rail",
-          "line": 2094
+          "line": 2058
         },
         {
           "kind": "method",
           "name": "render_mini_cart_offer_banners",
-          "line": 2141
+          "line": 2105
         },
         {
           "kind": "method",
           "name": "render_mini_cart_total_after_discount",
-          "line": 2181
+          "line": 2145
         },
         {
           "kind": "method",
           "name": "cart_offer_badge",
-          "line": 2203
+          "line": 2167
         },
         {
           "kind": "method",
           "name": "cart_offer_button_label",
-          "line": 2217
+          "line": 2181
         },
         {
           "kind": "method",
           "name": "cart_offer_headline",
-          "line": 2235
+          "line": 2199
         },
         {
           "kind": "method",
           "name": "cart_offer_subtext",
-          "line": 2265
+          "line": 2229
         },
         {
           "kind": "method",
           "name": "enqueue_mini_cart_adapter",
-          "line": 2279
+          "line": 2243
         },
         {
           "kind": "method",
           "name": "enqueue_add_to_cart_adapter",
-          "line": 2296
+          "line": 2260
         },
         {
           "kind": "method",
           "name": "frontend_console_debug_enabled",
-          "line": 2323
+          "line": 2287
         },
         {
           "kind": "method",
           "name": "classify_from_bricks_name",
-          "line": 2334
+          "line": 2298
         },
         {
           "kind": "method",
           "name": "bricks_config",
-          "line": 2376
+          "line": 2340
         },
         {
           "kind": "method",
           "name": "commerce_config",
-          "line": 2382
+          "line": 2346
         },
         {
           "kind": "method",
           "name": "mini_cart_settings",
-          "line": 2388
+          "line": 2352
         },
         {
           "kind": "method",
           "name": "product_max_quantity",
-          "line": 2399
+          "line": 2363
         },
         {
           "kind": "method",
           "name": "stock_badge_html",
-          "line": 2411
+          "line": 2375
         },
         {
           "kind": "method",
           "name": "product_id_from_element",
-          "line": 2437
+          "line": 2401
         },
         {
           "kind": "method",
           "name": "cart_item_for_product",
-          "line": 2451
+          "line": 2415
         },
         {
           "kind": "method",
           "name": "add_to_cart_runtime_enabled",
-          "line": 2470
+          "line": 2434
         },
         {
           "kind": "method",
           "name": "mini_cart_css",
-          "line": 2478
+          "line": 2442
         },
         {
           "kind": "method",
           "name": "mini_cart_js",
-          "line": 2521
+          "line": 2485
         },
         {
           "kind": "metadata",
           "name": "_kiwe_nonce",
-          "line": 2586
+          "line": 2550
         },
         {
           "kind": "method",
           "name": "add_to_cart_css",
-          "line": 2686
+          "line": 2650
         },
         {
           "kind": "method",
           "name": "add_to_cart_js",
-          "line": 2714
+          "line": 2678
         },
         {
           "kind": "metadata",
           "name": "_kiwe_nonce",
-          "line": 2790
+          "line": 2754
         }
       ]
     },

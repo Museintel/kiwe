@@ -113,7 +113,7 @@ if (!$theme[3]) {
     check('All 38 catalog additions plus 15 existing ATC styles available', $total === 53);
     $mini = apply_filters('bricks/elements/woocommerce-mini-cart/controls', []);
     check('Mini cart editor includes quantity, stock and linked controls', isset($mini['brxMcStepperEnable'], $mini['brxMcBadgeEnable'], $mini['kiweMiniCartRuntimeInfo']));
-    check('Linked product controls available', isset(apply_filters('bricks/elements/product-upsells/controls', [])['brxKiweLinkedProductsMode']));
+    check('Native linked product Type is the only authoring control', ! isset(apply_filters('bricks/elements/product-upsells/controls', [])['brxKiweLinkedProductsMode']));
     check('DSA launcher control available without enabling dock', isset(apply_filters('bricks/elements/icon/controls', [])['dsaOpenModule']));
     check('Contact action controls available', isset(apply_filters('bricks/elements/button/controls', [])['kiweContactAction']));
     check('Search bridge control available', isset(apply_filters('bricks/elements/filter-search/controls', [])['dsaSearchBridge']));

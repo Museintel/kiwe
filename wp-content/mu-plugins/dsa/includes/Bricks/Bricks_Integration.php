@@ -20,7 +20,6 @@ if ( ! defined( 'ABSPATH' ) ) {
 final class Bricks_Integration {
 	private const MINI_CART_SETTINGS_OPTION = 'dsa_bricks_mini_cart_settings';
 	private const ATC_GROUP = 'dsaAtcBehaviour';
-	private const LINKED_PRODUCTS_GROUP = 'dsaLinkedProducts';
 
 	private $registry;
 	private $settings;
@@ -107,8 +106,6 @@ final class Bricks_Integration {
 			add_filter( 'bricks/elements/woocommerce-mini-cart/controls', [ $this, 'add_mini_cart_controls' ], 20 );
 			add_filter( 'bricks/elements/product-add-to-cart/control_groups', [ $this, 'add_add_to_cart_control_group' ], 20 );
 			add_filter( 'bricks/elements/product-add-to-cart/controls', [ $this, 'add_add_to_cart_controls' ], 20 );
-			add_filter( 'bricks/elements/product-upsells/control_groups', [ $this, 'add_linked_products_control_group' ], 20 );
-			add_filter( 'bricks/elements/product-upsells/controls', [ $this, 'add_linked_products_controls' ], 20 );
 			add_filter( 'bricks/element/set_root_attributes', [ $this, 'add_add_to_cart_attributes' ], 20, 2 );
 			add_action( 'woocommerce_before_mini_cart', [ $this, 'restore_mini_cart_context' ] );
 			add_filter( 'woocommerce_widget_cart_item_quantity', [ $this, 'render_mini_cart_quantity' ], 20, 3 );
@@ -347,6 +344,7 @@ final class Bricks_Integration {
 		// Native authoring data is independent of optional DSA runtime switches.
 		$existing = array_filter( array_column( $tags, 'name' ), 'is_string' );
 		$definitions = self::base_dynamic_tag_definitions();
+		unset( $definitions['woo_product_bestseller'] );
 		// Keep old layouts renderable. Only offer the compatibility tags when Bricks lacks the native tag.
 		if ( in_array( '{woo_cart_order_total}', $existing, true ) ) unset( $definitions['kiwe_checkout_total'] );
 		if ( in_array( '{woo_url}', $existing, true ) ) unset( $definitions['kiwe_checkout_terms_url'] );
@@ -1836,40 +1834,6 @@ final class Bricks_Integration {
 				$controls[ $key ]['group'] = 'dsaAtcStyles';
 			}
 		}
-
-		return $controls;
-	}
-
-	public function add_linked_products_control_group( array $groups ): array {
-		$groups[ self::LINKED_PRODUCTS_GROUP ] = [
-			'title' => esc_html__( 'Kiwe Linked Products', 'dsa' ),
-			'tab'   => 'content',
-		];
-
-		return $groups;
-	}
-
-	public function add_linked_products_controls( array $controls ): array {
-		$group = self::LINKED_PRODUCTS_GROUP;
-		$controls['brxKiweLinkedInfo'] = [
-			'tab'     => 'content',
-			'group'   => $group,
-			'type'    => 'info',
-			'content' => esc_html__( 'Kiwe stores cross-sells as native WooCommerce linked products. Source presets and style controls are automatically available. Manage generation and bestseller analytics in Kiwe > WooCommerce.', 'dsa' ),
-		];
-		$controls['brxKiweLinkedProductsMode'] = [
-			'tab'         => 'content',
-			'group'       => $group,
-			'type'        => 'select',
-			'label'       => esc_html__( 'Kiwe source preset', 'dsa' ),
-			'options'     => [
-				''                 => esc_html__( 'Use Bricks setting', 'dsa' ),
-				'cross_sells'      => esc_html__( 'Current product cross-sells', 'dsa' ),
-				'cart_cross_sells' => esc_html__( 'Cart cross-sells', 'dsa' ),
-				'upsells'          => esc_html__( 'Woo upsells', 'dsa' ),
-			],
-			'description' => esc_html__( 'Maps to Bricks 2.3.7 product-upsells source modes. Bestseller categories can be selected in normal product/category queries.', 'dsa' ),
-		];
 
 		return $controls;
 	}
