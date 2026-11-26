@@ -24,7 +24,41 @@ permissions:
   contents: read
 
 jobs:
+  sign_private_candidate:
+    if: github.repository == 'Museintel/kiwe' && github.ref == 'refs/heads/signing/rc501-membership-candidate' && inputs.channel == 'candidate' && inputs.profile == 'core' && !inputs.rollout_core
+    runs-on: ubuntu-latest
+    permissions: {}
+    steps:
+      - name: Sign the two reviewed candidate digests
+        env:
+          KIWE_UPDATE_ED25519_PRIVATE_PEM: ${{ secrets.KIWE_UPDATE_ED25519_PRIVATE_PEM }}
+        run: |
+          node <<'NODE'
+          const assert = require('node:assert/strict');
+          const { createPrivateKey, createPublicKey, sign } = require('node:crypto');
+          const { mkdirSync, writeFileSync } = require('node:fs');
+          const key = createPrivateKey(process.env.KIWE_UPDATE_ED25519_PRIVATE_PEM);
+          assert.equal(key.asymmetricKeyType, 'ed25519');
+          assert.equal(createPublicKey(key).export({type:'spki',format:'der'}).subarray(-32).toString('base64'), 'v6qwuL3+Zqx76G5A1MCqkvnzOM62fyXudc8OCgXqKzg=');
+          const publishedAt = new Date().toISOString();
+          const core = { ...{"schema":"kiwe.mu-release.v1","version":"8.0.0-rc.501","channel":"candidate","packageUrl":"https://app.kiwelaunch.com/updates/kiwe/v1/releases/8.0.0-rc.501/kiwe-mu-plugin.zip","sha256":"7cb49f5167d049717f70cacc9ad13177d356f4ff867dc0a092a744b74618bf49","bytes":2645880,"requiresPhp":"8.2","requiresWp":"7.1","packageManifestSha256":"dcc0e1bb265e0fc1377721ac2efc8766991b6ae27a4a1dd63cc4700bccc07d69","keyId":"kiwe-release-2026-01"}, publishedAt };
+          const store = { ...{"schema":"kiwe.app-release.v1","id":"store","version":"1.2.0-rc.3","channel":"candidate","coreApi":4,"requiresPhp":"8.2","requiresWp":"7.1","requiresWoo":"11.2","packageUrl":"https://app.kiwelaunch.com/apps/v1/releases/store/1.2.0-rc.3/kiwe-store.zip","sha256":"52431b8b6767d819d9e7897a1fd1e6bd193ae13cb294042b56622ebdf27b462f","bytes":279914,"packageManifestSha256":"15f70f209c09013b9688ca08b2b9c94e23f966cad3e8ba00f7542a7cb339ff63","keyId":"kiwe-release-2026-01"}, publishedAt: publishedAt.replace(/\.\d{3}Z$/, 'Z') };
+          const corePayload = ["schema","version","channel","publishedAt","packageUrl","sha256","bytes","requiresPhp","requiresWp","packageManifestSha256","keyId"].map(field => core[field]).join('\n') + '\n';
+          const storePayload = JSON.stringify(Object.fromEntries(Object.entries(store).sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0)));
+          core.signature = sign(null, Buffer.from(corePayload), key).toString('base64');
+          store.signature = sign(null, Buffer.from(storePayload), key).toString('base64');
+          mkdirSync('candidate-manifests');
+          writeFileSync('candidate-manifests/manifest.json', JSON.stringify(core, null, 2) + '\n');
+          writeFileSync('candidate-manifests/release.json', JSON.stringify(store, null, 2) + '\n');
+          NODE
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kiwe-rc501-detached-candidate-manifests
+          path: candidate-manifests/
+          if-no-files-found: error
+          retention-days: 1
   release:
+    if: github.ref != 'refs/heads/signing/rc501-membership-candidate'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
