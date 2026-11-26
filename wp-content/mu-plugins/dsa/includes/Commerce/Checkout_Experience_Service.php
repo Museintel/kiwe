@@ -132,9 +132,12 @@ final class Checkout_Experience_Service {
 		if ( ! self::checkout_page() ) return;
 		$url = plugin_dir_url( dirname( __DIR__, 2 ) . '/dsa.php' ) . 'assets/';
 		$version = \DSA\Apps\Runtime_Registry::provider( 'store' )['version'] ?? DSA_VERSION;
-		wp_enqueue_style( 'kiwe-checkout-experience', $url . 'css/checkout-experience.css', [], $version );
+		// Give both checkout assets a release cache key even on edges that normalize the WordPress ver parameter.
+		$style = add_query_arg( 'kiwe-build', $version, $url . 'css/checkout-experience.css' );
+		$script = add_query_arg( 'kiwe-build', $version, $url . 'js/checkout-experience.js' );
+		wp_enqueue_style( 'kiwe-checkout-experience', $style, [], $version );
 		$dependencies = self::authored() ? [ 'dsa-surface' ] : [ 'jquery' ];
-		wp_enqueue_script( 'kiwe-checkout-experience', $url . 'js/checkout-experience.js', $dependencies, $version, true );
+		wp_enqueue_script( 'kiwe-checkout-experience', $script, $dependencies, $version, true );
 	}
 
 	public function body_classes( array $classes ): array {

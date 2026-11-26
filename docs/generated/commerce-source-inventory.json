@@ -4192,7 +4192,7 @@
     },
     {
       "source": "wp-content/mu-plugins/dsa/includes/Commerce/Checkout_Experience_Service.php",
-      "sha256": "40121772c396e570678b94f1855fe055bdc4919812a42117bf1fdf691da9b027",
+      "sha256": "d96252bb7a56ec495000ea3b0958bffceb227c546a1ff782b021278b99cfa289",
       "symbols": [
         {
           "kind": "method",
@@ -4292,17 +4292,17 @@
         {
           "kind": "method",
           "name": "body_classes",
-          "line": 140
+          "line": 143
         },
         {
           "kind": "method",
           "name": "address_summary",
-          "line": 145
+          "line": 148
         },
         {
           "kind": "method",
           "name": "payment_choices",
-          "line": 155
+          "line": 158
         }
       ]
     },

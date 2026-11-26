@@ -1,3 +1,7 @@
+## 8.0.0-rc.508 (2026-11-26, candidate)
+
+- Use a shared Store release cache key for the checkout stylesheet and script so browsers can load the matching pair.
+
 ## 8.0.0-rc.507 (2026-11-26, candidate)
 
 - Show only confirmed payment methods on authored checkout pages, including on the first load.
