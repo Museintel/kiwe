@@ -1,3 +1,8 @@
+## 8.0.0-rc.512 (2026-11-27, candidate)
+
+- Prefer the native Bricks linked product selector for new layouts and preserve saved presets.
+- Document Kiwe Bricks attributes, controls, dynamic tags and loops in Developer and the MCP design guide.
+
 ## 8.0.0-rc.499 (2026-11-25, candidate)
 
 - Use an existing event session index to check protected incidents before retiring old page history. Preserve those pages when the lookup index is unavailable so other retention work can continue.

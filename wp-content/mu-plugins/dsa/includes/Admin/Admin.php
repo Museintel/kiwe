@@ -6610,6 +6610,7 @@ final class Admin {
 		?>
 		<section class="dsa-admin__panel">
 			<h2><?php esc_html_e( 'Universal Appsite attribute library', 'dsa' ); ?></h2>
+			<?php \DSA\Bricks\Authoring_Reference::render(); ?>
 			<p><?php echo esc_html( (string) ( $capabilities['purpose'] ?? __( 'Builder-neutral capability hooks for Bricks, block themes, and custom HTML.', 'dsa' ) ) ); ?></p>
 			<p class="description"><?php echo esc_html( (string) ( $capabilities['authorRule'] ?? __( 'Use attributes only where the matching Kiwe runtime owns the capability.', 'dsa' ) ) ); ?></p>
 			<p><strong><?php esc_html_e( 'Bricks custom attributes:', 'dsa' ); ?></strong> <?php esc_html_e( 'in Settings → Style → Attributes, put the exact attribute in Name and only its value in Value. Never put data-name="value" in the Value field. For a presence-only trigger, use 1.', 'dsa' ); ?></p>
