@@ -124,6 +124,7 @@ const gates = [
 	['Core inbox and private saved-cart identity projections', 'tools/release/saved-cart-inbox-contracts.cjs'],
 	['Shared sheet refresh, verification and backdrop continuity', 'tools/runtime/sheet-continuity-contracts.cjs'],
 	['Checkout serial draft and stale response boundaries', 'tools/runtime/checkout-save-contracts.cjs'],
+	['Bricks-authored checkout bindings and payment controls', 'tools/runtime/authored-checkout-contracts.cjs'],
 	['Role scoped notification renderer and explicit selections', 'tools/runtime/notification-preferences-render-contracts.cjs'],
 	['Private role preference frontend continuity', 'tools/release/notification-preference-client-contracts.cjs'],
 	['Private notification catalog and default native preferences', 'tools/release/notification-preference-journey-contracts.cjs'],

@@ -1,3 +1,8 @@
+## 8.0.0-rc.505 (2026-11-26, candidate)
+
+- Author a checkout review in Bricks with Kiwe address, total, and recurring-term bindings. Fill private values from the current checkout session.
+- Use Bricks attributes to open the DSA address editor, apply native WooCommerce coupons, and continue through an available payment gateway.
+
 ## 8.0.0-rc.504 (2026-11-26, candidate)
 
 - Preserve browser history when a shopper continues from the Cart or Checkout sheet to the checkout page.

@@ -3,6 +3,7 @@
 namespace DSA\Rest;
 
 use DSA\Commerce\Checkout_Service;
+use DSA\Commerce\Checkout_Experience_Service;
 use DSA\Utilities\Origin_Checker;
 use WP_Error;
 use WP_REST_Request;
@@ -25,6 +26,13 @@ final class Checkout_Controller {
 	}
 
 	public function routes(): void {
+		if ( Checkout_Experience_Service::authored() ) {
+			register_rest_route( 'dsa/v1', '/checkout/review', [
+				'methods'=>'GET',
+				'callback'=>[ $this, 'review' ],
+				'permission_callback'=>[ $this, 'same_site' ],
+			] );
+		}
 		register_rest_route(
 			'dsa/v1',
 			'/checkout',
@@ -41,6 +49,14 @@ final class Checkout_Controller {
 				],
 			]
 		);
+	}
+
+	public function review(): WP_REST_Response {
+		nocache_headers();
+		$response = new WP_REST_Response( Checkout_Experience_Service::review( $this->checkout ) );
+		$response->header( 'Cache-Control', 'private, no-store' );
+		$response->header( 'Vary', 'Cookie' );
+		return $response;
 	}
 
 	public function same_site(): bool {

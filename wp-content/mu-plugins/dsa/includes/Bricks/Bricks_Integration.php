@@ -379,6 +379,14 @@ final class Bricks_Integration {
 		}
 		if ( ! str_starts_with( $name, 'kiwe_' ) && 'woo_product_weight' !== $name ) return $tag;
 		$context = is_string( $context ) ? $context : 'text';
+		if ( in_array( $name, [ 'kiwe_checkout_address', 'kiwe_checkout_total', 'kiwe_checkout_renewal' ], true ) ) {
+			return 'text' === $context && class_exists( \DSA\Commerce\Checkout_Experience_Service::class )
+				? \DSA\Commerce\Checkout_Experience_Service::binding( $name ) : '';
+		}
+		if ( 'kiwe_checkout_terms_url' === $name ) {
+			$id = function_exists( 'wc_terms_and_conditions_page_id' ) ? wc_terms_and_conditions_page_id() : 0;
+			return $id > 0 ? esc_url_raw( get_permalink( $id ) ) : '';
+		}
 		if ( str_starts_with( $name, 'kiwe_icon_' ) ) return class_exists( Icon_Library_Service::class ) ? Icon_Library_Service::render( $name, $context ) : '';
 		if ( in_array( $name, [ 'kiwe_discussion_id','kiwe_discussion_count' ], true ) ) return Discussion_Bindings::render( $name, $post );
 		if(str_starts_with($name,'kiwe_testimonial')){
@@ -454,6 +462,10 @@ final class Bricks_Integration {
 		$definitions = [
 			'kiwe_discussion_id'      => __( 'Current discussion ID', 'dsa' ),
 			'kiwe_discussion_count'   => __( 'Approved top-level comments / reviews', 'dsa' ),
+			'kiwe_checkout_address'  => __( 'Checkout address', 'dsa' ),
+			'kiwe_checkout_total'    => __( 'Checkout total', 'dsa' ),
+			'kiwe_checkout_renewal'  => __( 'Checkout renewal terms', 'dsa' ),
+			'kiwe_checkout_terms_url' => __( 'Checkout terms page URL', 'dsa' ),
 			'kiwe_site_logo'          => __( 'Site logo URL', 'dsa' ),
 			'kiwe_site_logo_inverse'  => __( 'Site logo inverse URL', 'dsa' ),
 			'kiwe_store_address_1'    => __( 'Store address line 1', 'dsa' ),

@@ -47,6 +47,7 @@ final class Checkout_Service {
 
 	public function render_details_link(): void {
 		if ( ! $this->enabled() || ! $this->identity_allowed() ) return;
+		if ( Checkout_Experience_Service::authored() ) return;
 		if ( Checkout_Experience_Service::enabled() ) {
 			Checkout_Experience_Service::address_summary();
 			return;

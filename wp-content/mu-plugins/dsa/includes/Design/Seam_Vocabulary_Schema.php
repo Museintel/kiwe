@@ -231,9 +231,22 @@ final class Seam_Vocabulary_Schema {
 							[
 								'attribute' => 'data-kiwe-checkout-details',
 								'values' => [ 'boolean HTML attribute' ],
-								'purpose' => 'Open the Kiwe checkout sheet from a classic WooCommerce checkout. Link to #customer_details so the browser can reach the native form directly.',
-								'example' => '<a href="#customer_details" data-kiwe-checkout-details>Edit checkout details</a>',
+								'purpose' => 'Open Checkout DSA in edit mode from a Bricks checkout. Add the attribute to a native button or link. On a classic checkout template #customer_details can serve as an anchor fallback.',
+								'example' => '<button type="button" data-kiwe-checkout-details>Add or edit address</button>',
 							],
+						],
+					],
+					'checkoutReview' => [
+						'status' => 'live',
+						'authority' => 'woocommerce-native-checkout',
+						'dynamicTags' => [ '{kiwe_checkout_address}', '{kiwe_checkout_total}', '{kiwe_checkout_renewal}', '{kiwe_checkout_terms_url}' ],
+						'attributes' => [
+							[ 'attribute'=>'data-kiwe-checkout', 'purpose'=>'Root Bricks container on the Store checkout page. Put native Bricks headings, text tags, controls and the status element inside it.' ],
+							[ 'attribute'=>'data-kiwe-checkout-pay', 'values'=>[ 'upi','card','netbanking','wallet','razorpay','cod','subscription','free' ], 'purpose'=>'Place the order with the currently available Woo gateway. Hidden when ineligible. The Razorpay gateway owns payment authorization.' ],
+							[ 'attribute'=>'data-kiwe-checkout-consent', 'values'=>[ 'terms','renewal' ], 'purpose'=>'Accessible toggle button. Include aria-pressed="false". Only applicable consents appear. A changed recurring quote resets approval.' ],
+							[ 'attribute'=>'data-kiwe-checkout-coupon', 'purpose'=>'Coupon section containing a text input named coupon_code and an apply button. WooCommerce applies and validates coupons.' ],
+							[ 'attribute'=>'data-kiwe-checkout-apply-coupon', 'purpose'=>'Apply the coupon and refresh the native total and renewal quote.' ],
+							[ 'attribute'=>'data-kiwe-checkout-status', 'purpose'=>'Message container with role=status. Receives payment and coupon notices.' ],
 						],
 					],
 					'browserNotifications' => [

@@ -106,24 +106,19 @@ final class Subscription_Checkout_Service {
 		] ), wp_salt( 'nonce' ) );
 	}
 
-	public function payment_fields(): void {
+	public function review(): ?array {
+		if ( ! $this->recurring_cart() ) return null;
+		if ( ! self::enabled() ) return [ 'message'=>__( 'Subscription payments are currently unavailable.', 'dsa' ) ];
 		$customer = self::customer();
-		if ( ! $customer ) {
-			printf( '<p>%s <a href="%s">%s</a></p>',
-				esc_html__( 'Sign in or create an account to buy a subscription.', 'dsa' ),
-				esc_url( wc_get_page_permalink( 'myaccount' ) ), esc_html__( 'My account', 'dsa' ) );
-			return;
-		}
+		if ( ! $customer ) return [ 'message'=>__( 'Sign in or create an account to buy a subscription.', 'dsa' ), 'signIn'=>true ];
 		try {
 			$quote = $this->current_quote();
 			Subscription_Quote_Service::assert_groups_available( $customer, $quote['lines'] );
 			$token = $this->consent_token( $quote, $customer );
 		} catch ( \DomainException $error ) {
-			echo '<p>' . esc_html( $error->getMessage() ) . '</p>';
-			return;
+			return [ 'message'=>$error->getMessage() ];
 		} catch ( \RuntimeException $error ) {
-			echo '<p>' . esc_html__( 'Review the subscription items in your cart before continuing.', 'dsa' ) . '</p>';
-			return;
+			return [ 'message'=>__( 'Review the subscription items in your cart before continuing.', 'dsa' ) ];
 		}
 		$summary = sprintf(
 			/* translators: 1: first charge, 2: renewal charge, 3: number of months in the first term, 4: months between renewals, 5: renewal count. */
@@ -133,13 +128,30 @@ final class Subscription_Checkout_Service {
 			self::months( $quote['firstTermMonths'] ), self::months( $quote['intervalMonths'] ),
 			number_format_i18n( Subscription_Billing_Service::CYCLES )
 		);
-		echo '<p>' . wp_kses_post( $summary ) . '</p>';
-		if ( $quote['recurringLines'] > 1 ) {
+		return [
+			'quote'=>$token,
+			'summary'=>html_entity_decode( wp_strip_all_tags( $summary ), ENT_QUOTES, 'UTF-8' ),
+			'sharedAgreement'=>$quote['recurringLines'] > 1,
+		];
+	}
+
+	public function payment_fields(): void {
+		$review = $this->review() ?? [];
+		if ( ! empty( $review['message'] ) ) {
+			echo '<p>' . esc_html( $review['message'] );
+			if ( ! empty( $review['signIn'] ) ) {
+				echo ' <a href="' . esc_url( wc_get_page_permalink( 'myaccount' ) ) . '">' . esc_html__( 'My account', 'dsa' ) . '</a>';
+			}
+			echo '</p>';
+		}
+		if ( empty( $review['quote'] ) ) return;
+		echo '<p>' . esc_html( $review['summary'] ) . '</p>';
+		if ( $review['sharedAgreement'] ) {
 			echo '<p>' . esc_html__( 'These memberships share one billing agreement. Buy them separately if you want to manage renewals independently.', 'dsa' ) . '</p>';
 		}
 		// Woo restores controls by ID after fragment swaps. A changed quote needs a new unchecked control.
 		printf( '<input type="hidden" name="kiwe_subscription_quote" value="%1$s"><label for="kiwe-consent-%1$s"><input type="checkbox" id="kiwe-consent-%1$s" name="kiwe_subscription_consent" value="yes"> %2$s</label>',
-			esc_attr( $token ), esc_html__( 'I agree to the first charge and automatic renewals through Razorpay.', 'dsa' ) );
+			esc_attr( $review['quote'] ), esc_html__( 'I agree to the first charge and automatic renewals through Razorpay.', 'dsa' ) );
 	}
 
 	private static function months( int $count ): string {

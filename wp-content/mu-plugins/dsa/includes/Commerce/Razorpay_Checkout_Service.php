@@ -8,7 +8,9 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 /** Integrates method selection into the qualified official gateway's normal receipt. */
 final class Razorpay_Checkout_Service {
 	public const CHOICE_SETTING = 'kiwe_standard_method_choices';
+	private const EXTRA_CHOICES = 'kiwe_additional_standard_methods';
 	public const ORDER_META = '_kiwe_razorpay_checkout_method';
+	private const STANDARD_CHOICES = [ 'upi', 'card', 'netbanking', 'wallet' ];
 	private const QUALIFIED_VERSION = '4.8.9';
 
 	public function register(): void {
@@ -37,7 +39,20 @@ final class Razorpay_Checkout_Service {
 			'default' => 'no',
 			'description' => __( 'Enable this for standard Razorpay Checkout after verifying both methods in your Razorpay account.', 'dsa' ),
 		];
+		$fields[self::EXTRA_CHOICES] = [
+			'title' => __( 'Additional Kiwe payment choices', 'dsa' ),
+			'type' => 'multiselect',
+			'options' => [ 'netbanking'=>__( 'Net banking', 'dsa' ), 'wallet'=>__( 'Wallet', 'dsa' ) ],
+			'default' => [],
+			'description' => __( 'Select methods after verifying them in your Razorpay account.', 'dsa' ),
+		];
 		return $fields;
+	}
+
+	public static function configured_choices(): array {
+		if ( ! self::can_choose() ) return [];
+		$settings = get_option( 'woocommerce_razorpay_settings', [] );
+		return array_merge( [ 'upi', 'card' ], array_intersect( [ 'netbanking', 'wallet' ], (array) ( $settings[self::EXTRA_CHOICES] ?? [] ) ) );
 	}
 
 	public function gateways( array $gateways ): array {
@@ -51,7 +66,7 @@ final class Razorpay_Checkout_Service {
 	public function record_choice( \WC_Order $order, array $checkout ): void {
 		$choice = $_POST['kiwe_checkout_method'] ?? '';
 		if ( 'razorpay' === ( $checkout['payment_method'] ?? '' ) && self::can_choose()
-			&& 'INR' === $order->get_currency() && in_array( $choice, [ 'upi', 'card' ], true ) ) {
+			&& 'INR' === $order->get_currency() && in_array( $choice, self::configured_choices(), true ) ) {
 			$order->update_meta_data( self::ORDER_META, $choice );
 		} else {
 			$order->delete_meta_data( self::ORDER_META );
@@ -62,14 +77,19 @@ final class Razorpay_Checkout_Service {
 		if ( ! $order || ! $order->needs_payment() || 'razorpay' !== $order->get_payment_method()
 			|| 'INR' !== $order->get_currency() || 'all' === ( $_GET['kiwe_payment_methods'] ?? '' ) ) return '';
 		$method = $order->get_meta( self::ORDER_META );
-		return in_array( $method, [ 'upi', 'card' ], true ) ? $method : '';
+		return in_array( $method, self::STANDARD_CHOICES, true ) ? $method : '';
 	}
 
 	public static function display_config( string $method ): array {
 		return [
 			'blocks' => [
 				'kiwe_method' => [
-					'name' => 'upi' === $method ? __( 'UPI', 'dsa' ) : __( 'Card', 'dsa' ),
+					'name' => match ( $method ) {
+						'upi' => __( 'UPI', 'dsa' ),
+						'netbanking' => __( 'Net banking', 'dsa' ),
+						'wallet' => __( 'Wallet', 'dsa' ),
+						default => __( 'Card', 'dsa' ),
+					},
 					'instruments' => [ [ 'method' => $method ] ],
 				],
 			],

@@ -46,3 +46,7 @@
 .kiwe-checkout-experience .kiwe-checkout-address a {
 	text-underline-offset: .2em;
 }
+
+[data-kiwe-checkout] [hidden] {
+	display: none !important;
+}

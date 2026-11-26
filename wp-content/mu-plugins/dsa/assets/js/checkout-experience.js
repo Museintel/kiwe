@@ -1,6 +1,12 @@
 ( function () {
 	'use strict';
 
+	const reviewPage = document.querySelector( '[data-kiwe-checkout]' );
+	if ( reviewPage ) {
+		bindAuthoredCheckout( reviewPage );
+		return;
+	}
+
 	const form = document.querySelector( 'form.woocommerce-checkout' );
 	if ( ! form ) return;
 
@@ -66,4 +72,171 @@
 	form.addEventListener( 'change', sync );
 	if ( window.jQuery ) window.jQuery( document.body ).on( 'updated_checkout.kiweExperience', sync );
 	sync();
+
+	function bindAuthoredCheckout( page ) {
+		const readReview = window.DSA && window.DSA.readCheckoutReview;
+		if ( ! readReview ) return;
+		const payments = Array.from( page.querySelectorAll( '[data-kiwe-checkout-pay]' ) );
+		const consents = Array.from( page.querySelectorAll( '[data-kiwe-checkout-consent]' ) );
+		const coupon = page.querySelector( '[data-kiwe-checkout-coupon]' );
+		const status = page.querySelector( '[data-kiwe-checkout-status]' );
+		let review = null;
+		let busy = false;
+		let refreshing = false;
+		let revision = 0;
+
+		function announce( message ) {
+			if ( status ) status.textContent = message || '';
+		}
+
+		function updateControls() {
+			const ready = review && review.available && ! review.empty;
+			const disabled = busy || refreshing || ! ready;
+			payments.forEach( function ( button ) {
+				button.hidden = Boolean( review ) && ( ! ready || ! Object.hasOwn( review.methods, button.dataset.kiweCheckoutPay ) );
+				if ( 'disabled' in button ) button.disabled = disabled;
+				button.setAttribute( 'aria-disabled', disabled ? 'true' : 'false' );
+			} );
+			consents.forEach( function ( control ) {
+				control.hidden = Boolean( review ) && !( control.dataset.kiweCheckoutConsent === 'terms' ? review.termsRequired : review.subscriptionQuote );
+			} );
+			if ( coupon ) coupon.hidden = Boolean( review ) && ( ! ready || ! review.coupons );
+			page.setAttribute( 'aria-busy', busy || refreshing ? 'true' : 'false' );
+		}
+
+		function refresh() {
+			const order = ++revision;
+			refreshing = true;
+			updateControls();
+			return readReview().then( function ( data ) {
+				if ( order !== revision ) return;
+				if ( ! review || review.subscriptionQuote !== data.subscriptionQuote ) {
+					consents.filter( control => control.dataset.kiweCheckoutConsent === 'renewal' )
+						.forEach( control => control.setAttribute( 'aria-pressed', 'false' ) );
+				}
+				review = data;
+				page.querySelectorAll( '[data-kiwe-checkout-value]' ).forEach( function ( output ) {
+					const key = output.dataset.kiweCheckoutValue;
+					output.textContent = data[key] || ( key === 'address' ? 'Add your address' : key === 'total' ? '–' : '' );
+				} );
+				if ( data.sharedAgreement ) {
+					announce( 'These plans share one billing agreement. Buy them separately to manage renewals independently.' );
+				}
+				if ( ! data.available ) announce( 'Checkout details are unavailable. Open the address editor to continue.' );
+				else if ( data.empty ) announce( 'Your cart is empty.' );
+				else if ( ! Object.keys( data.methods ).length && ! data.renewal ) announce( 'No payment method is available for this cart.' );
+			} ).catch( function () {
+				if ( order !== revision ) return;
+				review = null;
+				announce( 'Checkout could not load. Refresh the page to try again.' );
+			} ).finally( function () {
+				if ( order !== revision ) return;
+				refreshing = false;
+				updateControls();
+			} );
+		}
+
+		function accepted( kind ) {
+			return consents.some( control => control.dataset.kiweCheckoutConsent === kind && control.getAttribute( 'aria-pressed' ) === 'true' );
+		}
+
+		function request( endpoint, fields ) {
+			const url = new URL( endpoint, window.location.href );
+			if ( url.origin !== window.location.origin ) throw new Error( 'Invalid checkout destination.' );
+			return fetch( url, { method: 'POST', credentials: 'same-origin', cache: 'no-store', body: fields } );
+		}
+
+		function noticeText( html ) {
+			return new DOMParser().parseFromString( String( html || '' ), 'text/html' ).body.textContent.trim();
+		}
+
+		async function placeOrder( choice ) {
+			if ( ! review || ! review.available || review.empty || ! Object.hasOwn( review.methods, choice ) ) return;
+			if ( review.termsRequired && ! accepted( 'terms' ) ) {
+				announce( 'Accept the terms before continuing.' );
+				return;
+			}
+			if ( choice === 'subscription' && ! accepted( 'renewal' ) ) {
+				announce( 'Review and agree to automatic renewals before continuing.' );
+				return;
+			}
+			const fields = new URLSearchParams();
+			Object.entries( review.fields ).forEach( function ( [ key, value ] ) {
+				if ( Array.isArray( value ) ) value.forEach( item => fields.append( key + '[]', item ) );
+				else fields.set( key, value );
+			} );
+			review.shipping.forEach( ( rate, index ) => fields.set( 'shipping_method[' + index + ']', rate ) );
+			fields.set( 'woocommerce-process-checkout-nonce', review.checkoutNonce );
+			fields.set( 'payment_method', review.methods[choice] );
+			fields.set( 'kiwe_checkout_method', choice );
+			if ( review.termsRequired ) {
+				fields.set( 'terms-field', '1' );
+				fields.set( 'terms', 'on' );
+			}
+			if ( choice === 'subscription' ) {
+				fields.set( 'kiwe_subscription_quote', review.subscriptionQuote );
+				fields.set( 'kiwe_subscription_consent', 'yes' );
+			}
+			const response = await request( review.checkoutUrl, fields );
+			const result = await response.json();
+			if ( result.result !== 'success' || ! result.redirect ) {
+				throw new Error( noticeText( result.messages ) || 'Review your details and try again.' );
+			}
+			const destination = new URL( result.redirect, window.location.href );
+			if ( destination.origin !== window.location.origin ) throw new Error( 'Open your order to continue payment.' );
+			window.location.assign( destination.href );
+		}
+
+		async function applyCoupon() {
+			if ( ! review || ! review.coupons || ! coupon ) return;
+			const field = coupon.querySelector( '[name="coupon_code"], input[type="text"]' );
+			if ( ! field || ! field.value.trim() ) {
+				announce( 'Enter a coupon code.' );
+				if ( field ) field.focus();
+				return;
+			}
+			const fields = new URLSearchParams( { coupon_code: field.value.trim(), security: review.couponNonce } );
+			if ( review.fields.billing_email ) fields.set( 'billing_email', review.fields.billing_email );
+			const response = await request( review.couponUrl, fields );
+			if ( ! response.ok ) throw new Error( 'The coupon could not be checked. Try again.' );
+			const message = noticeText( await response.text() );
+			await refresh();
+			announce( message );
+		}
+
+		function run( action, message ) {
+			if ( busy || refreshing || ! review || ! review.available ) return;
+			busy = true;
+			updateControls();
+			announce( message );
+			Promise.resolve().then( action ).catch( function ( error ) {
+				announce( error.message || 'Checkout could not continue.' );
+			} ).finally( function () {
+				busy = false;
+				updateControls();
+			} );
+		}
+
+		page.addEventListener( 'click', function ( event ) {
+			const button = event.target.closest( '[data-kiwe-checkout-pay], [data-kiwe-checkout-consent], [data-kiwe-checkout-apply-coupon]' );
+			if ( ! button || ! page.contains( button ) ) return;
+			event.preventDefault();
+			if ( button.hasAttribute( 'data-kiwe-checkout-consent' ) ) {
+				button.setAttribute( 'aria-pressed', button.getAttribute( 'aria-pressed' ) === 'true' ? 'false' : 'true' );
+			} else if ( button.hasAttribute( 'data-kiwe-checkout-pay' ) ) {
+				run( () => placeOrder( button.dataset.kiweCheckoutPay ), 'Checking your order…' );
+			} else {
+				run( applyCoupon, 'Checking coupon…' );
+			}
+		} );
+		if ( coupon ) coupon.addEventListener( 'submit', function ( event ) {
+			event.preventDefault();
+			event.stopImmediatePropagation();
+			run( applyCoupon, 'Checking coupon…' );
+		}, true );
+		window.addEventListener( 'dsa:checkout:draft-applied', refresh );
+		if ( ! status ) return;
+		updateControls();
+		refresh();
+	}
 } )();

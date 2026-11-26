@@ -5289,6 +5289,11 @@
 		}
 	}
 
+	// The Store checkout page consumes the same private, session-bound REST client as the sheet.
+	window.DSA.readCheckoutReview = function () {
+		return runtimeHydrationPromise.then( function () { return dsaGet( '/checkout/review' ); } );
+	};
+
 	function navigateFromCheckoutSheet( checkoutUrl ) {
 		// Use the sheet's history entry for checkout so closing cannot race the page load with Back.
 		const replaceHistoryEntry = surfaceHistoryActive;
@@ -11250,6 +11255,17 @@
 	}, true );
 
 	document.addEventListener( 'click', function ( event ) {
+		const edit = closestEventTarget( event, '[data-kiwe-checkout-details]' );
+		if ( edit && ! event.defaultPrevented && event.button === 0
+			&& ! event.metaKey && ! event.ctrlKey && ! event.shiftKey && ! event.altKey
+			&& ( ! edit.target || edit.target === '_self' )
+			&& isCurrentCheckoutPage() && commerce.settings && commerce.settings.checkoutSurfaceEnabled
+			&& ( edit.closest( '[data-kiwe-checkout]' ) || document.querySelector( 'form.checkout #customer_details, form.woocommerce-checkout #customer_details' ) ) ) {
+			event.preventDefault();
+			event.stopPropagation();
+			openCheckoutSurface( { returnToPage: true, editDetails: true } );
+			return;
+		}
 		const launcher = closestEventTarget( event, '[data-dsa-open-module]' );
 		if ( ! launcher || launcher.closest( '[data-dsa-surface]' ) ) return;
 		const moduleId = String( launcher.dataset.dsaOpenModule || '' );
@@ -11910,17 +11926,6 @@
 		if ( purchaseAttemptTarget( link ) && openPurchaseIdentityGate( link.href ) ) {
 			event.preventDefault();
 			event.stopPropagation();
-			return;
-		}
-
-		if ( link.hasAttribute( 'data-kiwe-checkout-details' )
-			&& link.getAttribute( 'href' ) === '#customer_details'
-			&& ( ! link.target || link.target === '_self' )
-			&& commerce.settings && commerce.settings.checkoutSurfaceEnabled
-			&& isCurrentCheckoutPage() && document.querySelector( 'form.checkout #customer_details' ) ) {
-			event.preventDefault();
-			event.stopPropagation();
-			openCheckoutSurface( { returnToPage: true, editDetails: true } );
 			return;
 		}
 
