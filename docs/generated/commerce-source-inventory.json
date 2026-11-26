@@ -4319,7 +4319,7 @@
     },
     {
       "source": "wp-content/mu-plugins/dsa/includes/Commerce/Checkout_Offers.php",
-      "sha256": "d5a20d2d076cbd0c176311450e402917e565e00ce82d1527480f6db2571b64e5",
+      "sha256": "8c08ce236ba49f25ccd6432d87f7e447964906511739994e4bdc23d622aa733a",
       "symbols": [
         {
           "kind": "metadata",
@@ -4348,128 +4348,138 @@
         },
         {
           "kind": "hook",
-          "name": "woocommerce_coupon_options",
+          "name": "woocommerce_cart_loaded_from_session",
           "line": 18
         },
         {
           "kind": "hook",
-          "name": "woocommerce_coupon_options_save",
+          "name": "woocommerce_coupon_options",
           "line": 19
         },
         {
           "kind": "hook",
-          "name": "bricks/setup/control_options",
+          "name": "woocommerce_coupon_options_save",
           "line": 20
         },
         {
           "kind": "hook",
-          "name": "bricks/query/run",
+          "name": "bricks/setup/control_options",
           "line": 21
         },
         {
           "kind": "hook",
-          "name": "bricks/query/loop_object_id",
+          "name": "bricks/query/run",
           "line": 22
         },
         {
           "kind": "hook",
-          "name": "bricks/dynamic_tags_list",
+          "name": "bricks/query/loop_object_id",
           "line": 23
         },
         {
           "kind": "hook",
-          "name": "bricks/dynamic_data/render_tag",
+          "name": "bricks/dynamic_tags_list",
           "line": 24
         },
         {
           "kind": "hook",
-          "name": "bricks/dynamic_data/render_content",
+          "name": "bricks/dynamic_data/render_tag",
           "line": 25
+        },
+        {
+          "kind": "hook",
+          "name": "bricks/dynamic_data/render_content",
+          "line": 26
         },
         {
           "kind": "method",
           "name": "settings",
-          "line": 28
+          "line": 29
         },
         {
           "kind": "method",
           "name": "can_edit",
-          "line": 35
+          "line": 36
         },
         {
           "kind": "method",
           "name": "set_settings",
-          "line": 41
+          "line": 42
         },
         {
           "kind": "method",
           "name": "membership_product",
-          "line": 56
+          "line": 57
         },
         {
           "kind": "method",
           "name": "editor",
-          "line": 74
+          "line": 75
         },
         {
           "kind": "method",
           "name": "save_editor",
-          "line": 102
+          "line": 103
         },
         {
           "kind": "method",
           "name": "validate_membership",
-          "line": 113
+          "line": 114
         },
         {
           "kind": "method",
-          "name": "apply_membership_offers",
+          "name": "refresh_restored_cart",
           "line": 119
         },
         {
           "kind": "method",
+          "name": "apply_membership_offers",
+          "line": 126
+        },
+        {
+          "kind": "method",
           "name": "coupon_ids",
-          "line": 145
+          "line": 152
         },
         {
           "kind": "method",
           "name": "listed",
-          "line": 153
+          "line": 160
         },
         {
           "kind": "method",
           "name": "review",
-          "line": 170
+          "line": 177
         },
         {
           "kind": "method",
           "name": "query_options",
-          "line": 200
+          "line": 207
         },
         {
           "kind": "method",
           "name": "run_query",
-          "line": 205
+          "line": 212
         },
         {
           "kind": "method",
           "name": "loop_id",
-          "line": 217
+          "line": 224
         },
         {
           "kind": "method",
           "name": "tags",
-          "line": 221
+          "line": 228
         },
         {
           "kind": "method",
           "name": "render_tag",
-          "line": 230
+          "line": 237
         },
         {
           "kind": "method",
           "name": "render_content",
-          "line": 243
+          "line": 250
         }
       ]
     },

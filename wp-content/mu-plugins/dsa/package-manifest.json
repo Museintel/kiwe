@@ -1557,8 +1557,8 @@
       "sha256": "aa94a10a9766bd72403f293fdc42120020906b34f03bd2ad9575c86d10e47af5"
     },
     "includes/Commerce/Checkout_Offers.php": {
-      "bytes": 11713,
-      "sha256": "d5a20d2d076cbd0c176311450e402917e565e00ce82d1527480f6db2571b64e5"
+      "bytes": 12097,
+      "sha256": "8c08ce236ba49f25ccd6432d87f7e447964906511739994e4bdc23d622aa733a"
     },
     "includes/Commerce/Checkout_Service.php": {
       "bytes": 27367,

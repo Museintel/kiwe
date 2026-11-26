@@ -15,6 +15,7 @@ final class Checkout_Offers {
 	public function register(): void {
 		add_filter( 'woocommerce_coupon_is_valid', [ $this, 'validate_membership' ], 25, 2 );
 		add_action( 'woocommerce_before_calculate_totals', [ $this, 'apply_membership_offers' ], 10 );
+		add_action( 'woocommerce_cart_loaded_from_session', [ $this, 'refresh_restored_cart' ], 35 );
 		add_action( 'woocommerce_coupon_options', [ $this, 'editor' ], 10, 2 );
 		add_action( 'woocommerce_coupon_options_save', [ $this, 'save_editor' ], 10, 2 );
 		add_filter( 'bricks/setup/control_options', [ $this, 'query_options' ] );
@@ -115,26 +116,32 @@ final class Checkout_Offers {
 		return $valid && ( ! $id || isset( Membership_Directory::paid_product_ids( get_current_user_id() )[ $id ] ) );
 	}
 
+	public function refresh_restored_cart( \WC_Cart $cart ): void {
+		$before = $cart->get_applied_coupons();
+		$this->apply_membership_offers( $cart );
+		if ( $before !== $cart->get_applied_coupons() ) $cart->calculate_totals();
+	}
+
 	/** Woo still validates restrictions and calculates actual discounts. Discard lost access before totals. */
 	public function apply_membership_offers( \WC_Cart $cart ): void {
 		if ( ! wc_coupons_enabled() ) return;
 		$applied = $cart->get_coupons();
-		$discounts = new \WC_Discounts( $cart );
+		$discounts = null;
 		$codes = [];
 		$exclusive = false;
 		foreach ( $applied as $code => $coupon ) {
-			if ( self::settings( $coupon )['membershipProductId'] && true !== $discounts->is_coupon_valid( $coupon ) ) continue;
+			if ( self::settings( $coupon )['membershipProductId'] && true !== ( $discounts ??= new \WC_Discounts( $cart ) )->is_coupon_valid( $coupon ) ) continue;
 			$codes[] = $code;
 			$exclusive = $exclusive || $coupon->get_individual_use();
 		}
-		$owned = $cart->is_empty() ? [] : Membership_Directory::paid_product_ids( get_current_user_id() );
+		$owned = $cart->get_cart_contents() ? Membership_Directory::paid_product_ids( get_current_user_id() ) : [];
 		if ( $owned && ! $exclusive ) {
 			$ids = self::coupon_ids( self::MEMBER, array_keys( $owned ) );
 			foreach ( $ids as $id ) {
 				$coupon = new \WC_Coupon( $id );
 				$code = $coupon->get_code();
 				if ( in_array( $code, $codes, true ) || ( $codes && $coupon->get_individual_use() )
-					|| true !== $discounts->is_coupon_valid( $coupon ) ) continue;
+					|| true !== ( $discounts ??= new \WC_Discounts( $cart ) )->is_coupon_valid( $coupon ) ) continue;
 				$codes[] = $code;
 				if ( $coupon->get_individual_use() ) break;
 			}
