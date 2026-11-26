@@ -103,6 +103,16 @@ Run `tools/release/test-wordpress-kiwe-shopper-checkout.mjs` against the isolate
 
 On 26 November, the 390 px Chrome run passed 16 checks with the Bricks theme and classic WooCommerce checkout. It verified the ₹8,738 upfront and ₹700 renewal amounts, owner-only retries, stock release after confirmed expiry and the Store Off/On cycle. The account form stopped renewal and the private page remained readable through the paid period. An unrelated shopper received 404. The expanded native membership suite passed 47 checks in each of WooCommerce's HPOS and legacy storage modes. All four setup modes passed native WordPress qualification, including a services boot without WooCommerce files. Native variation operations passed 71 checks in the previous checkout candidate.
 
+## Plum Giraffe qualification
+
+On 26 November, isolated WordPress 7.1.5 installations on Hostinger authenticated Core 8.0.0-rc.500, MCP 1.2.0-rc.4 and the matching Store 1.2.0-rc.2. The services install had no WooCommerce, Store, Razorpay or Shiprocket. The combined install loaded WooCommerce 11.3.1 and both membership services, with the vendor archives verified against WordPress.org. The existing public Plum Giraffe homepage and its Core RC498 remained available.
+
+The original Store 1.2.0-rc.1 package failed native provider admission. Its explicit class map redundantly declared commerce classes that the owned namespace already supplies. Remove those entries from the source map and validate real ownership descriptors through the same native contract used at installation. The corrected Store version passed the actual split installation and 234 App platform contract checks. The signed Core package remained byte-identical.
+
+Razorpay Test Mode issued and captured the original ₹8,400 invoice on the hosted approval page. A reviewed operator reconciliation applied it to the exact WooCommerce order and granted membership only to the buyer. Buyer self-service then confirmed cancellation at Razorpay and kept the already purchased period. Razorpay recorded a full test refund. Kiwe reconciled the same invoice, marked the WooCommerce order refunded and withdrew the paid access. Provider-originated webhook delivery and a scheduled ₹700 recurring capture still need hosted proof. The real Razorpay operations here used the synthetic order only. [Razorpay subscription test cards](https://github.com/razorpay/markdown-docs/blob/master/payments/payments/test-card-details.md)
+
+The existing GitHub Ed25519 signer authenticated the exact archive and inventory hashes. The archives stay in private candidate custody. After qualification, use the same Core artifact on eligible sites and preflight each Store dependency before publication or rollout. Launch referral settlement and production rollout remain open.
+
 ## Delivery and qualification
 
 | Batch | Acceptance |
