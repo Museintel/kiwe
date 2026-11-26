@@ -12,6 +12,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 final class Account_Controller {
+	public function __construct( private bool $phonekey_enabled = true ) {}
+
 	public function register(): void {
 		add_action( 'rest_api_init', [ $this, 'routes' ] );
 	}
@@ -27,6 +29,7 @@ final class Account_Controller {
 			'/account/avatar'    => [ 'methods' => 'POST', 'callback' => 'update_avatar' ],
 			'/account/password-reset' => [ 'methods' => 'POST', 'callback' => 'password_reset' ],
 		] as $route => $args ) {
+			if ( ! $this->phonekey_enabled && 'orders' !== $args['callback'] ) continue;
 			if ( in_array( $args['callback'], [ 'orders','downloads','addresses','update_address' ], true ) && ! \DSA\Apps\Store_App_Service::enabled() ) continue;
 			register_rest_route(
 				'dsa/v1',
@@ -254,13 +257,14 @@ final class Account_Controller {
 		return new WP_REST_Response( [ 'ok' => true, 'message' => __( 'Password reset email sent.', 'dsa' ) ], 200 );
 	}
 
-	public function orders(): WP_REST_Response {
+	public function orders( ?WP_REST_Request $request = null ): WP_REST_Response {
 		if ( ! \DSA\Apps\Store_App_Service::enabled() || ! function_exists( 'wc_get_orders' ) ) {
 			return new WP_REST_Response( [ 'orders' => [] ], 200 );
 		}
 
 		$orders = wc_get_orders(
 			[
+				'type'        => 'shop_order',
 				'customer_id' => get_current_user_id(),
 				'limit'       => 10,
 				'orderby'     => 'date',
@@ -299,7 +303,16 @@ final class Account_Controller {
 			];
 		}
 
-		return new WP_REST_Response( [ 'orders' => $data ], 200 );
+		$membership = \DSA\Commerce\Membership_Account_Service::class;
+		$summary = [ 'orders'=>$data ];
+		if ( '1' === $request?->get_param( 'memberships' ) && class_exists( $membership ) && ( $active = $membership::active_cards() ) ) {
+			$summary['activeMemberships'] = $active;
+			$summary['shopUrl'] = esc_url_raw( wc_get_page_permalink( 'shop' ) );
+			$summary['accountUrl'] = esc_url_raw( wc_get_page_permalink( 'myaccount' ) ) . '#kiwe-memberships';
+		}
+		$response = new WP_REST_Response( $summary, 200 );
+		$response->header( 'Cache-Control', 'private, no-store' );
+		return $response;
 	}
 
 	public function downloads(): WP_REST_Response {

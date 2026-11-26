@@ -61,8 +61,9 @@ $product->set_virtual(true);
 $product->set_tax_status('none');
 $product->set_regular_price('8400');
 $product->set_status('draft');
-Products::write($product, ['renewalMinor'=>70000, 'intervalMonths'=>1, 'firstTermMonths'=>12]);
+Products::write($product, ['renewalMinor'=>70000, 'intervalMonths'=>1, 'firstTermMonths'=>12, 'membershipGroup'=>'cardio']);
 $product->save();
+$membershipProductId = $product->get_id();
 $ordinary = new WC_Product_Simple();
 $ordinary->set_name('One-time item ' . $fixture);
 $ordinary->set_virtual(true);
@@ -102,6 +103,12 @@ add_filter('pre_http_request', static function ($reply, $args, $url) use (&$prov
         $resource = 'subscriptions/'.$subscriptionId;
         $provider[$resource]['status'] = 'cancelled';
         if ($loseCancellation) return new WP_Error('lost_cancel_response', 'The fixture lost the cancellation response.');
+    }
+    foreach (['pause'=>'paused','resume'=>'active'] as $action=>$state) {
+        if (('subscriptions/'.$subscriptionId.'/'.$action) !== $resource || 'POST' !== $args['method']) continue;
+        if ([$action.'_at'=>'now'] !== json_decode($args['body'], true)) throw new RuntimeException('Unexpected pause or resume timing.');
+        $resource = 'subscriptions/'.$subscriptionId;
+        $provider[$resource]['status'] = $state;
     }
     return isset($provider[$resource])
         ? ['response'=>['code'=>200], 'body'=>wp_json_encode($provider[$resource])]
@@ -204,11 +211,30 @@ try {
     $staffNotices = $inbox($staff);
     $assert(count($customerNotices) === 3 && count($staffNotices) === 3 && !$inbox($other) && !$inbox($editor),
         'Each paid period generates one inbox update for the member and permitted staff only.');
+    foreach ([$customerNotices,$staffNotices] as $notices) {
+        $titles = array_column($notices,'title');
+        $assert(count(array_filter($titles, static fn ($title) => str_ends_with($title,'Membership '.$fixture))) === 3
+            && count(array_filter($titles, static fn ($title) => str_starts_with($title,'Membership automatically renewed'))) === 2,
+            'The inbox uses the purchased plan name and identifies each automatic renewal.');
+    }
+    $profile = new WP_REST_Request('GET', '/dsa/v1/account/orders');
+    $profile->set_query_params(['memberships'=>'1']);
     wp_set_current_user($member);
     $assert(Receipts::membership(wc_get_order($membershipOrderId))['status'] === 'active' && !$members['discoverPermission'](), 'A customer can read their own membership and cannot discover the staff directory.');
+    $profileData = rest_do_request($profile);
+    $activeCard = $profileData->get_data()['activeMemberships'][0] ?? [];
+    $assert(($activeCard['name'] ?? '') === 'Membership '.$fixture && $activeCard['orderId'] === $membershipOrderId
+        && $profileData->get_headers()['Cache-Control'] === 'private, no-store', 'The private Profile rail uses the purchased plan and the original Woo order.');
+    $assert(!$ops['store.subscription.orders']['permission']([]), 'A shopper cannot query the staff Orders tab through MCP.');
     wp_set_current_user($other);
     $assert(!Receipts::membership(wc_get_order($membershipOrderId)) && !$members['permission']([]), 'Another customer cannot read that membership or the staff roster.');
+    $assert(empty(rest_do_request($profile)->get_data()['activeMemberships']), 'An unrelated shopper receives no membership cards.');
     wp_set_current_user($staff);
+    $subscriptions = array_column(json_decode($ops['store.subscription.orders']['execute']([])['resultJson'], true)['orders'], null, 'id');
+    $assert(($subscriptions[$membershipOrderId]['subscriptionLabel'] ?? '') === 'New subscription', 'The Orders tab marks the original native subscription order.');
+    foreach ($orders as $receipt) {
+        $assert(($subscriptions[$receipt->get_id()]['subscriptionLabel'] ?? '') === 'Subscription renewal', 'A renewal is a separate native order in the same tab.');
+    }
     $list = json_decode($members['execute'](['search'=>$fixture])['resultJson'], true);
     $assert(count($list['people']) === 1 && $list['people'][0]['id'] === $member && $list['people'][0]['status'] === 'active',
         'The Members view and MCP show the same active purchaser while leaving ordinary customers out.');
@@ -251,6 +277,29 @@ try {
     $assert($getPage($memberPage) === 0 && !MyMembership::available(), 'Suspension revokes member page and self-service access.');
     delete_user_meta($member, Users::SUSPENDED_META);
 
+    $provider['subscriptions/'.$subscriptionId]['status'] = 'active';
+    $eventSubject = ['subscription'=>['entity'=>['id'=>$subscriptionId]]];
+    $assert($webhook('subscription.resumed',$eventSubject)->get_status() === 200, 'A signed lifecycle event refreshes the active provider state.');
+    $pauseControl = $ops['store.membership.renewals'];
+    $pauseInput = ['orderId'=>$membershipOrderId,'action'=>'pause'];
+    wp_set_current_user($other);
+    $assert(!$pauseControl['permission']($pauseInput), 'Another customer cannot pause the buyer’s subscription.');
+    wp_set_current_user($member);
+    $paused = json_decode($write($pauseControl,$pauseInput)['resultJson'],true);
+    $assert($paused['status'] === 'paused' && $paused['active'] && $paused['canResume'], 'Pause stops future billing while keeping the paid membership visible.');
+    $resumed = json_decode($write($pauseControl,['orderId'=>$membershipOrderId,'action'=>'resume'])['resultJson'],true);
+    $assert($resumed['status'] === 'active' && $resumed['active'] && $resumed['canPause'], 'A confirmed resume preserves the paid period and re-enables future billing.');
+    DSA\Commerce\Subscription_Quote_Service::assert_groups_available($member, [['productId'=>$ordinary->get_id(),'membershipGroup'=>'full-gym']]);
+    $assert(true, 'A membership in a separate group can coexist.');
+    foreach ([['productId'=>$ordinary->get_id(),'membershipGroup'=>'cardio'],['productId'=>$membershipProductId,'membershipGroup'=>'renamed']] as $candidate) {
+        try {
+            DSA\Commerce\Subscription_Quote_Service::assert_groups_available($member, [$candidate]);
+            throw new LogicException('The duplicate plan was accepted.');
+        } catch (DomainException $error) {
+            $assert(true, 'An overlapping membership is blocked by its group or its native product family.');
+        }
+    }
+
     $stop = ['orderId'=>$membershipOrderId];
     $review = $cancel['prepare']($stop);
     $assert('required' === $cancel['approval'] && $cancel['permission']($stop), 'Stopping the shopper’s own renewals requires approval.');
@@ -262,6 +311,13 @@ try {
     $recovered = json_decode($write($cancel, $stop)['resultJson'], true);
     $assert($recovered['active'] && 'cancelled' === $recovered['status'] && $cancelWrites === 1
         && $getPage($memberPage) === $memberPage && !$cancel['permission']($stop), 'The next request reads back cancellation, retains paid access and sends no second provider write.');
+    $stillCovered = false;
+    try {
+        DSA\Commerce\Subscription_Quote_Service::assert_groups_available($member, [['productId'=>$membershipProductId]]);
+    } catch (DomainException $error) {
+        $stillCovered = true;
+    }
+    $assert($stillCovered, 'A cancelled membership with a paid term still blocks replacement billing.');
 
     wp_set_current_user(0);
     $cancelEvent = ['subscription'=>['entity'=>['id'=>$subscriptionId]]];
@@ -269,7 +325,12 @@ try {
         && $webhook('subscription.cancelled',$cancelEvent)->get_status() === 200, 'A confirmed cancellation is safe to reconcile twice.');
     $assert(Receipts::paid_period(wc_get_order($membershipOrderId))['status'] === 'cancelled' && Receipts::paid_period(wc_get_order($membershipOrderId))['active'],
         'The cancelled membership is marked red while its existing paid term remains usable.');
-    $assert(count($inbox($member)) === 4 && count($inbox($staff)) === 4, 'Cancellation is announced once to each authorized inbox.');
+    foreach ([$member, $staff] as $recipient) {
+        $notices = $inbox($recipient);
+        $titles = array_column($notices, 'title');
+        $assert(count($notices) === 4 && in_array('Membership cancelled: Membership ' . $fixture, $titles, true),
+            'Cancellation names the purchased plan once in each authorized inbox.');
+    }
     $staffUser = new WP_User($staff);
     $staffUser->add_cap('edit_users', false);
     wp_set_current_user(0);
@@ -288,6 +349,10 @@ try {
     wp_set_current_user($member);
     $assert(!Membership::has_paid_access($member) && $getPage($memberPage) === 0 && $requestPage($memberPage)->get_status() >= 400,
         'A refund that removes the current paid period revokes the native page and REST grants.');
+    wp_set_current_user($staff);
+    $allOrders = array_column((new DSA\Access\Commerce_App_Service())->workspace('orders')['orders'], null, 'id');
+    $assert(isset($allOrders[$membershipOrderId]) && !isset($allOrders[$refunded->get_refunds()[0]->get_id()]),
+        'Daily Orders remains available after a refund and includes the actual refunded order.');
 
     echo wp_json_encode(['verified'=>true,'hpos'=>$hpos,'checks'=>count($passed),'fixtureSearch'=>$fixture,'members'=>count($list['people']),
         'staffId'=>$staff,'editorId'=>$editor,'memberId'=>$member,'orderId'=>$membershipOrderId]), PHP_EOL;

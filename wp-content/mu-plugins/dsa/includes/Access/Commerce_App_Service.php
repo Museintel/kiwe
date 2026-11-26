@@ -927,6 +927,7 @@ final class Commerce_App_Service {
 		if ( $id > 0 ) { $args['include'] = [ $id ]; $args['offset'] = 0; }
 		if ( 'orders' === $out['tab'] ) {
 			if ( ! $this->can_order() ) return $out;
+			$args['type'] = 'shop_order';
 			$order_statuses = array_map( static fn( $status ) => str_starts_with( $status, 'wc-' ) ? substr( $status, 3 ) : $status, array_values( array_diff( array_keys( wc_get_order_statuses() ), [ 'wc-checkout-draft','wc-auto-draft' ] ) ) );
 			$status = in_array( $filters['status'] ?? '', $order_statuses, true ) ? $filters['status'] : 'all';
 			$sort = in_array( $filters['sort'] ?? '', [ 'date_desc','date_asc','total_desc','total_asc' ], true ) ? $filters['sort'] : 'date_desc';
@@ -934,6 +935,7 @@ final class Commerce_App_Service {
 			$args['orderby'] = str_starts_with( $sort, 'total_' ) ? 'total' : 'date';
 			$args['order'] = str_ends_with( $sort, '_asc' ) ? 'ASC' : 'DESC';
 			$out['status'] = $status; $out['sort'] = $sort;
+			$out['subscriptionsAvailable'] = \DSA\Apps\Store_App_Service::supports_memberships();
 			$extra = ( new Order_Workspace_Service() )->query_filters( $filters );
 			if ( is_wp_error( $extra ) ) return $out;
 			$args = array_merge( $args, $extra );
@@ -943,8 +945,16 @@ final class Commerce_App_Service {
 			if ( ! is_array( $items ) ) return $out;
 			$out['hasNext'] = count( $items ) > self::PAGE_SIZE;
 			foreach ( array_slice( $items, 0, self::PAGE_SIZE ) as $order ) {
-				if ( ! is_object( $order ) || ! current_user_can( 'edit_shop_order', $order->get_id() ) ) continue;
-				$out['orders'][] = [ 'id'=>(int) $order->get_id(), 'number'=>(string) $order->get_order_number(), 'status'=>(string) $order->get_status(), 'statusLabel'=>sanitize_text_field( wc_get_order_status_name( $order->get_status() ) ), 'total'=>(string) $order->get_total(), 'currency'=>(string) $order->get_currency(), 'customer'=>sanitize_text_field( trim( $order->get_billing_first_name() . ' ' . $order->get_billing_last_name() ) ), 'date'=>$order->get_date_created() ? $order->get_date_created()->date( 'c' ) : '' ];
+				if ( ! $order instanceof \WC_Order || ! current_user_can( 'edit_shop_order', $order->get_id() ) ) continue;
+				$row = [ 'id'=>(int) $order->get_id(), 'number'=>(string) $order->get_order_number(), 'status'=>(string) $order->get_status(), 'statusLabel'=>sanitize_text_field( wc_get_order_status_name( $order->get_status() ) ), 'total'=>(string) $order->get_total(), 'currency'=>(string) $order->get_currency(), 'customer'=>sanitize_text_field( trim( $order->get_billing_first_name() . ' ' . $order->get_billing_last_name() ) ), 'date'=>$order->get_date_created() ? $order->get_date_created()->date( 'c' ) : '' ];
+				if ( \DSA\Apps\Store_Checkout_Gate::GATEWAY === $order->get_payment_method() ) {
+					$renewal = $order->get_parent_id() > 0;
+					$row['subscriptionLabel'] = $renewal ? __( 'Subscription renewal', 'dsa' ) : __( 'New subscription', 'dsa' );
+					$row['subscriptionName'] = $renewal || ! class_exists( \DSA\Commerce\Membership_Directory::class )
+						? implode( ', ', array_slice( array_map( static fn( $item ) => sanitize_text_field( $item->get_name() ), $order->get_items() ), 0, 3 ) )
+						: \DSA\Commerce\Membership_Directory::plan_names( $order );
+				}
+				$out['orders'][] = $row;
 			}
 			return $out;
 		}

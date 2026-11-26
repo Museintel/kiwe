@@ -143,7 +143,7 @@ final class Subscription_Renewal_Orders {
 			&& ( ! is_multisite() || is_user_member_of_blog( $user_id ) ) && ! Store_Recovery_Gate_Service::is_paused();
 	}
 
-	public static function paid_period( \WC_Order $order, ?int $at = null ): array {
+	public static function paid_period( \WC_Order $order, ?int $at = null, bool $include_future = false ): array {
 		$agreement = $order->get_meta( self::AGREEMENT );
 		$initial = $order->get_meta( self::CHARGE );
 		if ( ! is_array( $agreement ) || ! is_array( $initial ) || ! $order->get_date_paid()
@@ -156,11 +156,12 @@ final class Subscription_Renewal_Orders {
 			if ( ! is_array( $charge ) || ! $receipt->is_paid() || $receipt->get_customer_id() !== $agreement['customerId']
 				|| $receipt->get_transaction_id() !== $charge['paymentId']
 				|| $charge['refundedMinor'] >= $charge['amountMinor'] || Subscription_Quote_Service::minor( (string) $receipt->get_total_refunded() ) >= $charge['amountMinor']
-				|| $charge['startsAt'] > $now ) continue;
+				|| ( ! $include_future && $charge['startsAt'] > $now ) ) continue;
 			if ( $charge['endsAt'] <= $now ) $ended = max( $ended, $charge['endsAt'] );
 			else $until = max( $until, $charge['endsAt'] );
 		}
-		$state = 'cancelled' === ( $agreement['providerStatus'] ?? '' ) ? 'cancelled' : ( $until > 0 ? 'active' : 'expired' );
+		$provider = $agreement['providerStatus'] ?? '';
+		$state = 'cancelled' === $provider ? 'cancelled' : ( $until > 0 ? ( 'paused' === $provider ? 'paused' : 'active' ) : 'expired' );
 		return [ 'status'=>$state, 'active'=>$until > 0, 'paidThrough'=>$until ?: $ended, 'products'=>array_map( static fn( $line )=>[
 			'productId'=>$line['productId'], 'variationId'=>$line['variationId'], 'name'=>$line['name'],
 		], $agreement['lines'] ) ];
@@ -172,6 +173,7 @@ final class Subscription_Renewal_Orders {
 		if ( ! $membership ) return;
 		$label = match ( $membership['status'] ) {
 			'active'=>__( 'Membership active', 'dsa' ),
+			'paused'=>__( 'Membership renewals paused', 'dsa' ),
 			'cancelled'=>__( 'Membership cancelled', 'dsa' ),
 			default=>__( 'Membership expired', 'dsa' ),
 		};

@@ -49,6 +49,20 @@ final class MCP_Store_Provider {
    'permission'=>$membersAllowed,'discoverPermission'=>$membersAllowed,
    'execute'=>static fn($a)=>['resultJson'=>Native::json((new \DSA\Access\Team_Workspace_Service())->membership_listing($a['page']??1,$a['search']??''))],
   ];
+  $ordersAllowed=static fn()=>current_user_can('edit_shop_orders')&&current_user_can('edit_others_shop_orders')
+   && \DSA\Apps\Store_App_Service::supports_memberships()
+   && !\DSA\Access\Team_Workspace_Service::suspended(get_current_user_id());
+  $ops['store.subscription.orders']=[
+   'scope'=>'store.subscription.read','label'=>'Read permitted membership purchases and renewals from WooCommerce orders',
+   'effect'=>'read','approval'=>'none','accessVersion'=>1,
+   'inputSchema'=>self::object(['page'=>self::integer(1)+['maximum'=>1000]]),
+   'outputSchema'=>self::object(['resultJson'=>self::text(24000)],['resultJson']),
+   'permission'=>$ordersAllowed,'discoverPermission'=>$ordersAllowed,
+   'execute'=>static function($a):array {
+    $orders=(new \DSA\Access\Commerce_App_Service())->workspace('orders',$a['page']??1,0,['kind'=>'subscription']);
+    return ['resultJson'=>Native::json(array_intersect_key($orders,array_flip(['orders','page','hasNext'])))];
+   },
+  ];
   $ops+=self::subscription_pilot_operations() + self::membership_operations();
   $definitions=[
    'store.product.create'=>['create',[],[]],
@@ -148,6 +162,24 @@ final class MCP_Store_Provider {
    'current'=>static fn($a)=>$cancel($a)['expected'],
    'execute'=>static fn($a,$expected)=>['resultJson'=>Native::json(Subscription_Billing_Service::cancel_own_subscription($a['orderId'],$expected))],
   ];
+  $pauseReview=static fn($a)=>Membership_Account_Service::pause_review(wc_get_order($a['orderId']),$a['action']==='pause');
+  $pauseAllowed=static function($a) use ($available): bool {
+   $order=$available()?wc_get_order($a['orderId']):false;
+   $status=$order?Membership_Account_Service::status($order):[];
+   return !empty($status[$a['action']==='pause'?'canPause':'canResume']);
+  };
+  $selfPause=[
+   'scope'=>'store.membership.self.write','label'=>'Pause or resume automatic renewals on your own membership','effect'=>'write','approval'=>'required','accessVersion'=>1,
+   'inputSchema'=>self::object(['orderId'=>self::integer(1),'action'=>self::choice(['pause','resume'])],['orderId','action']),
+   'outputSchema'=>$result,'permission'=>$pauseAllowed,'discoverPermission'=>static fn()=>$available()&&Subscription_Billing_Service::available(),
+   'prepare'=>static function($a)use($pauseReview):array {
+    $before=Membership_Account_Service::status(wc_get_order($a['orderId']));
+    return Native::plan('Review automatic billing for this membership',$pauseReview($a),$before,
+     ['renewals'=>$a['action']==='pause'?'paused':'resumed'],true);
+   },
+   'current'=>$pauseReview,
+   'execute'=>static fn($a,$expected)=>['resultJson'=>Native::json(Subscription_Billing_Service::change_own_pause($a['orderId'],$a['action']==='pause',$expected))],
+  ];
   $pageAllowed=static fn($a)=>class_exists(Membership_Content_Service::class)&&Membership_Content_Service::can_manage_page($a['pageId']);
   $pageDiscover=static fn()=>current_user_can('manage_woocommerce')&&current_user_can('publish_pages')
    && \DSA\Apps\Store_App_Service::supports_memberships()&&! \DSA\Access\Team_Workspace_Service::suspended(get_current_user_id());
@@ -163,7 +195,7 @@ final class MCP_Store_Provider {
    'current'=>static fn($a)=>Membership_Content_Service::settings($a['pageId'])['expected'],
    'execute'=>static fn($a,$expected)=>['resultJson'=>Native::json(Membership_Content_Service::change($a['pageId'],$a['memberOnly'],$expected))],
   ];
-  return ['store.membership.self'=>$selfRead,'store.membership.cancel'=>$selfCancel,'store.membership.page.access'=>$page];
+  return ['store.membership.self'=>$selfRead,'store.membership.cancel'=>$selfCancel,'store.membership.renewals'=>$selfPause,'store.membership.page.access'=>$page];
  }
 
  private static function group(array $a): array{

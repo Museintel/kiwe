@@ -37,12 +37,19 @@ final class Subscription_Product_Service {
 			return new \WP_Error( 'kiwe_subscription_virtual', 'Use a virtual product for recurring billing.', [ 'status' => 409 ] );
 		}
 		$limits = [ 'renewalMinor' => 999999999, 'intervalMonths' => 12, 'firstTermMonths' => 12 ];
-		if ( ! is_array( $input ) || count( $input ) !== count( $limits ) ) return self::invalid_terms();
+		if ( ! is_array( $input ) || array_diff_key( $input, $limits + [ 'membershipGroup'=>true ] ) ) return self::invalid_terms();
 		$terms = [];
 		foreach ( $limits as $field => $maximum ) {
 			$value = $input[$field] ?? null;
 			if ( ! is_int( $value ) || $value < 1 || $value > $maximum ) return self::invalid_terms();
 			$terms[$field] = $value;
+		}
+		if ( array_key_exists( 'membershipGroup', $input ) ) {
+			$group = $input['membershipGroup'];
+			if ( ! is_string( $group ) || ! preg_match( '/^[a-z0-9]+(?:-[a-z0-9]+)*$/D', $group ) || strlen( $group ) > 64 ) {
+				return new \WP_Error( 'kiwe_subscription_group', __( 'Enter a membership group using lowercase letters, numbers and hyphens.', 'dsa' ), [ 'status'=>400 ] );
+			}
+			$terms['membershipGroup'] = $group;
 		}
 		return $terms;
 	}

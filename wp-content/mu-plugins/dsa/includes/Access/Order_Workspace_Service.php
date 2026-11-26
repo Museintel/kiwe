@@ -16,6 +16,9 @@ final class Order_Workspace_Service {
 	public function query_filters( array $filters ) {
 		$out = [];
 		if ( in_array( $filters['kind'] ?? '', [ 'bacs', 'cod', 'cheque' ], true ) ) $out['payment_method'] = $filters['kind'];
+		if ( 'subscription' === ( $filters['kind'] ?? '' ) ) {
+			$out['payment_method'] = \DSA\Apps\Store_Checkout_Gate::GATEWAY;
+		}
 		$dates = [];
 		foreach ( [ 'from', 'to' ] as $key ) {
 			$value = $filters[$key] ?? '';

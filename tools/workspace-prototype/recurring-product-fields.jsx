@@ -6,6 +6,7 @@ export function recurringDraft(terms){
     renewalPrice:Number.isSafeInteger(terms.renewalMinor)?(terms.renewalMinor/100).toFixed(2):'',
     intervalMonths:String(terms.intervalMonths??''),
     firstTermMonths:String(terms.firstTermMonths??''),
+    membershipGroup:terms.membershipGroup||'',
   };
 }
 
@@ -19,7 +20,9 @@ export function recurringPayload(draft,saved){
   if(!renewalMinor||![intervalMonths,firstTermMonths].every(months=>Number.isInteger(months)&&months>=1&&months<=12)){
     throw Error('Enter a renewal price above ₹0 and billing periods between one and twelve months.');
   }
-  return {subscriptionTerms:{renewalMinor,intervalMonths,firstTermMonths}};
+  const membershipGroup=(draft.membershipGroup||'').trim();
+  if(membershipGroup&&!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(membershipGroup))throw Error('Use lowercase letters, numbers and hyphens for the membership group.');
+  return {subscriptionTerms:{renewalMinor,intervalMonths,firstTermMonths,...(membershipGroup?{membershipGroup}:{})}};
 }
 
 export function RecurringProductFields({value,onChange,canSet,checkoutReady=false,variation=false}){
@@ -40,6 +43,8 @@ export function RecurringProductFields({value,onChange,canSet,checkoutReady=fals
       <label>Renewal price (₹)<input inputMode="decimal" pattern="[0-9]{1,7}([.][0-9]{1,2})?" required value={value.renewalPrice} onChange={event=>onChange({...value,renewalPrice:event.target.value})}/></label>
       <label>First term (months)<input type="number" min="1" max="12" step="1" required value={value.firstTermMonths} onChange={event=>onChange({...value,firstTermMonths:event.target.value})}/></label>
       <label>Renew every (months)<input type="number" min="1" max="12" step="1" required value={value.intervalMonths} onChange={event=>onChange({...value,intervalMonths:event.target.value})}/></label>
+      <label>Exclusive membership group <input maxLength={64} value={value.membershipGroup||''} onChange={event=>onChange({...value,membershipGroup:event.target.value})}/></label>
+      <p className="wf-small">Use the same group on plans across products that a member should never hold together. Durations of one product already share a group.</p>
     </>}
   </fieldset>;
 }

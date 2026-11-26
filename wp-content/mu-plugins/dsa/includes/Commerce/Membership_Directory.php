@@ -113,13 +113,15 @@ final class Membership_Directory {
 		if ( ! $order->get_date_paid() ) return;
 		$label = match ( $kind ) {
 			'started'=>__( 'Membership started', 'dsa' ),
-			'renewed'=>__( 'Membership renewed', 'dsa' ),
+			'renewed'=>__( 'Membership automatically renewed', 'dsa' ),
 			'cancelled'=>__( 'Membership cancelled', 'dsa' ),
 			'expired'=>__( 'Membership expired', 'dsa' ),
 			'refunded'=>__( 'Membership payment refunded', 'dsa' ),
 			default=>'',
 		};
 		if ( ! $label ) return;
+		$plans = self::plan_names( $order );
+		if ( $plans ) $label = sprintf( __( '%1$s: %2$s', 'dsa' ), $label, $plans );
 		$id = 'membership-' . $order->get_id() . '-' . $kind . '-' . $source;
 		$base = [
 			'objectId'=>$order->get_id(), 'kicker'=>__( 'Membership', 'dsa' ), 'title'=>$label, 'inboxOnly'=>true,
@@ -132,5 +134,17 @@ final class Membership_Directory {
 			'id'=>$id . '-staff', 'url'=>Users::url( [ 'team_view'=>'subscriptions', 'team_account'=>$order->get_customer_id() ] ),
 			'message'=>__( 'Review this account’s membership in Daily → Users.', 'dsa' ), 'actionLabel'=>__( 'Review membership', 'dsa' ),
 		] );
+	}
+
+	/** Use the plan names agreed to at purchase, including after a product is renamed. */
+	public static function plan_names( \WC_Order $order ): string {
+		$agreement = $order->get_meta( Subscription_Renewal_Orders::AGREEMENT );
+		if ( ! is_array( $agreement['lines'] ?? null ) ) return '';
+		$names = array_values( array_unique( array_filter( array_map(
+			static fn( $line ) => sanitize_text_field( (string) ( $line['name'] ?? '' ) ),
+			$agreement['lines']
+		) ) ) );
+		$label = implode( ', ', array_slice( $names, 0, 3 ) );
+		return count( $names ) > 3 ? sprintf( __( '%1$s and %2$s more', 'dsa' ), $label, number_format_i18n( count( $names ) - 3 ) ) : $label;
 	}
 }

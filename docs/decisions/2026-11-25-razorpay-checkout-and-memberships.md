@@ -113,6 +113,24 @@ Razorpay Test Mode issued and captured a ₹8,400 invoice on its hosted approval
 
 The existing GitHub Ed25519 signer authenticated the exact archive and inventory hashes. The archives stay in private candidate custody. After qualification, use the same Core artifact on eligible sites and preflight each Store dependency before publication or rollout. Launch referral settlement and production rollout remain open.
 
+## Membership orders, Profile and plan changes
+
+WooCommerce owns the initial order and each paid renewal. Daily → Orders lists them in All orders and in the Subscriptions tab. The original order shows New subscription and the purchased plan name. Each renewal shows Subscription renewal and links to its own receipt. Daily → Users → Members still shows each account’s verified membership and paid-through date. The same order capability and per-record checks apply to the Orders tab and the Store MCP subscription order read.
+
+| Audience | Membership notices |
+| --- | --- |
+| Signed-in buyer with notification access | The frontend DSA shows their own confirmed signup, automatic renewal and cancellation with the name saved at purchase. |
+| Staff with notification, account review and WooCommerce order access | The frontend DSA and Kiwe dashboard both show events for accounts and orders they may review. The staff link opens the relevant Members record. |
+| Guests, other customers, and staff who lose access | Private membership notices are filtered when the inbox is read, including older notices. |
+
+Profile loads active memberships when the buyer opens it and places them above recent orders. Its private order read works with a signed-in WordPress account when PhoneKey is disabled. Each card opens the corresponding WooCommerce order and its billing controls. Stop renewals keeps the paid term. Eligible Razorpay mandates can be paused or resumed after the buyer confirms the action and Kiwe verifies provider state. Subscribe to the provider’s `subscription.paused` and `subscription.resumed` webhook events for changes made outside Kiwe.
+
+A simple product or each variation can carry recurring terms. Variations under one WooCommerce parent are mutually exclusive. Set the same Membership group on separate products when those plans also replace one another. Independently grouped products can coexist. Buy and manage them in separate orders when independent billing controls are needed. Compatible items bought together share the agreement disclosed at checkout.
+
+Change plan opens Shop. A same-group switch requires stopping the old renewals and waiting for the paid service to end before starting replacement billing. This covers verified future terms already paid. Kiwe checks again when creating the agreement to prevent concurrent overlapping purchases. Queued switches and proration require a separate billing design.
+
+The source candidate is on the private membership workspace branch based on `6b19694`. Native WordPress qualification passed 65 checks with HPOS and 65 with legacy WooCommerce storage, including signed simulated callbacks, refund-safe order browsing, role-specific inbox reads and pause and resume against a simulated Razorpay transport. Local Chrome verified the staff Orders tab and the buyer’s first-tap Profile rail and links at 390 px. The MCP suite passed 890 checks and App platform contracts passed 234. Plum Giraffe’s existing Dock now opens with Profile available immediately. The new membership runtime awaits signed hosted qualification, including actual Razorpay pause and resume and the outstanding scheduled recurring debit.
+
 ## Delivery and qualification
 
 | Batch | Acceptance |

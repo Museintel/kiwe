@@ -101,8 +101,14 @@ final class Subscription_Quote_Service {
 				'quantity' => $quantity,
 				'unitMinor' => $price,
 			];
+			if ( ! empty( $terms['membershipGroup'] ) ) {
+				$lines[ count( $lines ) - 1 ]['membershipGroup'] = $terms['membershipGroup'];
+			}
 		}
 		if ( ! $recurring ) throw new \DomainException( 'This order has no Kiwe subscription products.' );
+		if ( count( self::groups( $lines ) ) !== count( $lines ) || count( array_unique( array_column( $lines, 'productId' ) ) ) !== count( $lines ) ) {
+			throw new \DomainException( __( 'Choose only one term or plan from each membership group.', 'dsa' ) );
+		}
 		return [
 			'currency' => 'INR',
 			'firstChargeMinor' => $first_charge,
@@ -113,6 +119,36 @@ final class Subscription_Quote_Service {
 			'oneTimeLines' => $one_time,
 			'lines' => $lines,
 		];
+	}
+
+	/** Older subscriptions and ungrouped variations share their Woo parent product's group. */
+	public static function groups( array $lines ): array {
+		return array_values( array_unique( array_map( static fn( $line ) => ! empty( $line['membershipGroup'] )
+			? 'group:' . $line['membershipGroup'] : 'product:' . (int) $line['productId'], $lines ) ) );
+	}
+
+	public static function assert_groups_available( int $customer, array $lines ): void {
+		$groups = self::groups( $lines );
+		$products = array_column( $lines, 'productId' );
+		$page = 1;
+		do {
+			$orders = wc_get_orders( [
+				'customer_id'=>$customer, 'parent'=>0, 'payment_method'=>Subscription_Renewal_Orders::GATEWAY,
+				'status'=>array_keys( wc_get_order_statuses() ), 'limit'=>20, 'page'=>$page++,
+			] );
+			foreach ( $orders as $order ) {
+				$agreement = $order->get_meta( Subscription_Renewal_Orders::AGREEMENT );
+				if ( ! is_array( $agreement['lines'] ?? null ) || ! Subscription_Renewal_Orders::owned_by( $customer, $order )
+					|| ( ! array_intersect( $groups, self::groups( $agreement['lines'] ) )
+						&& ! array_intersect( $products, array_column( $agreement['lines'], 'productId' ) ) ) ) continue;
+				$ended = in_array( $agreement['providerStatus'], [ 'cancelled','completed','expired' ], true );
+				// A previously paid renewal may cover a future term even after billing stops.
+				$period = Subscription_Renewal_Orders::paid_period( $order, null, true );
+				if ( ! $ended || ! empty( $period['active'] ) ) {
+					throw new \DomainException( __( 'This group already has a membership or an approval in progress. Stop its renewals and wait until paid access ends to switch terms.', 'dsa' ) );
+				}
+			}
+		} while ( count( $orders ) === 20 );
 	}
 
 	public static function minor( string $total ): int {

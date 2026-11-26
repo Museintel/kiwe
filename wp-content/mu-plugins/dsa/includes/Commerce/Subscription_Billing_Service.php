@@ -94,6 +94,13 @@ final class Subscription_Billing_Service {
 	}
 
 	private static function begin( \WC_Order $order, array $quote, string $plan_id, bool $checkout = false ): array {
+		return self::synchronized( 'membership-groups', $order->get_customer_id(), static function () use ( $order, $quote, $plan_id, $checkout ): array {
+			Subscription_Quote_Service::assert_groups_available( $order->get_customer_id(), $quote['lines'] );
+			return self::create_agreement( $order, $quote, $plan_id, $checkout );
+		} );
+	}
+
+	private static function create_agreement( \WC_Order $order, array $quote, string $plan_id, bool $checkout ): array {
 		$plan = Razorpay_Subscription_Provider::plan( $plan_id );
 		if ( 'monthly' !== ( $plan['period'] ?? null ) || $quote['intervalMonths'] !== ( $plan['interval'] ?? null )
 			|| $quote['renewalMinor'] !== ( $plan['item']['amount'] ?? null ) || 'INR' !== ( $plan['item']['currency'] ?? null ) ) {
@@ -152,6 +159,31 @@ final class Subscription_Billing_Service {
 				}
 			}
 			if ( 'cancelled' === $agreement['providerStatus'] ) Membership_Directory::notify( $order, 'cancelled', 'confirmed' );
+			return Membership_Account_Service::status( $order );
+		} );
+	}
+
+	public static function change_own_pause( int $id, bool $pause, string $expected ): array {
+		return self::synchronized( 'order', $id, static function () use ( $id, $pause, $expected ): array {
+			$order = wc_get_order( $id );
+			if ( ! $order || ! hash_equals( Membership_Account_Service::pause_review( $order, $pause ), $expected ) ) {
+				throw new \DomainException( __( 'Review your membership before changing renewals.', 'dsa' ) );
+			}
+			$agreement = $order->get_meta( Subscription_Renewal_Orders::AGREEMENT );
+			$provider_id = $agreement['subscriptionId'];
+			$from = $pause ? 'active' : 'paused';
+			$to = $pause ? 'paused' : 'active';
+			$fresh = Razorpay_Subscription_Provider::subscription( $provider_id );
+			$agreement = self::bind( $order, $agreement, $fresh, true );
+			if ( $from === $agreement['providerStatus'] ) {
+				try {
+					Razorpay_Subscription_Provider::change_pause( $provider_id, $pause );
+				} catch ( \RuntimeException $error ) {
+					// A timed-out mutation can already have taken effect. Read it before asking for a retry.
+				}
+				$agreement = self::bind( $order, $agreement, Razorpay_Subscription_Provider::subscription( $provider_id ), true );
+			}
+			if ( $to !== $agreement['providerStatus'] ) throw new \DomainException( __( 'Razorpay could not confirm this change to renewals.', 'dsa' ) );
 			return Membership_Account_Service::status( $order );
 		} );
 	}
@@ -277,7 +309,7 @@ final class Subscription_Billing_Service {
 		$wpdb->get_var( $wpdb->prepare( 'SELECT RELEASE_LOCK(%s)', $key ) );
 	}
 
-	private static function bind( \WC_Order $order, array $agreement, array $subscription ): array {
+	private static function bind( \WC_Order $order, array $agreement, array $subscription, bool $refresh = false ): array {
 		$id = $subscription['id'] ?? '';
 		if ( ! Razorpay_Subscription_Provider::id( $id, 'sub' ) || ( $agreement['subscriptionId'] && $agreement['subscriptionId'] !== $id )
 			|| (string) $order->get_id() !== ( $subscription['notes']['kiwe_order'] ?? '' )
@@ -296,8 +328,14 @@ final class Subscription_Billing_Service {
 		}
 		// A terminal state does not regress when an older payment notification arrives later.
 		$terminal = [ 'cancelled', 'completed', 'expired' ];
-		if ( ! in_array( $agreement['providerStatus'], $terminal, true ) && in_array( $subscription['status'] ?? '', $terminal, true ) ) {
-			$agreement['providerStatus'] = $subscription['status'];
+		$status = $subscription['status'] ?? '';
+		if ( ! in_array( $agreement['providerStatus'], $terminal, true ) ) {
+			$tracks_progress = in_array( $agreement['providerStatus'], [ '', 'created', 'authenticated' ], true )
+				&& in_array( $status, [ 'authenticated', 'active' ], true );
+			if ( in_array( $status, $terminal, true ) || $tracks_progress || ( $refresh
+				&& in_array( $status, [ 'created','authenticated','active','paused','pending','halted' ], true ) ) ) {
+				$agreement['providerStatus'] = $status;
+			}
 		}
 		if ( $before !== $agreement ) {
 			$order->update_meta_data( Subscription_Renewal_Orders::AGREEMENT, $agreement );
@@ -340,6 +378,8 @@ final class Subscription_Billing_Service {
 		try {
 			if ( 'subscription.cancelled' === $event['event'] ) {
 				self::cancelled( $payload['subscription']['entity']['id'] ?? '' );
+			} elseif ( in_array( $event['event'], [ 'subscription.paused', 'subscription.resumed' ], true ) ) {
+				self::refresh_provider_state( $payload['subscription']['entity']['id'] ?? '' );
 			} elseif ( null !== $payment ) {
 				if ( ! Razorpay_Subscription_Provider::id( $payment, 'pay' ) ) return new \WP_Error( 'kiwe_subscription_payment', 'The event does not identify a payment.', [ 'status'=>400 ] );
 				self::reconcile( $payment );
@@ -350,6 +390,17 @@ final class Subscription_Billing_Service {
 		} catch ( \Throwable $error ) {
 			return new \WP_Error( 'kiwe_subscription_retry', 'The provider payment is awaiting reconciliation. Retry the event.', [ 'status'=>503 ] );
 		}
+	}
+
+	private static function refresh_provider_state( mixed $subscription_id ): void {
+		if ( ! Razorpay_Subscription_Provider::id( $subscription_id, 'sub' ) ) return;
+		$id = self::native_order_id( Razorpay_Subscription_Provider::subscription( $subscription_id ) );
+		if ( ! $id ) return;
+		self::synchronized( 'order', $id, static function () use ( $id, $subscription_id ): void {
+			$order = wc_get_order( $id );
+			$agreement = $order ? $order->get_meta( Subscription_Renewal_Orders::AGREEMENT ) : null;
+			if ( is_array( $agreement ) ) self::bind( $order, $agreement, Razorpay_Subscription_Provider::subscription( $subscription_id ), true );
+		} );
 	}
 
 	private static function cancelled( mixed $subscription_id ): void {

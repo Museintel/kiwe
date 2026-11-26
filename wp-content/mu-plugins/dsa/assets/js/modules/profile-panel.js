@@ -163,6 +163,7 @@ function renderLegacyProfile( payload ) {
 		'</div>',
 		profileForm( user ),
 		accountActions( hasWoo, payload.iconSprite || '', copy ),
+		hasWoo ? '<section class="dsa-recent-orders" data-dsa-active-memberships hidden></section>' : '',
 		hasWoo ? '<section class="dsa-recent-orders" data-dsa-recent-orders><div class="dsa-recent-orders__head"><strong>' + escapeHtml( copy.recentOrdersTitle ) + '</strong><span>Loading...</span></div></section>' : '',
 		'<button class="dsa-panel__button dsa-logout-button" type="button" data-dsa-account-logout data-dsa-context-slot data-dsa-context-name="profile" data-dsa-context-width="dock" aria-label="' + escapeHtml( copy.signOutLabel ) + '" title="' + escapeHtml( copy.signOutLabel ) + '">' + icon( 'log-out', payload.iconSprite || '' ) + '<span class="dsa-account-action__label">' + escapeHtml( copy.signOutLabel ) + '</span></button>',
 		'</section>',
@@ -209,6 +210,7 @@ function renderPrototypeProfile( payload ) {
 		profileRow( copy.passwordTitle, copy.passwordText, 'data-dsa-account-view="password" aria-label="' + escapeHtml( copy.passwordTitle ) + '"', '' ),
 		'<button class="kiwe-profile-v2027__signout" type="button" data-dsa-account-logout>' + escapeHtml( copy.signOutLabel ) + '</button>',
 		'</div>',
+		hasWoo ? '<section class="dsa-recent-orders" data-dsa-active-memberships hidden></section>' : '',
 		hasWoo ? '<section class="dsa-recent-orders kiwe-profile-v2027__recent" data-dsa-recent-orders hidden><div class="dsa-recent-orders__head"><strong>' + escapeHtml( copy.recentOrdersTitle ) + '</strong><span>Loading...</span></div></section>' : '',
 		'</section>',
 	].join( '' );

@@ -6860,6 +6860,7 @@ html:not(.dsa-overlay-active) .dsa-surface[data-dsa-dock-mobile="1"][data-dsa-do
 :is(html[data-kiwe-theme="dark"], html[data-brx-theme="dark"]) .dsa-menu-link:not(.is-active) .dsa-menu-link__body > span { color: inherit; }
 
 .dsa-recent-orders { display: grid; grid-column: 2; gap: 8px; min-width: 0; }
+.dsa-recent-orders[data-dsa-active-memberships][hidden] { display: none; }
 .dsa-recent-orders__head { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 12px; }
 .dsa-recent-orders__head span { color: var(--dsa-runtime-token-0219); font-size: var(--kiwe-type-micro, 10px); font-weight: 700; }
 .dsa-recent-orders__rail { display: flex; gap: 8px; min-width: 0; overflow-x: auto; padding-bottom: 3px; scroll-snap-type: x proximity; scrollbar-width: thin; }

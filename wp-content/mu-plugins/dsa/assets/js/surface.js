@@ -3402,7 +3402,7 @@
 		return adapter.render( {
 			label: resolvedLabel,
 			user: user,
-			hasWoo: Boolean( phonekey.cart && phonekey.cart.available ),
+			hasWoo: Boolean( commerce.available ),
 			iconSprite: iconSprite,
 			visualProfile: currentVisualProfile(),
 			savedCount: visibleSavedItems().length,
@@ -4613,13 +4613,34 @@
 
 	function loadRecentOrders( panel ) {
 		const target = panel ? panel.querySelector( '[data-dsa-recent-orders]' ) : null;
-		if ( ! target || ! ( phonekey.cart && phonekey.cart.available ) ) return;
-		dsaGet( '/account/orders' ).then( function ( response ) {
+		if ( ! target || ! commerce.available ) return;
+		const query = String( data.restUrl ).includes( '?' ) ? '&' : '?';
+		dsaGet( '/account/orders' + query + 'memberships=1' ).then( function ( response ) {
 			setProfileMetric( 'orders', ( response.orders || [] ).length );
 			if ( target.isConnected ) target.innerHTML = renderRecentOrdersRail( response.orders || [] );
+			const rail = panel.querySelector( '[data-dsa-active-memberships]' );
+			if ( rail && rail.isConnected ) {
+				const memberships = response.activeMemberships || [];
+				rail.innerHTML = renderMembershipRail( memberships, response.shopUrl, response.accountUrl );
+				rail.hidden = ! memberships.length;
+			}
 		} ).catch( function () {
 			if ( target.isConnected ) target.innerHTML = '<div class="dsa-recent-orders__head"><strong>Recent orders</strong><span>Unavailable</span></div>';
 		} );
+	}
+
+	function renderMembershipRail( memberships, shopUrl, accountUrl ) {
+		if ( ! memberships.length ) return '';
+		return '<div class="dsa-recent-orders__head"><strong>Active memberships</strong></div>'
+			+ '<div class="dsa-recent-orders__rail">' + memberships.map( function ( membership ) {
+				const billing = membership.status === 'cancelled' ? 'Renewals stopped' : membership.status === 'paused' ? 'Renewals paused' : '';
+				return '<article class="dsa-recent-order"><div><strong>' + escapeHtml( membership.name ) + '</strong></div>'
+					+ '<small>Access through ' + escapeHtml( membership.paidThroughLabel ) + '</small>'
+					+ ( billing ? '<small>' + billing + '</small>' : '' )
+					+ '<a href="' + escapeHtml( membership.url ) + '">Manage membership</a></article>';
+			} ).join( '' ) + '</div>'
+			+ ( accountUrl ? '<a class="dsa-recent-orders__all" href="' + escapeHtml( accountUrl ) + '">View memberships</a>' : '' )
+			+ ( shopUrl ? '<a class="dsa-recent-orders__all" href="' + escapeHtml( shopUrl ) + '">Change plan</a>' : '' );
 	}
 
 	function renderRecentOrdersRail( orders ) {

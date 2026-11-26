@@ -76,6 +76,12 @@ final class Razorpay_Subscription_Provider {
 		return self::request( 'subscriptions/' . $id . '/cancel', [ 'cancel_at_cycle_end'=>false ] );
 	}
 
+	public static function change_pause( string $id, bool $pause ): array {
+		if ( ! self::id( $id, 'sub' ) ) throw new \DomainException( 'The Razorpay subscription identity is invalid.' );
+		$action = $pause ? 'pause' : 'resume';
+		return self::request( 'subscriptions/' . $id . '/' . $action, [ $action . '_at'=>'now' ] );
+	}
+
 	public static function authorization_url( mixed $url ): string {
 		if ( ! is_string( $url ) || strlen( $url ) > 512 ) return '';
 		return preg_match( '~^https://(?:rzp\.io|rzp\.link)/(?:[A-Za-z0-9_/-]+)$~D', $url ) ? $url : '';

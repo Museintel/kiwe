@@ -110,7 +110,11 @@ final class Subscription_Checkout_Service {
 		}
 		try {
 			$quote = $this->current_quote();
+			Subscription_Quote_Service::assert_groups_available( $customer, $quote['lines'] );
 			$token = $this->consent_token( $quote, $customer );
+		} catch ( \DomainException $error ) {
+			echo '<p>' . esc_html( $error->getMessage() ) . '</p>';
+			return;
 		} catch ( \RuntimeException $error ) {
 			echo '<p>' . esc_html__( 'Review the subscription items in your cart before continuing.', 'dsa' ) . '</p>';
 			return;
@@ -124,6 +128,9 @@ final class Subscription_Checkout_Service {
 			number_format_i18n( Subscription_Billing_Service::CYCLES )
 		);
 		echo '<p>' . wp_kses_post( $summary ) . '</p>';
+		if ( $quote['recurringLines'] > 1 ) {
+			echo '<p>' . esc_html__( 'These memberships share one billing agreement. Buy them separately if you want to manage renewals independently.', 'dsa' ) . '</p>';
+		}
 		// Woo restores controls by ID after fragment swaps. A changed quote needs a new unchecked control.
 		printf( '<input type="hidden" name="kiwe_subscription_quote" value="%1$s"><label for="kiwe-consent-%1$s"><input type="checkbox" id="kiwe-consent-%1$s" name="kiwe_subscription_consent" value="yes"> %2$s</label>',
 			esc_attr( $token ), esc_html__( 'I agree to the first charge and automatic renewals through Razorpay.', 'dsa' ) );
@@ -164,6 +171,7 @@ final class Subscription_Checkout_Service {
 				$this->release_checkout();
 				return;
 			}
+			Subscription_Quote_Service::assert_groups_available( $customer, $quote['lines'] );
 			$waiting = absint( WC()->session->get( 'order_awaiting_payment' ) );
 			if ( $waiting ) {
 				$order = wc_get_order( $waiting );
@@ -174,6 +182,9 @@ final class Subscription_Checkout_Service {
 			}
 			$this->accepted = [ 'customer'=>$customer, 'terms'=>Subscription_Quote_Service::terms_digest( $quote, WC()->cart ) ];
 			add_action( 'shutdown', [ $this, 'release_checkout' ], 0 );
+		} catch ( \DomainException $error ) {
+			$this->release_checkout();
+			$errors->add( 'kiwe_subscription_plan', $error->getMessage() );
 		} catch ( \RuntimeException $error ) {
 			$this->release_checkout();
 			$errors->add( 'kiwe_subscription_busy', __( 'Checkout could not confirm these subscription terms. Review your cart and try again.', 'dsa' ) );

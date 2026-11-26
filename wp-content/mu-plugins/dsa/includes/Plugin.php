@@ -298,8 +298,8 @@ final class Plugin {
 			( new Surface_Renderer( $this->settings, $this->modules, $this->registry, $this->phonekey ) )->register();
 			( new Runtime_Hydration_Controller( $this->settings, $this->phonekey, $this->trust, $this->flow_guard, $this->commerce ) )->register();
 		}
-		if ( $phonekey_enabled ) {
-			( new Account_Controller() )->register();
+		if ( $surface_enabled || $phonekey_enabled ) {
+			( new Account_Controller( $phonekey_enabled ) )->register();
 		}
 		// MU plugins precede regular plugins: native Woo availability is known here.
 		add_action( 'plugins_loaded', [ $this, 'register_store_services' ], 30 );

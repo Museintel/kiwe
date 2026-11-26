@@ -1,3 +1,10 @@
+## Unreleased
+
+- List native membership purchases and automatic renewal receipts under Daily → Orders → Subscriptions and permission-scoped Store MCP.
+- Show purchased plan names in membership notices to the buyer and eligible staff.
+- Load the buyer’s active memberships above recent orders in Profile. Open the buyer’s Woo order for confirmation before stopping, pausing or resuming renewals.
+- Use each Woo product family and the optional Membership group to prevent overlapping recurring plans while allowing independent plans to coexist.
+
 ## 8.0.0-rc.500 (2026-11-26, candidate)
 
 - Show Razorpay setup status in Kiwe Apps and Store MCP.
