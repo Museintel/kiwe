@@ -78,6 +78,13 @@
 		if ( ! readReview ) return;
 		const cart = window.DSA.cart;
 		const payments = Array.from( page.querySelectorAll( '[data-kiwe-checkout-pay]' ) );
+		for ( const button of payments ) {
+			if ( ! button.hasAttribute( 'data-kiwe-checkout-pay-total' ) || button.querySelector( '[data-kiwe-checkout-value="total"]' ) ) continue;
+			const amount = document.createElement( 'span' );
+			amount.className = 'kiwe-checkout-payment-total';
+			amount.dataset.kiweCheckoutValue = 'total';
+			button.append( amount );
+		}
 		const consents = Array.from( page.querySelectorAll( '[data-kiwe-checkout-consent]' ) );
 		const coupon = page.querySelector( '[data-kiwe-checkout-coupon]' );
 		const status = page.querySelector( '[data-kiwe-checkout-status]' );
@@ -133,6 +140,7 @@
 			const delivery = review?.shippingReview;
 			const fragment = deliveryFragment();
 			const shippingPending = Boolean( fragment && delivery?.required && delivery.state !== 'ready' );
+			page.querySelectorAll( '[data-kiwe-checkout-show="delivery"]' ).forEach( section => { section.hidden = ! delivery?.required; } );
 			if ( fragment ) {
 				fragment.hidden = ! delivery?.required || delivery.state === 'address';
 				fragment.querySelectorAll( 'input.shipping_method' ).forEach( input => { input.disabled = disabled; } );
@@ -191,6 +199,7 @@
 					const key = output.dataset.kiweCheckoutValue;
 					output.textContent = data[key] || ( key === 'address' ? 'Add your address' : key === 'total' ? '–' : '' );
 				} );
+				page.querySelectorAll( '[data-kiwe-checkout-show="savings"]' ).forEach( banner => { banner.hidden = ! data.savings; } );
 				if ( ! data.available ) announce( 'Checkout details are unavailable. Open the address editor to continue.' );
 				else if ( data.empty ) announce( 'Your cart is empty.' );
 				else if ( data.purchaseError ) announce( data.purchaseError );

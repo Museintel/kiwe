@@ -387,7 +387,7 @@ final class Bricks_Integration {
 			$item = \Bricks\Query::get_loop_object();
 			return is_array( $item ) ? \DSA\Commerce\Cart_Payload_Service::variation_selector( $item ) : '';
 		}
-		if ( in_array( $name, [ 'kiwe_checkout_address', 'kiwe_checkout_total', 'kiwe_checkout_renewal' ], true ) ) {
+		if ( in_array( $name, [ 'kiwe_checkout_address', 'kiwe_checkout_total', 'kiwe_checkout_renewal', 'kiwe_checkout_savings' ], true ) ) {
 			return 'text' === $context && class_exists( \DSA\Commerce\Checkout_Experience_Service::class )
 				? \DSA\Commerce\Checkout_Experience_Service::binding( $name ) : '';
 		}
@@ -474,6 +474,7 @@ final class Bricks_Integration {
 			'kiwe_cart_variation_selector' => __( 'Cart variation selector (Cart contents loop)', 'dsa' ),
 			'kiwe_checkout_total'    => __( 'Checkout total', 'dsa' ),
 			'kiwe_checkout_renewal'  => __( 'Checkout renewal terms', 'dsa' ),
+			'kiwe_checkout_savings'  => __( 'Checkout savings', 'dsa' ),
 			'kiwe_checkout_terms_url' => __( 'Checkout terms page URL', 'dsa' ),
 			'kiwe_site_logo'          => __( 'Site logo URL', 'dsa' ),
 			'kiwe_site_logo_inverse'  => __( 'Site logo inverse URL', 'dsa' ),

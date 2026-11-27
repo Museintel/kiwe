@@ -173,6 +173,27 @@ final class Cart_Payload_Service {
 		return [ 'lines' => $lines, 'total' => $this->money_text( $cart->get_total() ), 'note' => $note ];
 	}
 
+	/** Count checkout savings on the already calculated cart, including native Kiwe coupons. */
+	public static function checkout_savings( \WC_Cart $cart ): float {
+		$inclusive = $cart->display_prices_including_tax();
+		$savings = (float) $cart->get_discount_total() + ( $inclusive ? (float) $cart->get_discount_tax() : 0.0 );
+
+		foreach ( $cart->get_cart() as $line ) {
+			$product = $line['data'] ?? null;
+			if ( ! $product instanceof \WC_Product || '' === $product->get_regular_price() ) continue;
+
+			$regular = wc_get_price_to_display( $product, [
+				'price'=>(float) $product->get_regular_price(), 'qty'=>(int) $line['quantity'], 'display_context'=>'cart',
+			] );
+			$subtotal = (float) $line['line_subtotal'] + ( $inclusive ? (float) $line['line_subtotal_tax'] : 0.0 );
+			$savings += max( 0.0, $regular - $subtotal );
+		}
+		foreach ( $cart->get_fees() as $fee ) {
+			if ( $fee->total < 0 ) $savings += max( 0.0, -( (float) $fee->total + ( $inclusive ? (float) $fee->tax : 0.0 ) ) );
+		}
+		return round( max( 0.0, $savings ), wc_get_price_decimals() );
+	}
+
 	public function discount_summary( bool $products_only = false ): array {
 		if ( ! $this->load_cart() ) {
 			return [ 'hasDiscount' => false, 'lines' => [], 'beforeDiscount' => '', 'subtotal' => '', 'total' => '', 'totalDiscount' => '' ];

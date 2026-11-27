@@ -48,8 +48,43 @@
 }
 
 [data-kiwe-checkout]:not([data-kiwe-checkout-ready]) :is([data-kiwe-checkout-pay], [data-kiwe-checkout-consent]),
+[data-kiwe-checkout]:not([data-kiwe-checkout-ready]) [data-kiwe-checkout-show],
 [data-kiwe-checkout] [hidden] {
 	display: none !important;
+}
+
+[data-kiwe-checkout] [data-kiwe-checkout-layout] {
+	display: grid;
+	width: 100%;
+	grid-template-columns: minmax(0, 1fr);
+	align-items: start;
+	gap: clamp(1rem, 3vw, 2.25rem);
+}
+
+@media (min-width: 1100px) {
+	[data-kiwe-checkout] [data-kiwe-checkout-layout] {
+		grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+	}
+
+	[data-kiwe-checkout] [data-kiwe-checkout-summary] {
+		position: sticky;
+		top: var(--kiwe-checkout-sticky-offset, 1.5rem);
+		max-height: calc(100dvh - var(--kiwe-checkout-sticky-offset, 1.5rem) - 1rem);
+		overflow: auto;
+	}
+}
+
+[data-kiwe-checkout] [data-kiwe-checkout-pay-total] {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 1rem;
+	text-align: start;
+}
+
+.kiwe-checkout-payment-total {
+	flex: none;
+	font-variant-numeric: tabular-nums;
 }
 
 .kiwe-checkout-variation {

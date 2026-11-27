@@ -12,6 +12,9 @@ Use a Bricks **Checkout** template. Set one outer Section or Container attribute
 | Renewal terms text element | <code>{kiwe_checkout_renewal}</code> |
 | Link to the configured Terms page | Bricks <code>{woo_url:terms}</code>. If your Bricks version lacks that tag, use <code>{kiwe_checkout_terms_url}</code>. |
 | Payment button | <code>data-kiwe-checkout-pay</code> with <code>upi</code>, <code>card</code>, <code>netbanking</code>, <code>wallet</code>, <code>razorpay</code>, <code>cod</code>, <code>subscription</code> or <code>free</code> |
+| Amount inside a native payment button | Add the <code>data-kiwe-checkout-pay-total</code> attribute to an existing payment button. |
+| Order savings text | Use <code>{kiwe_checkout_savings}</code> in a native text element. Add <code>data-kiwe-checkout-show="savings"</code> to its wrapper to hide it when savings are zero. The amount covers the initial order. |
+| Sticky desktop order summary | Add <code>data-kiwe-checkout-layout</code> to the wrapper, with the address and payment column first and a summary marked <code>data-kiwe-checkout-summary</code> second. Both columns stack below 1100 CSS pixels. |
 | Consent toggle button | <code>data-kiwe-checkout-consent</code> with <code>renewal</code> or <code>terms</code>, and <code>aria-pressed="false"</code> |
 | Coupon form | Native Bricks **Checkout Coupon** element with <code>data-kiwe-checkout-coupon</code>, placed in its current location. Enable it under Bricks → Settings → WooCommerce. |
 | Status text element | <code>data-kiwe-checkout-status</code> and <code>role="status"</code> |

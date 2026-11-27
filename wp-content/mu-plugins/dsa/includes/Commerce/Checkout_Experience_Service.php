@@ -60,6 +60,7 @@ final class Checkout_Experience_Service {
 			'kiwe_checkout_address' => '<span data-kiwe-checkout-value="address">' . esc_html__( 'Add your address', 'dsa' ) . '</span>',
 			'kiwe_checkout_total'   => '<span data-kiwe-checkout-value="total">–</span>',
 			'kiwe_checkout_renewal' => '<span data-kiwe-checkout-value="renewal"></span>',
+			'kiwe_checkout_savings' => '<span data-kiwe-checkout-value="savings"></span>',
 			default => '',
 		};
 	}
@@ -100,9 +101,11 @@ final class Checkout_Experience_Service {
 		}
 		$delivery = Checkout_Shipping_Service::review();
 		$delivery['codOption'] = $delivery['modeSensitive'] && Checkout_Shipping_Service::can_quote_cod( $terms );
+		$savings = Cart_Payload_Service::checkout_savings( $cart );
 		return [
 			'available'=>true, 'empty'=>$cart->is_empty(), 'address'=>$address,
 			'total'=>self::plain( $cart->get_total() ), 'renewal'=>$terms['summary'] ?? $terms['message'] ?? '',
+			'savings'=>$savings > 0 ? self::plain( wc_price( $savings ) ) : '',
 			'purchaseError'=>$purchase_error,
 			'sharedAgreement'=>! empty( $terms['sharedAgreement'] ),
 			'subscriptionQuote'=>$terms['quote'] ?? '', 'methods'=>empty( $methods ) ? (object) [] : $methods,

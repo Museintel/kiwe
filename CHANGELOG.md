@@ -1,3 +1,8 @@
+## 8.0.0-rc.516 (2026-11-27)
+
+- Add checkout savings, live amounts on native Bricks payment buttons and a responsive opt-in sticky order summary.
+- Hide authored delivery sections for digital carts. Physical lines in mixed carts keep native shipping.
+
 ## 8.0.0-rc.515 (2026-11-27)
 
 - Show Shiprocket setup in Kiwe Apps and expose connection status to permitted Store MCP users.

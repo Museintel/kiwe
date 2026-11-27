@@ -239,7 +239,7 @@ final class Seam_Vocabulary_Schema {
 					'checkoutReview' => [
 						'status' => 'live',
 						'authority' => 'woocommerce-native-checkout',
-						'dynamicTags' => [ '{kiwe_checkout_address}', '{kiwe_checkout_renewal}', '{kiwe_cart_variation_selector}' ],
+						'dynamicTags' => [ '{kiwe_checkout_address}', '{kiwe_checkout_renewal}', '{kiwe_checkout_savings}', '{kiwe_cart_variation_selector}' ],
 						'nativeRecipes' => [
 							'total' => 'Use the Bricks {woo_cart_order_total} when the target supports it. Set data-kiwe-checkout-value="total" on its text element to refresh it after a checkout change. Otherwise use {kiwe_checkout_total}.',
 							'terms' => 'Use the Bricks {woo_url:terms} when available. Otherwise use {kiwe_checkout_terms_url}.',
@@ -249,6 +249,10 @@ final class Seam_Vocabulary_Schema {
 						'attributes' => [
 							[ 'attribute'=>'data-kiwe-checkout', 'purpose'=>'Root Bricks container on the Store checkout page. Put native Bricks headings, text tags, controls and the status element inside it.' ],
 							[ 'attribute'=>'data-kiwe-checkout-pay', 'values'=>[ 'upi','card','netbanking','wallet','razorpay','cod','subscription','free' ], 'purpose'=>'Place the order with the currently available Woo gateway. Hidden when ineligible. The Razorpay gateway owns payment authorization.' ],
+							[ 'attribute'=>'data-kiwe-checkout-pay-total', 'purpose'=>'Add to a payment button to show the live initial-order amount.' ],
+							[ 'attribute'=>'data-kiwe-checkout-show', 'values'=>[ 'savings','delivery' ], 'purpose'=>'Show the marked section only when there are savings or there are products that need delivery.' ],
+							[ 'attribute'=>'data-kiwe-checkout-layout', 'purpose'=>'Stack the payment and summary columns except on desktop.' ],
+							[ 'attribute'=>'data-kiwe-checkout-summary', 'purpose'=>'Keep the order summary within reach on desktop while browsing the checkout.' ],
 							[ 'attribute'=>'data-kiwe-checkout-shipping', 'purpose'=>'Add to a native Bricks Dynamic fragment containing Shipping options. Shiprocket supplies courier names and dates when configured.' ],
 							[ 'attribute'=>'data-kiwe-checkout-delivery-mode', 'values'=>[ 'prepaid','cod' ], 'purpose'=>'Optional Bricks buttons that refresh delivery rates for the selected payment mode before placing the order.' ],
 							[ 'attribute'=>'data-kiwe-checkout-consent', 'values'=>[ 'terms','renewal' ], 'purpose'=>'Accessible toggle button. Include aria-pressed="false". Only applicable consents appear. A changed recurring quote resets approval.' ],

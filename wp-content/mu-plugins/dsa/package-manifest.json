@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "version": "8.0.0-rc.515",
+  "version": "8.0.0-rc.516",
   "algorithm": "sha256",
   "file_count": 1063,
   "files": {
@@ -41,8 +41,8 @@
       "sha256": "44203316dfd789233003cd9fde3fbd8020be34a25f7ca3a6a7662b53f18fd198"
     },
     "assets/css/checkout-experience.css": {
-      "bytes": 1657,
-      "sha256": "a7af420911eeb682b101374b06ae7bde536a031995ecf9d8244c02cfebda05b7"
+      "bytes": 2530,
+      "sha256": "a2f38f0c33973dcd3e125674ead7093bdf4fb313c0ced820c4ba494eac782efb"
     },
     "assets/css/comments.css": {
       "bytes": 5813,
@@ -297,8 +297,8 @@
       "sha256": "3fba86300eaf6dbec7d27b7d8230d41a9b55f633e1af7e84337ff93981099e08"
     },
     "assets/js/checkout-experience.js": {
-      "bytes": 19966,
-      "sha256": "9b3a14077c6f1d0ef847e46ff2d836c8d40efae251b0581f4700d52de4f991aa"
+      "bytes": 20585,
+      "sha256": "bb49ac979589dc57882ce4a13e2a491e23124db4f8ce8b980d9a745891cc83ce"
     },
     "assets/js/commerce-app.js": {
       "bytes": 309255,
@@ -425,8 +425,8 @@
       "sha256": "21a4e3666dad3ade9cc96b78e64de4a96de5f41f506842ffc3570cb111f5361e"
     },
     "assets/js/public-contract.js": {
-      "bytes": 45357,
-      "sha256": "20c2465d90101dc4bdddb9120b391fe962198600cc88e0ff56eaeecc905dfe25"
+      "bytes": 45923,
+      "sha256": "de5759c802c7a36a83c70a8f7274ed38cb5bdb748263935ed4137a55b6a93e85"
     },
     "assets/js/public-preview.js": {
       "bytes": 8668,
@@ -526,7 +526,7 @@
     },
     "dsa.php": {
       "bytes": 4536,
-      "sha256": "868049fe8202221535095bfc0ca2a0c1291378ee8dfc70c31ea870e5f8895f22"
+      "sha256": "a88b6650beca3769c5dafe5776969e286069675497e1419783f5ce3abc598b2f"
     },
     "framework-system/HANDOFF-LITE.md": {
       "bytes": 4119,
@@ -1433,12 +1433,12 @@
       "sha256": "ed8220e07ee40468dfd8a30ef54c6ece7ed265b7bec145e3ab3eb6842083d263"
     },
     "includes/Bricks/Authoring_Reference.php": {
-      "bytes": 8593,
-      "sha256": "097fd257243cdd406015678f264a46d7d3c11749b04fb61a414ebcdac1bcc20c"
+      "bytes": 9262,
+      "sha256": "00cce9e186cc30292433af2494f3151e42c55fa3c9c721ba774ce8f87ee1b803"
     },
     "includes/Bricks/Bricks_Integration.php": {
-      "bytes": 136858,
-      "sha256": "6a788b49b6ea4befa2c67fffa3ff655a69ddd39fb12e8d88266ffe7096285664"
+      "bytes": 136947,
+      "sha256": "cd27cb09840f1aa76c1b667ecd9c70dfe35cc32ee2fefe9626a1aa29deaaf23d"
     },
     "includes/Bricks/Clean_Conversion_Test_Service.php": {
       "bytes": 23620,
@@ -1549,16 +1549,16 @@
       "sha256": "95884882e54678804e2666aa66b6f9e243d7df63ede406b02efcdd5c7c32399b"
     },
     "includes/Commerce/Cart_Payload_Service.php": {
-      "bytes": 18314,
-      "sha256": "b60ebb9a09e523ec2c4647e276e11dabfdeea0c2161700a47a5b50215b8a2f7a"
+      "bytes": 19379,
+      "sha256": "28e24755ef598cb18402f93b7e769d77dcc500d42b8481392a6b11e973ada947"
     },
     "includes/Commerce/Checkout_Details_Model.php": {
       "bytes": 2723,
       "sha256": "e61e4fc3e756dade76ca708958440ddc6077837fbd6376cd3e348f4b87c8a681"
     },
     "includes/Commerce/Checkout_Experience_Service.php": {
-      "bytes": 8969,
-      "sha256": "31adb56ec33805a96dccdce04e2a44a0acf2132686b5d6c2626b8a4c819ef4fc"
+      "bytes": 9184,
+      "sha256": "f64a953fd586922aa8124bf50d29fdf34ad9b76eef146c7e15cccff283a5cb5d"
     },
     "includes/Commerce/Checkout_Field_Service.php": {
       "bytes": 1155,
@@ -1709,8 +1709,8 @@
       "sha256": "c3fb591495c82f340ebb69ecb3d7cda203ecf6332608f1c3d760bd408a2bd7c6"
     },
     "includes/Design/Seam_Vocabulary_Schema.php": {
-      "bytes": 28116,
-      "sha256": "e1287e173fb0a4e688a4df5c3b56f019ae8e0f577c4813b93d1d507cf11a6797"
+      "bytes": 28739,
+      "sha256": "3df59613332684dc97c53221f266cfd94f0c3e72427d9f294dff9cf441fc1b3f"
     },
     "includes/Design/Token_Schema.php": {
       "bytes": 8257,
