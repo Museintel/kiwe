@@ -64,7 +64,7 @@ final class Checkout_Offers {
 		self::$listed = null;
 	}
 
-	private static function membership_product( int $id ): ?\WC_Product {
+	public static function membership_product( int $id ): ?\WC_Product {
 		if ( ! $id || ! Store_App_Service::supports_memberships() ) return null;
 		$product = wc_get_product( $id );
 		if ( ! $product || 'publish' !== $product->get_status() || '' !== get_post_field( 'post_password', $product->get_id(), 'raw' ) ) return null;

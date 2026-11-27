@@ -301,8 +301,8 @@
       "sha256": "c5dd4b43d0d4cdf086b31ec977ebf5151ad97c6ee5c93f3b4fa914cff994c886"
     },
     "assets/js/commerce-app.js": {
-      "bytes": 304655,
-      "sha256": "08e67a128e7b070a0cf777cd0e500aaa2364f2f5f3d9dc1ecc6f89328704c52b"
+      "bytes": 309255,
+      "sha256": "7728db9ae507b649051eccc40adec14d7bb39b399a93ab8c230aa18b1fccbbd4"
     },
     "assets/js/compiler-import.js": {
       "bytes": 7230,
@@ -897,8 +897,8 @@
       "sha256": "6ae9f89a51ae78bfbe1dbacf8a510b33c2145368b1f30799c308acb83467b9aa"
     },
     "includes/Access/Commerce_App_Service.php": {
-      "bytes": 146301,
-      "sha256": "e09acc0bc54c9e714a7ccd367ad9db3386955f39d430d9c87ea3c1c5fcb76685"
+      "bytes": 149753,
+      "sha256": "5f842b98bb41a2223991f42ca47bbd029f80d0d7dc0829c97b19c008652765ad"
     },
     "includes/Access/Content_Archive_App_Service.php": {
       "bytes": 10962,
@@ -1557,8 +1557,8 @@
       "sha256": "aa94a10a9766bd72403f293fdc42120020906b34f03bd2ad9575c86d10e47af5"
     },
     "includes/Commerce/Checkout_Offers.php": {
-      "bytes": 14818,
-      "sha256": "d2ef07605285af149a84def5d3b107cbf940f1e1ad2c16b704fdd44f444a5201"
+      "bytes": 14817,
+      "sha256": "5d1f494b5cd3bf898cc974421919e2bca225bce752a37d507f622370d6d09e89"
     },
     "includes/Commerce/Checkout_Service.php": {
       "bytes": 27367,

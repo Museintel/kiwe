@@ -4319,7 +4319,7 @@
     },
     {
       "source": "wp-content/mu-plugins/dsa/includes/Commerce/Checkout_Offers.php",
-      "sha256": "d2ef07605285af149a84def5d3b107cbf940f1e1ad2c16b704fdd44f444a5201",
+      "sha256": "5d1f494b5cd3bf898cc974421919e2bca225bce752a37d507f622370d6d09e89",
       "symbols": [
         {
           "kind": "metadata",

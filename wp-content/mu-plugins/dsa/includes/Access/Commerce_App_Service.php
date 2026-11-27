@@ -233,6 +233,54 @@ final class Commerce_App_Service {
 		if('GET'!==$request->get_method()||!$this->permission($request))return $this->response($this->error('forbidden','Coupon editing is unavailable.',403));
 		return $this->response($this->coupon_record(Task_Workspace_UI::id($request->get_url_params()['id']??0)));
 	}
+	public function coupon_checkout_options( \WP_REST_Request $request ): \WP_REST_Response {
+		if ( 'GET' !== $request->get_method() || ! $this->permission( $request ) ) {
+			return $this->response( $this->error( 'forbidden', 'Checkout offer settings are unavailable.', 403 ) );
+		}
+		$id = Task_Workspace_UI::id( $request->get_url_params()['id'] ?? 0 );
+		$record = $this->coupon_record( $id );
+		if ( is_wp_error( $record ) ) return $this->response( $record );
+		if ( ! $record['editable'] ) return $this->response( $this->error( 'coupon_managed', 'This coupon is read-only in Kiwe.', 403 ) );
+
+		$enabled = \DSA\Apps\Store_App_Service::supports_memberships() && class_exists( \DSA\Commerce\Subscription_Product_Service::class );
+		$selected_id = $record['membershipProductId'];
+		$selected = $selected_id ? $this->coupon_target_label( $selected_id, false ) : null;
+		$page = max( 1, min( 1000, (int) $request->get_param( 'page' ) ) );
+		$choices = [];
+		$has_next = false;
+		if ( $enabled ) {
+			$query = new \WP_Query( [
+				'post_type'=>[ 'product','product_variation' ], 'post_status'=>'publish', 'has_password'=>false,
+				'meta_key'=>\DSA\Commerce\Subscription_Product_Service::META, 's'=>Task_Workspace_UI::text( $request->get_param( 'search' ) ?? '', 100 ),
+				'posts_per_page'=>21, 'offset'=>( $page - 1 ) * 20, 'orderby'=>'ID', 'order'=>'ASC',
+				'fields'=>'ids', 'no_found_rows'=>true, 'update_post_term_cache'=>false,
+			] );
+			$has_next = count( $query->posts ) > 20;
+			foreach ( array_slice( $query->posts, 0, 20 ) as $candidate ) {
+				$plan = \DSA\Commerce\Checkout_Offers::membership_product( (int) $candidate );
+				if ( ! $plan || ! ( $label = $this->coupon_target_label( $plan->get_id(), false ) ) ) continue;
+				$choices[$plan->get_id()] = $label;
+				$parent_id = $plan->get_parent_id();
+				if ( $parent_id && ! isset( $choices[$parent_id] ) && ( $parent = $this->coupon_target_label( $parent_id, false ) ) ) {
+					$parent['name'] .= ' · any recurring variation';
+					$choices[$parent_id] = $parent;
+				}
+			}
+		}
+		return $this->response( [
+			'selected'=>$selected, 'choices'=>array_values( $choices ), 'hasNext'=>$has_next, 'membershipEnabled'=>$enabled,
+		] );
+	}
+
+	public function save_coupon_checkout( \WP_REST_Request $request ): \WP_REST_Response {
+		if ( 'POST' !== $request->get_method() || ! $this->permission( $request ) ) {
+			return $this->response( $this->error( 'forbidden', 'Checkout offer settings are unavailable.', 403 ) );
+		}
+		$input = $request->get_json_params();
+		$id = Task_Workspace_UI::id( $request->get_url_params()['id'] ?? 0 );
+		return $this->response( $this->save_coupon_checkout_record( $id, is_array( $input ) ? $input : [] ) );
+	}
+
 	public function save_coupon_checkout_record( int $id, array $input ) {
 		$before = $this->coupon_record( $id );
 		if ( is_wp_error( $before ) ) return $before;
@@ -240,7 +288,8 @@ final class Commerce_App_Service {
 		if ( ! is_string( $input['expected'] ?? null ) || ! hash_equals( $before['expected'], $input['expected'] ) ) {
 			return $this->error( 'stale', 'The coupon changed. Reload and review.', 409 );
 		}
-		if ( ! is_bool( $input['checkoutListed'] ?? null ) || ! is_int( $input['membershipProductId'] ?? null ) || $input['membershipProductId'] < 0 ) {
+		if ( array_diff( array_keys( $input ), [ 'checkoutListed','membershipProductId','membershipStart','expected' ] )
+			|| ! is_bool( $input['checkoutListed'] ?? null ) || ! is_int( $input['membershipProductId'] ?? null ) || $input['membershipProductId'] < 0 ) {
 			return $this->error( 'coupon_input', 'Choose the listing setting and a membership product ID or zero.' );
 		}
 		$start = $input['membershipStart'] ?? $before['membershipStart'];
@@ -248,6 +297,10 @@ final class Commerce_App_Service {
 			return $this->error( 'coupon_input', 'Choose next-purchase or same-purchase.' );
 		}
 		if ( ! $input['membershipProductId'] ) $start = \DSA\Commerce\Checkout_Offers::NEXT_PURCHASE;
+		if ( $input['membershipProductId'] !== $before['membershipProductId'] && $input['membershipProductId']
+			&& ! $this->coupon_target_label( $input['membershipProductId'], false ) ) {
+			return $this->error( 'target_unavailable', 'Choose a membership product your account can edit.', 403 );
+		}
 		try {
 			\DSA\Commerce\Checkout_Offers::set_settings( new \WC_Coupon( $id ), $input['checkoutListed'], $input['membershipProductId'], $start );
 		} catch ( \DomainException $error ) {
@@ -342,6 +395,10 @@ final class Commerce_App_Service {
 
 
 		register_rest_route('dsa/v1','/workspace/commerce/coupons/(?P<id>[1-9][0-9]*)/targets',[['methods'=>'GET','callback'=>[$this,'read_coupon_targets'],'permission_callback'=>[$this,'permission']],['methods'=>'POST','callback'=>[$this,'save_coupon_targets'],'permission_callback'=>[$this,'permission']]]);
+		register_rest_route( 'dsa/v1', '/workspace/commerce/coupons/(?P<id>[1-9][0-9]*)/checkout', [
+			[ 'methods'=>'GET', 'callback'=>[ $this,'coupon_checkout_options' ], 'permission_callback'=>[ $this,'permission' ] ],
+			[ 'methods'=>'POST', 'callback'=>[ $this,'save_coupon_checkout' ], 'permission_callback'=>[ $this,'permission' ] ],
+		] );
 		register_rest_route('dsa/v1','/workspace/commerce/coupons/create',['methods'=>'POST','callback'=>[$this,'create_coupon'],'permission_callback'=>[$this,'permission']]);
 		register_rest_route('dsa/v1','/workspace/commerce/coupons/(?P<id>[1-9][0-9]*)/policy',['methods'=>'POST','callback'=>[$this,'save_coupon_policy'],'permission_callback'=>[$this,'permission']]);
 		register_rest_route('dsa/v1','/workspace/commerce/coupons',['methods'=>'GET','callback'=>[$this,'read_coupons'],'permission_callback'=>[$this,'permission']]);

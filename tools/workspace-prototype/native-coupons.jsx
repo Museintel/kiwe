@@ -4,19 +4,121 @@ import {NewCoupon,CouponPolicy} from './native-coupon-policy.jsx';
 import React,{useEffect,useState} from 'react';
 import {checkRecord} from './workflow-client.mjs';
 
+function CouponCheckoutOffer({record,work,onClose,onSaved}) {
+ const saved = {
+  checkoutListed: record.checkoutListed,
+  membershipProductId: record.membershipProductId,
+  membershipStart: record.membershipStart,
+ };
+ const [draft,setDraft] = useState(saved);
+ const [selected,setSelected] = useState(null);
+ const [search,setSearch] = useState('');
+ const [query,setQuery] = useState({search:'',page:1});
+ const [options,setOptions] = useState(null);
+ const [error,setError] = useState('');
+ const path = '/coupons/'+record.id+'/checkout';
+ const dirty = Object.keys(saved).some(key => saved[key]!==draft[key]);
+ const disabled = work.busy || work.blocked;
+
+ useEffect(() => {
+  const request = new AbortController();
+  setOptions(null);
+  setError('');
+  work.request(path,undefined,query,request.signal).then(result => {
+   if (request.signal.aborted) return;
+   if (!Array.isArray(result.choices) || typeof result.membershipEnabled!=='boolean' ||
+       typeof result.hasNext!=='boolean') throw Error('Checkout offer choices could not load.');
+   setOptions(result);
+  }).catch(err => { if (!request.signal.aborted) setError(err.message); });
+  return () => request.abort();
+ },[path,query,work.epoch]);
+ useEffect(() => {
+  const guard = event => { if (dirty) { event.preventDefault(); event.returnValue=''; } };
+  addEventListener('beforeunload',guard);
+  return () => removeEventListener('beforeunload',guard);
+ },[dirty]);
+
+ const currentSelection = draft.membershipProductId === saved.membershipProductId ? options?.selected : selected;
+ const choices = new Map((options?.choices || []).map(plan => [plan.id,plan]));
+ if (draft.membershipProductId && !choices.has(draft.membershipProductId)) {
+  choices.set(draft.membershipProductId,currentSelection || {
+   id:draft.membershipProductId,name:'Unavailable membership #'+draft.membershipProductId,
+  });
+ }
+
+ function choose(id) {
+  setSelected(choices.get(id) || null);
+  setDraft(previous => ({...previous,membershipProductId:id,membershipStart:id ? previous.membershipStart : 'next-purchase'}));
+ }
+ async function save(event) {
+  event.preventDefault();
+  if (!confirm('Save checkout and membership rules for '+record.name+'?')) return;
+  const next = await work.mutate(path,{...draft,expected:record.expected},value=>checkRecord(value,'name'));
+  if (next) onSaved(next);
+ }
+
+ return <section className="wf-detail">
+  <button className="wf-refresh" disabled={work.busy} onClick={()=>{if (!dirty || confirm('Discard the unsaved checkout offer?')) onClose();}}>Back to coupon</button>
+  <h2>Checkout & membership</h2>
+  <p>{record.name}</p>
+  {error && <p role="alert">{error}</p>}
+  {!options && !error && <p role="status">Loading membership choices…</p>}
+  {(options?.membershipEnabled || draft.membershipProductId > 0) && <>
+   <form className="wf-search" onSubmit={event=>{event.preventDefault();setQuery({search,page:1});}}>
+    <label>Find a membership<input type="search" maxLength={100} value={search} onChange={event=>setSearch(event.target.value)} disabled={disabled}/></label>
+    <button disabled={disabled}>Search memberships</button>
+   </form>
+   {options && (query.page>1 || options.hasNext) && <nav className="wf-actions" aria-label="Membership results">
+    <button disabled={disabled || query.page<=1} onClick={()=>setQuery({...query,page:query.page-1})}>Previous results</button>
+    <span>Page {query.page}</span>
+    <button disabled={disabled || !options.hasNext || query.page>=1000} onClick={()=>setQuery({...query,page:query.page+1})}>Next results</button>
+   </nav>}
+  </>}
+  <form onSubmit={save}>
+   <fieldset disabled={disabled || !options}>
+    <label className="wf-choice"><input type="checkbox" checked={draft.checkoutListed}
+     onChange={event=>setDraft({...draft,checkoutListed:event.target.checked})}/>Show in checkout offers</label>
+    <p className="wf-small">Available to the checkout’s View all coupons list when the coupon is active.</p>
+    {(options?.membershipEnabled || draft.membershipProductId>0) && <>
+     <label htmlFor="kiwe-coupon-membership">Membership product or variation</label>
+     <select id="kiwe-coupon-membership" value={draft.membershipProductId} onChange={event=>choose(Number(event.target.value))}>
+      <option value={0}>No membership required</option>
+      {[...choices.values()].map(plan=><option value={plan.id} key={plan.id}>{plan.name} (#{plan.id})</option>)}
+     </select>
+     {draft.membershipProductId>0 && <>
+      <label htmlFor="kiwe-coupon-membership-start">Membership discount starts</label>
+      <select id="kiwe-coupon-membership-start" value={draft.membershipStart}
+      onChange={event=>setDraft({...draft,membershipStart:event.target.value})}>
+      <option value="next-purchase">Next eligible purchase after payment</option>
+      <option value="same-purchase">The purchase that includes the membership</option>
+     </select></>}
+     <p className="wf-small">During paid membership, eligible carts receive the coupon automatically. Set the order cap under Availability & rules.</p>
+    </>}
+    <button className="wf-refresh wf-primary" disabled={!dirty}>Save checkout offer</button>
+   </fieldset>
+  </form>
+ </section>;
+}
+
 function CouponEditor({id,work,onClose}){
- const [record,setRecord]=useState(null),[amount,setAmount]=useState(''),[description,setDescription]=useState(''),[error,setError]=useState(''),[policy,setPolicy]=useState(false),[targets,setTargets]=useState(false),[customers,setCustomers]=useState(false);
+ const [record,setRecord]=useState(null),[amount,setAmount]=useState(''),[description,setDescription]=useState(''),[error,setError]=useState(''),[policy,setPolicy]=useState(false),[targets,setTargets]=useState(false),[customers,setCustomers]=useState(false),[checkoutOffer,setCheckoutOffer]=useState(false);
  const dirty=record&&(amount!==record.amount||description!==record.description);
- useEffect(()=>{const c=new AbortController();setRecord(null);setPolicy(false);setTargets(false);setCustomers(false);setError('');work.request('/coupons/'+id,undefined,{},c.signal).then(v=>{if(c.signal.aborted)return;checkRecord(v,'name');setRecord(v);setAmount(v.amount);setDescription(v.description);}).catch(e=>{if(!c.signal.aborted)setError(e.message);});return()=>c.abort();},[id,work.epoch]);
+ useEffect(()=>{const c=new AbortController();setRecord(null);setPolicy(false);setTargets(false);setCustomers(false);setCheckoutOffer(false);setError('');work.request('/coupons/'+id,undefined,{},c.signal).then(v=>{if(c.signal.aborted)return;checkRecord(v,'name');setRecord(v);setAmount(v.amount);setDescription(v.description);}).catch(e=>{if(!c.signal.aborted)setError(e.message);});return()=>c.abort();},[id,work.epoch]);
  useEffect(()=>{const guard=e=>{if(dirty){e.preventDefault();e.returnValue='';}};addEventListener('beforeunload',guard);return()=>removeEventListener('beforeunload',guard);},[dirty]);
  async function save(e){e.preventDefault();const next=await work.mutate('/coupons/'+id,{amount,description,expected:record.expected},v=>checkRecord(v,'name'));if(next){setRecord(next);setAmount(next.amount);setDescription(next.description);}}
+ if(checkoutOffer&&record)return <CouponCheckoutOffer record={record} work={work}
+  onClose={()=>setCheckoutOffer(false)} onSaved={next=>{setRecord(next);setCheckoutOffer(false);}}/>;
  if(customers&&record)return <CouponCustomers record={record} work={work} onClose={()=>setCustomers(false)} onSaved={next=>{setRecord(next);setAmount(next.amount);setDescription(next.description);}}/>;
  if(targets&&record)return <CouponTargets record={record} work={work} onClose={()=>setTargets(false)} onSaved={next=>{setRecord(next);setAmount(next.amount);setDescription(next.description);}}/>;
  if(policy&&record)return <CouponPolicy record={record} work={work} onClose={()=>setPolicy(false)} onSaved={next=>{setRecord(next);setAmount(next.amount);setDescription(next.description);setPolicy(false);}}/>;
  return <section className="wf-detail"><button disabled={work.busy} onClick={()=>{if(!dirty||confirm('Discard the unsaved coupon edits?'))onClose();}}>Back to coupons</button>{error&&<p role="alert">{error}</p>}{!record&&!error&&<p role="status">Reading coupon…</p>}{record&&<><h2>{record.name}</h2><p>{record.status} · {record.type.replaceAll('_',' ')} · {record.currency}</p><div className="wf-grid"><article className="wf-tile"><span className="wf-meta">Usage</span><h3>{record.usageCount} used</h3><p>Total limit: {record.usageLimit||'No limit'} · Per customer: {record.perUserLimit||'No limit'}</p></article><article className="wf-tile"><span className="wf-meta">Expiry</span><h3>{record.expiresAt?new Date(record.expiresAt*1000).toISOString().replace('T',' ').replace('.000Z',' UTC'):'No expiry'}</h3><p>{record.individualUse?'Cannot combine with other coupons':'Combination permitted by this coupon'} · {record.excludeSaleItems?'Sale items excluded':'Sale items permitted'}</p></article></div>
  <p>Spend range: {record.minimum||'No minimum'}–{record.maximum||'No maximum'}. Free shipping: {record.freeShipping?'Yes (shipping method must support it)':'No'}. Item limit: {record.itemLimit||'No limit'}.</p>
  <p>Restrictions: {Object.entries(record.restrictionCounts||{}).map(([k,n])=>k.replace(/([A-Z])/g,' $1').toLowerCase()+': '+n).join(' · ')}. Existing eligibility rules stay in place.</p>
- {record.editable&&<button disabled={work.busy||work.blocked} onClick={()=>{if(!dirty||confirm('Discard amount and description edits to open promotion rules?')){setAmount(record.amount);setDescription(record.description);setPolicy(true);}}}>Availability & rules</button>}{record.editable&&<button className="wf-refresh" disabled={work.busy||work.blocked} onClick={()=>{if(!dirty||confirm('Discard amount and description edits to open targeting?')){setAmount(record.amount);setDescription(record.description);setTargets(true);}}}>Products & categories</button>}{record.editable&&<button className="wf-refresh" disabled={work.busy||work.blocked} onClick={()=>{if(!dirty||confirm('Discard amount and description edits to open customer rules?')){setAmount(record.amount);setDescription(record.description);setCustomers(true);}}}>Who can use it</button>}{!record.editable&&<p className="wf-notice">{record.reason}</p>}<form onSubmit={save}><fieldset disabled={!record.editable||work.busy||work.blocked}><label>{record.type==='percent'?'Discount percent':'Discount amount ('+record.currency+')'}<input inputMode="decimal" value={amount} onChange={e=>setAmount(e.target.value)}/></label><label>Description<textarea maxLength={4000} value={description} onChange={e=>setDescription(e.target.value)}/></label><p>Saving changes this existing promotion. Its code, type, expiry, limits and eligibility remain unchanged.</p><button disabled={!dirty}>Save coupon</button></fieldset></form></>}</section>;
+ {record.editable&&<button disabled={work.busy||work.blocked} onClick={()=>{if(!dirty||confirm('Discard amount and description edits to open promotion rules?')){setAmount(record.amount);setDescription(record.description);setPolicy(true);}}}>Availability & rules</button>}{record.editable&&<button className="wf-refresh" disabled={work.busy||work.blocked} onClick={()=>{if(!dirty||confirm('Discard amount and description edits to open targeting?')){setAmount(record.amount);setDescription(record.description);setTargets(true);}}}>Products & categories</button>}{record.editable&&typeof record.checkoutListed==='boolean'&&<button className="wf-refresh" disabled={work.busy||work.blocked} onClick={()=>{
+  if (!dirty || confirm('Discard amount and description edits to open checkout settings?')) {
+   setAmount(record.amount);setDescription(record.description);setCheckoutOffer(true);
+  }
+ }}>Checkout & membership</button>}{record.editable&&<button className="wf-refresh" disabled={work.busy||work.blocked} onClick={()=>{if(!dirty||confirm('Discard amount and description edits to open customer rules?')){setAmount(record.amount);setDescription(record.description);setCustomers(true);}}}>Who can use it</button>}{!record.editable&&<p className="wf-notice">{record.reason}</p>}<form onSubmit={save}><fieldset disabled={!record.editable||work.busy||work.blocked}><label>{record.type==='percent'?'Discount percent':'Discount amount ('+record.currency+')'}<input inputMode="decimal" value={amount} onChange={e=>setAmount(e.target.value)}/></label><label>Description<textarea maxLength={4000} value={description} onChange={e=>setDescription(e.target.value)}/></label><p>Saving changes this existing promotion. Its code, type, expiry, limits and eligibility remain unchanged.</p><button disabled={!dirty}>Save coupon</button></fieldset></form></>}</section>;
 }
 
 export function Coupons({work,onClose}){

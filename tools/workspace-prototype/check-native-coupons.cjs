@@ -5,7 +5,7 @@ const {chromium}=require(process.env.KIWE_PLAYWRIGHT||'playwright');
  const built=await build({absWorkingDir:__dirname,entryPoints:['commerce-app-entry.jsx'],bundle:true,write:false,outfile:'test.js',platform:'browser',format:'iife'}),js=built.outputFiles.find(x=>x.path.endsWith('.js')).contents,css=built.outputFiles.find(x=>x.path.endsWith('.css')).contents;
  let customerRules=Array.from({length:21},(_,i)=>'person'+(i+1)+'@example.invalid');
  const targetSets={products:Array.from({length:21},(_,i)=>401+i),excludedProducts:[],categories:[601],excludedCategories:[]};const checks=[],errors=[],writes=[];const check=(ok,label)=>{if(!ok)throw Error(label);checks.push(label);};let serial=1,failNext=false;
- const stamp=()=>String(serial++).padStart(64,'a');let record={id:301,name:'welcome',type:'percent',amount:'10',description:'Welcome',status:'draft',currency:'INR',expiresAt:null,expiresLocal:'',timezone:'Asia/Kolkata',usageCount:2,usageLimit:10,perUserLimit:1,itemLimit:null,individualUse:false,freeShipping:false,excludeSaleItems:false,minimum:'',maximum:'',restrictionCounts:{productIds:1,emailRestrictions:1},editable:true,canPublish:true,expected:stamp()};
+ const stamp=()=>String(serial++).padStart(64,'a');let record={id:301,name:'welcome',type:'percent',amount:'10',description:'Welcome',status:'draft',currency:'INR',expiresAt:null,expiresLocal:'',timezone:'Asia/Kolkata',usageCount:2,usageLimit:10,perUserLimit:1,itemLimit:null,individualUse:false,freeShipping:false,excludeSaleItems:false,minimum:'',maximum:'',restrictionCounts:{productIds:1,emailRestrictions:1},editable:true,canPublish:true,checkoutListed:false,membershipProductId:0,membershipStart:'next-purchase',expected:stamp()};
  const send=(res,value,status=200)=>{res.writeHead(status,{'Content-Type':'application/json','Cache-Control':'no-store'});res.end(JSON.stringify(value));};
  const server=http.createServer(async(req,res)=>{const origin='http://127.0.0.1:'+server.address().port,url=new URL(req.url,origin),route=url.searchParams.get('rest_route')||'';
   if(route.startsWith('/dsa/v1/workspace/commerce')){
@@ -15,6 +15,15 @@ const {chromium}=require(process.env.KIWE_PLAYWRIGHT||'playwright');
     if(route.endsWith('/create'))record={...record,...body,id:302,status:'draft',expected:stamp()};else record={...record,...body,itemLimit:body.itemLimit===0?null:('itemLimit'in body?body.itemLimit:record.itemLimit),expected:stamp()};return send(res,record);
    }
    
+   if(route.endsWith('/checkout')){
+    const plan={id:610,name:'Annual membership',kind:'variation'};
+    const search=url.searchParams.get('search')||'';
+    return send(res,{
+     selected:record.membershipProductId===610?plan:null,
+     choices:plan.name.toLowerCase().includes(search.toLowerCase())?[plan]:[],
+     hasNext:false,membershipEnabled:true,
+    });
+   }
    if(route.endsWith('/customers')){const page=Number(url.searchParams.get('page')||1),search=url.searchParams.get('search')||'',matches=customerRules.filter(x=>x.includes(search));return send(res,{id:record.id,name:record.name,expected:record.expected,items:matches.slice((page-1)*20,page*20),page,hasNext:matches.length>page*20,count:customerRules.length,search});}
    if(route.endsWith('/targets')){const group=url.searchParams.get('group')||'products',page=Number(url.searchParams.get('page')||1),selectedPage=Number(url.searchParams.get('selectedPage')||1),search=url.searchParams.get('search')||'',category=group.toLowerCase().includes('categories'),opposite={products:'excludedProducts',excludedProducts:'products',categories:'excludedCategories',excludedCategories:'categories'}[group];const label=id=>({id,name:(category?'Category ':'Product ')+id,kind:category?'category':'product'});const all=Array.from({length:42},(_,i)=>label((category?601:401)+i)).filter(x=>x.name.toLowerCase().includes(search.toLowerCase()));return send(res,{...record,group,counts:Object.fromEntries(Object.entries(targetSets).map(([k,v])=>[k,v.length])),selected:targetSets[group].slice((selectedPage-1)*20,selectedPage*20).map(id=>({...label(id),available:true})),selectedPage,selectedHasNext:targetSets[group].length>selectedPage*20,candidates:all.slice((page-1)*20,page*20).map(x=>({...x,selected:targetSets[group].includes(x.id),opposite:targetSets[opposite].includes(x.id)})),page,hasNext:all.length>page*20,search});}
    if(route.endsWith('/coupons'))return send(res,{items:[record],page:1,hasNext:false,enabled:false,canCreate:true});
@@ -26,6 +35,22 @@ const {chromium}=require(process.env.KIWE_PLAYWRIGHT||'playwright');
  });await new Promise(r=>server.listen(0,'127.0.0.1',r));let browser;
  try{browser=await chromium.launch({headless:true,executablePath:process.env.KIWE_CHROME});const page=await browser.newPage({viewport:{width:390,height:844}});page.on('pageerror',e=>errors.push(e.message));page.on('dialog',d=>d.accept());await page.goto('http://127.0.0.1:'+server.address().port+'/?area=settings');await page.getByRole('button',{name:'Coupons',exact:true}).click();await page.getByRole('heading',{name:'Your coupons.'}).waitFor();check(await page.getByText('Coupon use is switched off',{exact:false}).isVisible(),'Disabled store coupon notice visible');
   await page.getByRole('button',{name:/Create a coupon/}).click();await page.getByLabel('Coupon code',{exact:true}).fill('SUMMER-10');await page.getByLabel('Percent',{exact:true}).fill('10');await page.getByRole('button',{name:'Create draft coupon',exact:true}).click();await page.getByRole('heading',{name:'SUMMER-10',exact:true}).waitFor();check(writes.length===1&&writes[0].route.endsWith('/create')&&!('status'in writes[0].body),'Creation sends one draft request without publication injection');
+  await page.getByRole('button',{name:'Checkout & membership',exact:true}).click();
+  await page.getByLabel('Show in checkout offers',{exact:true}).check();
+  await page.getByLabel('Find a membership',{exact:true}).fill('Annual');
+  await page.getByRole('button',{name:'Search memberships',exact:true}).click();
+  await page.getByLabel('Membership product or variation',{exact:true}).selectOption('610');
+  await page.getByLabel('Membership discount starts',{exact:true}).selectOption('same-purchase');
+  await page.getByRole('button',{name:'Save checkout offer',exact:true}).click();
+  await page.getByRole('heading',{name:'SUMMER-10',exact:true}).waitFor();
+  const offer = writes.at(-1);
+  check(offer.route.endsWith('/checkout')&&offer.body.checkoutListed===true&&offer.body.membershipProductId===610&&
+    offer.body.membershipStart==='same-purchase'&&Object.keys(offer.body).length===4,'Checkout list and timing save through their dedicated native record');
+  await page.getByRole('button',{name:'Checkout & membership',exact:true}).click();
+  check(await page.getByLabel('Membership product or variation',{exact:true}).inputValue()==='610'&&
+    await page.getByLabel('Membership discount starts',{exact:true}).inputValue()==='same-purchase','Saved membership rules reopen');
+  check(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'Phone checkout offer fits the viewport');
+  await page.getByRole('button',{name:'Back to coupon',exact:true}).click();
   await page.getByRole('button',{name:'Availability & rules',exact:true}).click();await page.getByLabel('Availability',{exact:false}).selectOption('publish');await page.getByLabel('Total uses',{exact:true}).fill('20');await page.getByLabel('Expires at (Asia/Kolkata)',{exact:true}).fill('2027-01-02T12:30');await page.getByLabel('Minimum spend',{exact:true}).fill('25');await page.getByLabel('Maximum spend',{exact:true}).fill('250');await page.getByLabel('Use alone, without other coupons',{exact:true}).check();
   await page.getByLabel('Maximum discounted items',{exact:true}).fill('2');await page.getByLabel('Allow free shipping with this coupon',{exact:true}).check();check(await page.getByText('Your store must also offer a Free shipping method',{exact:false}).isVisible(),'Shipping dependency appears beside its switch');
   check(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'Phone policy has no horizontal overflow');await page.screenshot({path:path.join(out,'coupon-policy-phone.png'),fullPage:true});
