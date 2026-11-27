@@ -62,6 +62,12 @@ Generate `launch-catalogue.json` from `launchCatalogue` in `services/start-proje
 
 The billing reconciliation job delivers by exact purchase ID, so one buyer can have separate native orders and Start projects. Read a purchase with `kiwe_launch_billing_status` and `purchaseId`. Omitting it selects the original Payment Link flow. Before migrating an existing billing database, keep a consistent SQLite backup including pending writes. The new schema retains the legacy single-open-payment constraint for original orders and permits multiple native purchases. If a migrated database already contains multiple purchases, preserve it for reconciliation before restoring any older code and index.
 
+The signed-in billing view lists the buyer's imported website orders by domain. Open one to see its Start link, paid-through date, refunds and renewal approval. The purchase ID travels with each billing form. A buyer can cancel one renewal and retain that site's paid term and any other site's approval.
+
+Map each supported direct website plan version to its Razorpay plan ID in the private `billing.plans.websitePlans` settings. For example, use the catalogue key `kiwe-portfolio-v1` and the separately created monthly provider plan for that price. Configure IDs for the same provider mode as the merchant. The service checks the interval, amount and currency before requesting approval. Purchases without a mapping can still be read and opened in Start. Approval requires fresh consent and begins after the recorded paid term. A full first-year refund or unsettled dispute blocks approval. Refunds and paid renewal periods follow the payment and invoice IDs for that exact website.
+
+If Razorpay created an approval but Launch lost the response, use `kiwe_launch_recover_renewal` with the account, purchase and subscription IDs. The CLI equivalent is `php operator.php recover-renewal ACCOUNT SUBSCRIPTION PURCHASE`. Verify the existing subscription before issuing another approval link.
+
 Partner tools in that private MCP process are `kiwe_launch_partner_summary`, `kiwe_launch_reconcile_partner_deliveries`, `kiwe_launch_withdrawals`, `kiwe_launch_review_withdrawal` and `kiwe_launch_record_payout`. They use the same ledger as the dashboard. The withdrawal read can page through pending, paid or all records. The tool results use Launch account and withdrawal IDs and omit client contact and bank details.
 
 ## Included domain registration

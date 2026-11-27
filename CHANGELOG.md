@@ -1,5 +1,7 @@
 ## Unreleased Kiwe Launch catalogue
 
+- Scope confirmed first-year payments, monthly approval and cancellation, refund history and recovery to the buyer's selected website.
+
 - Record verified native WooCommerce first-year payments by purchase ID and deliver each to its own Start project through the private Launch reconciler.
 - Share the four managed website plans and annual Freelancer Pass through the Start web and MCP catalogue. Enforce the purchased site's allowed setup modes and validate paid receipt amounts by plan version.
 - Compile the plan comparison into the Kiwe Launch Bricks homepage using the same catalogue prices.

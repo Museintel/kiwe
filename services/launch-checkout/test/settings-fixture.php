@@ -35,5 +35,11 @@ if ($start = getenv('KIWE_BILLING_TEST_START_ORIGIN')) {
         'start' => static fn (string $action, array $data): array =>
             kiwe_test_start(__DIR__, $start, getenv('KIWE_BILLING_TEST_START_TOKEN'), $action, $data),
     ];
+    if (is_file(__DIR__ . '/launch-catalogue.json')) {
+        $settings['billing']['plans']['websitePlans'] = [
+            'kiwe-portfolio-v1' => 'plan_PortfolioFixture',
+            'kiwe-ecommerce-v1' => 'plan_EcommerceFixture',
+        ];
+    }
 }
 return $settings;

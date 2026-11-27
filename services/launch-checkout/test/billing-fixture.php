@@ -32,12 +32,16 @@ function kiwe_test_gateway(string $root, string $method, string $route, array $b
         return $state['invoices'][$path[1]] ?? throw new KiweCheckoutError('The provider invoice is temporarily unavailable.', 503);
     }
     if ($path[0] === 'orders') {
+        if (!isset($path[2])) return $state['orders'][$path[1]] ?? throw new RuntimeException('Order is missing from the fixture.');
         return ['items' => array_values(array_filter($state['payments'], static fn ($item) => $item['order_id'] === $path[1]))];
     }
     if ($path[0] === 'plans') {
-        $plan = json_decode(file_get_contents($root . '/client-plan.json'), true, flags: JSON_THROW_ON_ERROR);
-        $terms = $plan[$path[1] === 'plan_ReferralFixture' ? 'referred' : 'direct'];
-        return ['id' => $path[1], 'period' => 'monthly', 'interval' => 1, 'item' => ['amount' => $terms['renewalMinor'], 'currency' => 'INR']];
+        $amount = $state['plan_amounts'][$path[1]] ?? null;
+        if ($amount === null) {
+            $plan = json_decode(file_get_contents($root . '/client-plan.json'), true, flags: JSON_THROW_ON_ERROR);
+            $amount = $plan[$path[1] === 'plan_ReferralFixture' ? 'referred' : 'direct']['renewalMinor'];
+        }
+        return ['id' => $path[1], 'period' => 'monthly', 'interval' => 1, 'item' => ['amount' => $amount, 'currency' => 'INR']];
     }
     if ($route === '/subscriptions' && $method === 'POST') {
         $id = 'sub_Fixture' . (count($state['subscriptions']) + 1);

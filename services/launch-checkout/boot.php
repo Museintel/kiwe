@@ -15,8 +15,14 @@ function kiwe_checkout_billing(mixed $config, KiweCheckout $checkout, string $da
     $merchant = kiwe_billing_id($config['merchant'] ?? null, 'acc');
     $secret = $config['webhookSecret'] ?? '';
     if (!$merchant || !is_string($secret) || strlen($secret) < 32 || !is_int($cycles) || $cycles < 1 || $cycles > 1200
-        || !kiwe_billing_id($plans['direct'] ?? null, 'plan') || !kiwe_billing_id($plans['referred'] ?? null, 'plan')) {
+        || !is_array($plans) || !kiwe_billing_id($plans['direct'] ?? null, 'plan')
+        || !kiwe_billing_id($plans['referred'] ?? null, 'plan') || !is_array($plans['websitePlans'] ?? [])) {
         throw new RuntimeException('Kiwe billing credentials or plans are invalid.');
+    }
+    foreach ($plans['websitePlans'] ?? [] as $catalogueId => $providerId) {
+        if (!isset($nativePlans[$catalogueId]) || !kiwe_billing_id($providerId, 'plan')) {
+            throw new RuntimeException('A website renewal plan is not mapped to the Launch catalogue.');
+        }
     }
     $razorpay = null;
     if ($test) {

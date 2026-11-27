@@ -9,7 +9,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { setTimeout as wait } from 'node:timers/promises';
 import { fileURLToPath } from 'node:url';
-import { clientPlan } from '../../start-projects/src/client-plan.mjs';
+import { clientPlan, launchCatalogue } from '../../start-projects/src/client-plan.mjs';
 import { startForCheckout, verifyBilling } from './billing-proof.mjs';
 import { verifyPartners } from './partner-proof.mjs';
 
@@ -96,6 +96,7 @@ try {
   await cp(path.join(service, 'test', 'settings-fixture.php'), path.join(root, 'settings.php'));
   await cp(path.join(service, 'test', 'billing-fixture.php'), path.join(root, 'billing-fixture.php'));
   await writeFile(path.join(root, 'client-plan.json'), JSON.stringify(clientPlan));
+  await writeFile(path.join(root, 'launch-catalogue.json'), JSON.stringify(launchCatalogue));
   await writeFile(path.join(data, 'rate-key'), randomBytes(32), { mode: 0o600 });
   await writeFile(path.join(data, 'gateway.json'), JSON.stringify({ links: {}, payments: {}, subscriptions: {} }));
   server = spawn(php, [...phpArgs, '-S', '127.0.0.1:' + port, '-t', app], { windowsHide: true, env, stdio: 'ignore' });
@@ -236,6 +237,7 @@ try {
     accountId: account.id, quote, tools: operation, start, clientPlan });
   await verifyPartners({ origin, data, partner, anotherPartner: mismatched, buyer: referred, start, paid,
     buyerId: account.id, partnerId: enrolment.account.id, call: (name, args) => mcp.callTool({ name, arguments: args }) });
+  await verifyWebsitePurchases(referred, direct, account.id, paid.purchaseId);
   process.stdout.write('Verified checkout, Razorpay billing and retries, renewal consent, refunds and same-account Kiwe Start handoff passed.\n');
   process.stdout.write('Partner service proof, commission adjustments, private withdrawals and payout readback passed.\n');
 } finally {
@@ -250,4 +252,61 @@ try {
   if (path.dirname(root) === path.resolve(tmpdir()) && path.basename(root).startsWith('kiwe-checkout-test-')) {
     await rm(root, { recursive: true, force: true, maxRetries: 3 });
   }
+}
+
+async function verifyWebsitePurchases(buyer, other, accountId, legacyPurchase) {
+  const checkout = origin + '/checkout/';
+  const gatewayPath = path.join(data, 'gateway.json');
+  const gateway = JSON.parse(await readFile(gatewayPath, 'utf8'));
+  gateway.orders = {};
+  gateway.plan_amounts = {};
+  const purchases = ['portfolio', 'ecommerce'].map((tier, index) => {
+    const plan = Object.values(launchCatalogue.websitePlans).find(entry => entry.id === 'kiwe-' + tier + '-v1');
+    const orderId = 701 + index;
+    const providerOrderId = 'order_NativeSite' + orderId;
+    const paymentId = 'pay_NativeSite' + orderId;
+    const paidAt = Math.floor(Date.now() / 1000);
+    const amount = plan.direct.upfrontMinor;
+    const providerPlan = index ? 'plan_EcommerceFixture' : 'plan_PortfolioFixture';
+    gateway.plan_amounts[providerPlan] = plan.direct.renewalMinor;
+    gateway.orders[providerOrderId] = { id: providerOrderId, receipt: String(orderId), status: 'paid', currency: 'INR',
+      notes: { woocommerce_order_id: String(orderId) }, amount, amount_paid: amount, amount_due: 0 };
+    gateway.payments[paymentId] = { id: paymentId, order_id: providerOrderId, status: 'captured',
+      amount, currency: 'INR', created_at: paidAt, amount_refunded: 0 };
+    return { orderId, accountId, planId: plan.id, sku: plan.sku, providerOrderId, paymentId, paidAt,
+      domain: { mode: 'owned', name: tier + '.example.invalid' } };
+  });
+  await writeFile(gatewayPath, JSON.stringify(gateway));
+  const first = await operation('kiwe_launch_import_woo_purchase', purchases[0]);
+  const second = await operation('kiwe_launch_import_woo_purchase', purchases[1]);
+  assert.equal((await operation('kiwe_launch_reconcile_billing', {})).delivered, 2);
+  await buyer.goto(checkout + '?tab=client');
+  await buyer.getByRole('link', { name: purchases[0].domain.name }).click();
+  assert.equal(new URL(buyer.url()).searchParams.get('purchase'), first.purchaseId);
+  await buyer.getByRole('heading', { name: 'First-year payment confirmed' }).waitFor();
+  const consent = buyer.locator('form:has(input[name="action"][value="renewal-consent"])');
+  const form = await consent.locator('input[type="hidden"]').evaluateAll(inputs => Object.fromEntries(inputs.map(input => [input.name, input.value])));
+  assert.equal(form.purchase, first.purchaseId);
+  const approval = await buyer.request.post(checkout, { form: { ...form, renewal_consent: 'yes' }, maxRedirects: 0 });
+  assert.equal(approval.status(), 303);
+  assert.match(approval.headers().location, /^https:\/\/rzp\.io\/rzp\/sub_/);
+  await buyer.reload();
+  await buyer.getByRole('link', { name: 'Finish renewal approval' }).waitFor();
+  await buyer.getByRole('button', { name: 'Cancel automatic renewal' }).click();
+  await buyer.getByText('Automatic renewal is cancelled.', { exact: false }).waitFor();
+  assert.equal(new URL(buyer.url()).searchParams.get('purchase'), first.purchaseId);
+  await buyer.getByRole('link', { name: purchases[1].domain.name }).click();
+  assert.equal(new URL(buyer.url()).searchParams.get('purchase'), second.purchaseId);
+  await buyer.getByRole('button', { name: 'Check payment and renewal status' }).click();
+  await buyer.getByText('Billing status updated.', { exact: true }).waitFor();
+  assert.equal(new URL(buyer.url()).searchParams.get('purchase'), second.purchaseId);
+  assert.equal((await operation('kiwe_launch_billing_status', { accountId })).billing.id, legacyPurchase);
+  assert.equal((await operation('kiwe_launch_billing_status', { accountId, purchaseId: second.purchaseId })).billing.mandate, null);
+  assert.equal((await other.goto(checkout + '?purchase=' + first.purchaseId)).status(), 404);
+  await other.goto(checkout);
+  const csrf = await other.locator('input[name="csrf"]').first().inputValue();
+  await other.request.post(checkout, { form: { csrf, action: 'cancel-renewal', purchase: second.purchaseId }, maxRedirects: 0 });
+  await other.goto(checkout);
+  assert.equal(await other.getByRole('alert').textContent(), 'This purchase is unavailable.');
+  process.stdout.write('Signed-in checkout kept both native websites, provider approval and cross-account denial scoped to the selected purchase.\n');
 }

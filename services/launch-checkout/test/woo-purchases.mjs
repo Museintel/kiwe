@@ -29,7 +29,7 @@ try {
   assert.deepEqual(projects.map(project => project.id).sort(), receipt.projects.sort());
   assert.deepEqual(projects.map(project => project.planId).sort(), ['kiwe-ecommerce-v1', 'kiwe-portfolio-v1']);
   assert.equal(projects.find(project => project.planId === 'kiwe-portfolio-v1').setup.mode, 'services');
-  console.log('Native WooCommerce billing proof passed for two Start projects, conflicts, access and retries.');
+  console.log('Native WooCommerce billing proof passed for two Start projects, isolated renewals and refunds, access and retries.');
 } finally {
   await start.close();
   await rm(fixture, { recursive: true, force: true });

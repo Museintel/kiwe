@@ -111,7 +111,16 @@ $mode = $formInput['mode'] ?? 'register';
         <?php elseif ($account): ?>
           <div class="checkout-card-head"><h2>Your setup</h2><a class="text-link" href="/checkout/?tab=partner"><?= $account['partner'] ? 'Partner area' : 'Become a partner' ?></a></div>
           <p>Verified email <strong><?= $e($account['email']) ?></strong></p>
-          <?php if ($referral): ?><p class="checkout-note">Your partner price is applied.</p><?php endif; ?>
+          <?php if ($websitePurchases): ?>
+            <h3>Your website purchases</h3>
+            <ul>
+              <?php foreach ($websitePurchases as $website): ?>
+                <li><a href="/checkout/?purchase=<?= $e($website['id']) ?>"<?= $purchaseId === $website['id'] ? ' aria-current="page"' : '' ?>><?= $e($website['domain']) ?></a></li>
+              <?php endforeach; ?>
+            </ul>
+            <?php if ($purchaseId): ?><p><a href="/checkout/?tab=client">Back to checkout</a></p><?php endif; ?>
+          <?php endif; ?>
+          <?php if ($referral && !$purchaseId): ?><p class="checkout-note">Your partner price is applied.</p><?php endif; ?>
           <?php if ($billingState): ?>
             <p class="checkout-note">Domain on this payment <strong><?= $e($billingState['quote']['domain']['name']) ?></strong></p>
           <?php else: ?>

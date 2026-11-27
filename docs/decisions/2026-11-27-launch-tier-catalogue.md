@@ -27,9 +27,10 @@ The shared Guest approval workspace authorizes wholesale, referral and product o
 - The Launch homepage now serves the approved plan comparison from 191 editable Bricks elements. The five native virtual products are drafts. The CTA opens the existing demo form while the new billing path is being qualified. The Plans and Partner routes match the new offer.
 - The owner's ₹8,400 Test Mode product and enhanced Checkout are available to WordPress store managers. The public homepage and restricted Razorpay checkout rendered successfully. Payment submission remains with the owner. The old static root is retained outside the public directory.
 - The private billing candidate accepts verified WooCommerce orders for direct first-year plans. Two independently verified captures for one buyer delivered two projects to the isolated Start service. Receipt replay, buyer ownership, amount validation and legacy billing were exercised. Automatic native collection and the production deployment remain pending.
+- Signed-in billing lists each imported website by domain. Renewal consent, Razorpay plan and invoice checks, cancellation, refund readback and private MCP recovery are scoped to the selected purchase. Isolated tests cover two websites for one buyer, another account's denied access, a lost provider response and one site's cancellation and refund. Production Razorpay plan mapping and hosted provider qualification remain pending.
 
 ## Three remaining launch batches
 
-1. Connect WooCommerce checkout, the verified buyer and site quote to purchase-level billing. Add exact renewal and refund handling, and the annual Freelancer Pass, with separate consent for recurring charges.
+1. Connect WooCommerce checkout, the verified buyer and site quote to purchase-level billing. The candidate handles renewal consent and refunds per website. Add the annual Freelancer Pass and connect the selected website's billing to the native journey.
 2. Finish private pass pricing and role-scoped Guest permissions, wholesale orders, referral attribution and the partner ledger UI and MCP access.
 3. Qualify outgoing mail and the joined provider, checkout, Start and hosting journeys on the representative site. Activate public purchases for the verified offers. Publish paid Operations after the wholesale workflow passes. POS and attendance remain separate roadmap work.

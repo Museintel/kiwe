@@ -7,10 +7,11 @@ function kiwe_checkout_escape(mixed $value): string
     return htmlspecialchars((string) $value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 }
 
-function kiwe_checkout_post_fields(string $action): string
+function kiwe_checkout_post_fields(string $action, ?string $purchaseId = null): string
 {
     return '<input type="hidden" name="action" value="' . kiwe_checkout_escape($action) . '">'
-        . '<input type="hidden" name="csrf" value="' . kiwe_checkout_escape($_SESSION['csrf']) . '">';
+        . '<input type="hidden" name="csrf" value="' . kiwe_checkout_escape($_SESSION['csrf']) . '">'
+        . ($purchaseId === null ? '' : '<input type="hidden" name="purchase" value="' . kiwe_checkout_escape($purchaseId) . '">');
 }
 
 function kiwe_checkout_establish_session(array $account): void
@@ -34,7 +35,9 @@ function kiwe_checkout_current_account(KiweCheckout $checkout): ?array
     return $account;
 }
 
-function kiwe_checkout_action(KiweCheckout $checkout, ?KiweBilling $billing, ?array $account, string $action): string|array
+function kiwe_checkout_action(
+    KiweCheckout $checkout, ?KiweBilling $billing, ?array $account, string $action, ?string $purchaseId = null
+): string|array
 {
     $referral = $_SESSION['referral'] ?? null;
     $address = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
@@ -122,23 +125,23 @@ function kiwe_checkout_action(KiweCheckout $checkout, ?KiweBilling $billing, ?ar
             case 'check-billing':
                 $checkout->limit('billing-status-network', $address, 40, 3600);
                 $checkout->limit('billing-status', $account['id'], 15, 900);
-                $status = $billing->refresh($account['id']);
+                $status = $billing->refresh($account['id'], $purchaseId);
                 if (!$status) return 'This payment link has ended. Refresh your checkout details for a new link.';
                 if (!$status['paid']) return 'The first-year payment is awaiting confirmation.';
-                $billing->deliver($account['id']);
+                $billing->deliver($account['id'], $purchaseId);
                 return 'Billing status updated.';
             case 'renewal-consent':
                 if (($_POST['renewal_consent'] ?? '') !== 'yes') throw new KiweCheckoutError('Confirm the monthly renewal terms.');
                 $amount = filter_var($_POST['renewal_amount'] ?? '', FILTER_VALIDATE_INT);
                 $starts = filter_var($_POST['renewal_start'] ?? '', FILTER_VALIDATE_INT);
                 $cycles = filter_var($_POST['renewal_cycles'] ?? '', FILTER_VALIDATE_INT);
-                return ['redirect' => $billing->renew($account['id'], $address, $amount ?: 0, $starts ?: 0, $cycles ?: 0)];
+                return ['redirect' => $billing->renew($account['id'], $address, $amount ?: 0, $starts ?: 0, $cycles ?: 0, $purchaseId)];
             case 'cancel-renewal':
-                $billing->cancelRenewal($account['id']);
+                $billing->cancelRenewal($account['id'], $purchaseId);
                 return 'Automatic renewal is cancelled. Your paid term is recorded below.';
             case 'open-start':
                 $checkout->limit('start-handoff', $account['id'], 20, 900);
-                return ['handoff' => $billing->handoff($account['id'])];
+                return ['handoff' => $billing->handoff($account['id'], $purchaseId)];
             case 'request-withdrawal':
                 $_SESSION['tab'] = 'partner';
                 $checkout->limit('partner-withdrawal', $account['id'], 20, 3600);
@@ -190,9 +193,20 @@ function kiwe_checkout_serve(array $state, string $root): void
             echo 'Open the Kiwe Launch checkout again and retry.';
             return;
         }
+        $purchaseId = null;
         try {
             if ((int) ($_SERVER['CONTENT_LENGTH'] ?? 0) > 18000) throw new KiweCheckoutError('Your request is too large.', 413);
-            $message = kiwe_checkout_action($checkout, $billing, $account, kiwe_checkout_text($_POST['action'] ?? '', 'action', 48));
+            $action = kiwe_checkout_text($_POST['action'] ?? '', 'action', 48);
+            if (isset($_POST['purchase'])) {
+                $requested = $_POST['purchase'];
+                if (!in_array($action, ['check-billing', 'renewal-consent', 'cancel-renewal', 'open-start'], true)
+                    || !$account || !is_string($requested) || !preg_match('/^kiwe_[a-f0-9]{32}$/D', $requested)
+                    || !$billing?->status($account['id'], $requested)) {
+                    throw new KiweCheckoutError('This purchase is unavailable.', 404);
+                }
+                $purchaseId = $requested;
+            }
+            $message = kiwe_checkout_action($checkout, $billing, $account, $action, $purchaseId);
             if (is_array($message)) {
                 if (isset($message['redirect'])) {
                     header('Location: ' . $message['redirect'], true, 303);
@@ -208,8 +222,20 @@ function kiwe_checkout_serve(array $state, string $root): void
             error_log('Kiwe Launch checkout action failed.');
             $_SESSION['flash'] = ['message' => 'Kiwe could not save this step. Please try again.', 'error' => true];
         }
-        header('Location: /checkout/', true, 303);
+        header('Location: /checkout/' . ($purchaseId ? '?purchase=' . $purchaseId : ''), true, 303);
         return;
+    }
+    $purchaseId = null;
+    $selectedBilling = null;
+    if (isset($_GET['purchase'])) {
+        $requested = $_GET['purchase'];
+        if (!$account || !is_string($requested) || !preg_match('/^kiwe_[a-f0-9]{32}$/D', $requested)
+            || !($selectedBilling = $billing?->status($account['id'], $requested))) {
+            http_response_code(404);
+            echo 'This purchase is unavailable.';
+            return;
+        }
+        $purchaseId = $requested;
     }
     if (isset($_GET['tab']) && in_array($_GET['tab'], ['partner', 'client'], true)) $_SESSION['tab'] = $_GET['tab'];
     $flash = $_SESSION['flash'] ?? null;
@@ -217,10 +243,11 @@ function kiwe_checkout_serve(array $state, string $root): void
     $formInput = $_SESSION['draft_input'] ?? [];
     unset($_SESSION['flash'], $_SESSION['share'], $_SESSION['draft_input']);
     $link = $account ? null : $checkout->linkInfo($_SESSION['verification'] ?? null);
-    $partnerTab = ($_SESSION['tab'] ?? '') === 'partner';
+    $partnerTab = !$purchaseId && ($_SESSION['tab'] ?? '') === 'partner';
     $referral = $account && !$partnerTab ? $checkout->referralFor($account['id']) : null;
     $draft = $account && !$partnerTab ? $checkout->draft($account['id']) : null;
-    $billingState = $account && !$partnerTab ? $billing?->status($account['id']) : null;
+    $billingState = $selectedBilling ?? ($account && !$partnerTab ? $billing?->status($account['id']) : null);
+    $websitePurchases = $account && !$partnerTab ? ($billing?->websitePurchases($account['id']) ?? []) : [];
     $partnerReferrals = $partnerTab && ($account['partner'] ?? false) ? $checkout->partnerReferrals($account) : [];
     $clientPage = filter_var($_GET['clients_page'] ?? 1, FILTER_VALIDATE_INT, [
         'options' => ['min_range' => 1, 'max_range' => intdiv(PHP_INT_MAX, 20) - 1],

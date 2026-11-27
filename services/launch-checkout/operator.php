@@ -26,7 +26,7 @@ try {
         'activate-domain-move' => ($billing ?? throw new KiweCheckoutError('Launch billing is unavailable.', 503))
             ->activateDomainMove($value, kiwe_checkout_domain($argv[3] ?? ''), $argv[4] ?? '', $argv[5] ?? '', $argv[6] ?? '',
                 ($argv[7] ?? '') === '--source-frozen'),
-        'recover-renewal' => kiwe_checkout_operator_recover($billing, $value, $argv[3] ?? ''),
+        'recover-renewal' => kiwe_checkout_operator_recover($billing, $value, $argv[3] ?? '', $argv[4] ?? null),
         'partner-summary' => ['balance' => kiwe_checkout_operator_partners($billing)->summary($value)],
         'reconcile-partner-deliveries' => kiwe_checkout_operator_partners($billing)->reconcileDeliveries(),
         'withdrawals' => kiwe_checkout_operator_partners($billing)->withdrawals($value ?: 'pending', kiwe_checkout_operator_page($argv[3] ?? '1')),
@@ -86,12 +86,13 @@ function kiwe_checkout_operator_woo_purchase(?KiweBilling $billing, string $json
     return ['purchaseId' => $billing->importWooPurchase($order)];
 }
 
-function kiwe_checkout_operator_recover(?KiweBilling $billing, string $account, string $subscription): array
+function kiwe_checkout_operator_recover(?KiweBilling $billing, string $account, string $subscription, ?string $purchase = null): array
 {
     if (!$billing) throw new KiweCheckoutError('Launch billing is unavailable.', 503);
     if (!preg_match('/^launch:[a-f0-9]{32}$/D', $account)) throw new KiweCheckoutError('Enter a Launch account ID.');
-    $billing->recoverMandate($account, $subscription);
-    return ['billing' => kiwe_checkout_operator_billing($billing, $account)];
+    if ($purchase !== null && !preg_match('/^kiwe_[a-f0-9]{32}$/D', $purchase)) throw new KiweCheckoutError('Enter a Launch purchase ID.');
+    $billing->recoverMandate($account, $subscription, $purchase);
+    return ['billing' => kiwe_checkout_operator_billing($billing, $account, $purchase)];
 }
 
 function kiwe_checkout_operator_partners(?KiweBilling $billing): KiwePartners

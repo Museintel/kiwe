@@ -124,10 +124,11 @@ if (checkoutRoot) {
   }, ({ purchaseId, domain, sourceUrl, recoverySha256, finalRecoverySha256 }) =>
     operation('activate-domain-move', purchaseId, domain, sourceUrl, recoverySha256, finalRecoverySha256, '--source-frozen'));
   server.registerTool('kiwe_launch_recover_renewal', {
-    description: 'Reconcile a previously reserved Kiwe renewal to its verified Razorpay subscription ID.',
-    inputSchema: { accountId: z.string().regex(/^launch:[a-f0-9]{32}$/), subscriptionId: z.string().regex(/^sub_[A-Za-z0-9]{4,80}$/) },
+    description: 'Reconcile a previously reserved renewal for its exact website purchase to a verified Razorpay subscription ID. Omit purchaseId for the original checkout flow.',
+    inputSchema: { accountId: launchAccountId, purchaseId: launchPurchaseId.optional(), subscriptionId: z.string().regex(/^sub_[A-Za-z0-9]{4,80}$/) },
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
-  }, ({ accountId, subscriptionId }) => operation('recover-renewal', accountId, subscriptionId));
+  }, ({ accountId, purchaseId, subscriptionId }) =>
+    operation('recover-renewal', accountId, subscriptionId, ...(purchaseId ? [purchaseId] : [])));
   const withdrawalId = z.string().regex(/^wd_[a-f0-9]{32}$/);
   const amountMinor = z.number().int().positive();
   server.registerTool('kiwe_launch_partner_summary', {
