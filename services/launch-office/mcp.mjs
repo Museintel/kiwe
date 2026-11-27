@@ -18,7 +18,7 @@ async function callPhp(script, ...input) {
   const php = process.env.KIWE_LAUNCH_PHP ?? 'php';
   const args = process.env.KIWE_LAUNCH_PHP_CONFIG ? ['-c', path.resolve(process.env.KIWE_LAUNCH_PHP_CONFIG)] : [];
   const timeout = input[0] === 'reconcile-billing' ? 55000
-    : ['reconcile-partner-deliveries', 'reconcile-domain', 'activate-domain-move'].includes(input[0]) ? 35000 : 12000;
+    : ['reconcile-partner-deliveries', 'reconcile-domain', 'activate-domain-move', 'import-woo-purchase'].includes(input[0]) ? 35000 : 12000;
   const { stdout } = await run(php, [...args, script, ...input], { timeout, maxBuffer: 512 * 1024 });
   return JSON.parse(stdout);
 }
@@ -77,11 +77,26 @@ if (checkoutRoot) {
     inputSchema: { accountId: z.string().regex(/^launch:[a-f0-9]{32}$/) },
     annotations: { readOnlyHint: true },
   }, ({ accountId }) => operation('quote', accountId));
+  const launchAccountId = z.string().regex(/^launch:[a-f0-9]{32}$/);
+  const launchPurchaseId = z.string().regex(/^kiwe_[a-f0-9]{32}$/);
   server.registerTool('kiwe_launch_billing_status', {
-    description: 'Read the confirmed payment, refunds, renewal and Start project status for one Launch account.',
-    inputSchema: { accountId: z.string().regex(/^launch:[a-f0-9]{32}$/) },
+    description: 'Read billing and Start status for an owned purchase. Omit purchaseId for the original checkout flow.',
+    inputSchema: { accountId: launchAccountId, purchaseId: launchPurchaseId.optional() },
     annotations: { readOnlyHint: true },
-  }, ({ accountId }) => operation('billing-status', accountId));
+  }, ({ accountId, purchaseId }) => operation('billing-status', accountId, ...(purchaseId ? [purchaseId] : [])));
+  server.registerTool('kiwe_launch_import_woo_purchase', {
+    description: 'Record an already paid direct Kiwe Launch WooCommerce order from trusted native operator evidence. Razorpay independently confirms it. This does not charge the customer.',
+    inputSchema: {
+      orderId: z.number().int().positive(), accountId: launchAccountId, planId: z.string().max(80), sku: z.string().max(80),
+      providerOrderId: z.string().regex(/^order_[A-Za-z0-9]{4,80}$/), paymentId: z.string().regex(/^pay_[A-Za-z0-9]{4,80}$/),
+      paidAt: z.number().int().positive(),
+      domain: z.discriminatedUnion('mode', [
+        z.strictObject({ mode: z.literal('owned'), name: z.string().min(1).max(253) }),
+        z.strictObject({ mode: z.literal('register'), name: z.string().min(1).max(253), category: z.literal('standard') }),
+      ]),
+    },
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
+  }, (order) => operation('import-woo-purchase', JSON.stringify(order)));
   server.registerTool('kiwe_launch_reconcile_billing', {
     description: 'Check pending Razorpay payments and deliver confirmed first-year purchases to Kiwe Start once.',
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },

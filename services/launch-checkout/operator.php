@@ -17,7 +17,8 @@ try {
         'domain' => ['domain' => kiwe_checkout_domain($value), ...$checkout->domainAvailability($value)],
         'enrol-partner' => ['account' => $checkout->enrolPartner($value)],
         'quote' => kiwe_checkout_operator_quote($checkout, $value),
-        'billing-status' => ['billing' => kiwe_checkout_operator_billing($billing, $value)],
+        'billing-status' => ['billing' => kiwe_checkout_operator_billing($billing, $value, $argv[3] ?? null)],
+        'import-woo-purchase' => kiwe_checkout_operator_woo_purchase($billing, $value),
         'reconcile-billing' => $billing?->deliverPending() ?? throw new KiweCheckoutError('Launch billing is unavailable.', 503),
         'register-domain', 'reconcile-domain' => kiwe_checkout_operator_domain($state, $argv[1], $value, $argv[3] ?? '', $argv[4] ?? ''),
         'review-domain-move' => ($billing ?? throw new KiweCheckoutError('Launch billing is unavailable.', 503))
@@ -63,16 +64,26 @@ function kiwe_checkout_operator_quote(KiweCheckout $checkout, string $accountId)
     return ['id' => $draft['id'], 'revision' => $draft['revision'], 'quote' => $draft['quote']];
 }
 
-function kiwe_checkout_operator_billing(?KiweBilling $billing, string $accountId): ?array
+function kiwe_checkout_operator_billing(?KiweBilling $billing, string $accountId, ?string $purchaseId = null): ?array
 {
     if (!$billing) throw new KiweCheckoutError('Launch billing is unavailable.', 503);
     if (!preg_match('/^launch:[a-f0-9]{32}$/D', $accountId)) throw new KiweCheckoutError('Enter a Launch account ID.');
-    $status = $billing->status($accountId);
+    if ($purchaseId !== null && !preg_match('/^kiwe_[a-f0-9]{32}$/D', $purchaseId)) throw new KiweCheckoutError('Enter a Launch purchase ID.');
+    $status = $billing->status($accountId, $purchaseId);
     if ($status) {
         unset($status['linkUrl']);
         unset($status['mandate']['url']);
     }
     return $status;
+}
+
+function kiwe_checkout_operator_woo_purchase(?KiweBilling $billing, string $json): array
+{
+    if (!$billing) throw new KiweCheckoutError('Launch billing is unavailable.', 503);
+    if (strlen($json) > 4096) throw new KiweCheckoutError('The native order payload is too large.', 400);
+    $order = json_decode($json, true);
+    if (!is_array($order)) throw new KiweCheckoutError('Provide the verified native order payload.', 400);
+    return ['purchaseId' => $billing->importWooPurchase($order)];
 }
 
 function kiwe_checkout_operator_recover(?KiweBilling $billing, string $account, string $subscription): array

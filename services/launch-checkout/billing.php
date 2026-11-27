@@ -19,6 +19,7 @@ final class KiweBilling
         public readonly int $cycles,
         private readonly Closure $razorpay,
         private readonly Closure $start,
+        private readonly array $nativePlans = [],
     ) {
         umask(0077);
         $this->db = new PDO('sqlite:' . $database, options: [PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC]);
@@ -68,12 +69,18 @@ final class KiweBilling
 
     private function active(string $accountId): ?array
     {
-        return $this->row('SELECT * FROM launch_payments WHERE account_id = ? AND retired_at IS NULL', [$accountId]);
+        return $this->row("SELECT * FROM launch_payments WHERE account_id = ? AND retired_at IS NULL AND draft_id NOT GLOB 'woo:*'", [$accountId]);
     }
 
     private function purchase(string $id): ?array
     {
         return $this->row('SELECT * FROM launch_payments WHERE id = ?', [$id]);
+    }
+
+    private function ownedPurchase(string $accountId, ?string $purchaseId): ?array
+    {
+        if ($purchaseId === null) return $this->active($accountId);
+        return $this->row('SELECT * FROM launch_payments WHERE id = ? AND account_id = ? AND retired_at IS NULL', [$purchaseId, $accountId]);
     }
 
     private function mandate(string $purchase): ?array
@@ -103,9 +110,9 @@ final class KiweBilling
         return (new DateTimeImmutable('@' . (time() + 1800)))->setTimezone(new DateTimeZone('Asia/Kolkata'))->modify('tomorrow')->getTimestamp();
     }
 
-    public function status(string $accountId): ?array
+    public function status(string $accountId, ?string $purchaseId = null): ?array
     {
-        $purchase = $this->active($accountId);
+        $purchase = $this->ownedPurchase($accountId, $purchaseId);
         if (!$purchase) return null;
         $quote = $this->quote($purchase);
         $paid = $purchase['payment_id'] !== null;
@@ -249,6 +256,80 @@ final class KiweBilling
             && (($payment['status'] ?? '') !== 'refunded' || $refund === $amount);
     }
 
+    /** The private Woo operator supplies the paid native order; Razorpay independently confirms it. */
+    public function importWooPurchase(array $native): string
+    {
+        $orderId = $native['orderId'] ?? null;
+        $accountId = $native['accountId'] ?? '';
+        $planId = $native['planId'] ?? '';
+        $providerOrder = kiwe_billing_id($native['providerOrderId'] ?? null, 'order');
+        $paymentId = kiwe_billing_id($native['paymentId'] ?? null, 'pay');
+        $paidAt = $native['paidAt'] ?? null;
+        $plan = is_string($planId) ? ($this->nativePlans[$planId] ?? null) : null;
+        if (!is_int($orderId) || $orderId < 1 || !is_string($accountId) || !preg_match('/^launch:[a-f0-9]{32}$/D', $accountId)
+            || !$plan || ($native['sku'] ?? null) !== $plan['sku'] || !$providerOrder || !$paymentId
+            || !is_int($paidAt) || $paidAt < 1 || $paidAt > time() + 300) {
+            throw new KiweCheckoutError('Provide the paid WooCommerce order and the exact website plan.', 400);
+        }
+        $domain = $native['domain'] ?? null;
+        if (!is_array($domain) || !in_array($domain['mode'] ?? '', ['owned', 'register'], true)) {
+            throw new KiweCheckoutError('Provide the domain selected at checkout.', 400);
+        }
+        $selection = ['mode' => $domain['mode'], 'name' => kiwe_checkout_domain($domain['name'] ?? null)];
+        if ($selection['mode'] === 'register') {
+            $labels = explode('.', $selection['name']);
+            if (count($labels) !== 2 || $labels[1] !== $plan['domain']['includedExtension'] || ($domain['category'] ?? '') !== 'standard') {
+                throw new KiweCheckoutError('Only an eligible standard .in domain is included.', 400);
+            }
+            $selection['category'] = 'standard';
+        }
+        if (!$this->row('SELECT id FROM checkout_accounts WHERE id = ? AND verified_at > 0', [$accountId])) {
+            throw new KiweCheckoutError('The checkout needs a verified Kiwe Launch account.', 404);
+        }
+        $price = $plan['direct'];
+        $quote = json_encode(['planId' => $planId, 'currency' => $plan['currency'], 'upfrontMinor' => $price['upfrontMinor'],
+            'renewalMinor' => $price['renewalMinor'], 'referralId' => null, 'domain' => $selection], JSON_THROW_ON_ERROR);
+        $lookup = function () use ($orderId, $accountId, $providerOrder, $paymentId, $paidAt, $quote): ?string {
+            $existing = $this->row('SELECT o.provider_order_id, p.* FROM launch_woo_orders o
+                JOIN launch_payments p ON p.id = o.purchase_id WHERE o.native_id = ?', [$orderId]);
+            if (!$existing) return null;
+            if ($existing['account_id'] !== $accountId || $existing['provider_order_id'] !== $providerOrder
+                || $existing['payment_id'] !== $paymentId || $existing['quote'] !== $quote || $existing['confirmed_at'] !== $paidAt) {
+                throw new KiweCheckoutError('This WooCommerce order is already linked to different purchase details.', 409);
+            }
+            return $existing['id'];
+        };
+        if ($existing = $lookup()) return $existing;
+
+        $order = ($this->razorpay)('GET', '/orders/' . $providerOrder);
+        $payment = ($this->razorpay)('GET', '/payments/' . $paymentId);
+        $amount = $price['upfrontMinor'];
+        if (($order['id'] ?? '') !== $providerOrder || ($order['receipt'] ?? '') !== (string) $orderId
+            || ($order['notes']['woocommerce_order_id'] ?? '') !== (string) $orderId || ($order['status'] ?? '') !== 'paid'
+            || ($order['currency'] ?? '') !== $plan['currency'] || ($order['amount'] ?? null) !== $amount
+            || ($order['amount_paid'] ?? null) !== $amount || ($order['amount_due'] ?? null) !== 0
+            || ($payment['id'] ?? '') !== $paymentId || ($payment['order_id'] ?? '') !== $providerOrder
+            || !is_int($payment['created_at'] ?? null) || $payment['created_at'] < 1 || $payment['created_at'] > $paidAt
+            || !$this->validPayment($payment, $amount, $plan['currency']) || ($payment['amount_refunded'] ?? 0) >= $amount) {
+            throw new KiweCheckoutError('Razorpay has not confirmed the exact paid WooCommerce order.', 409);
+        }
+
+        return $this->transaction(function () use ($lookup, $accountId, $orderId, $providerOrder, $paymentId, $paidAt, $quote, $payment): string {
+            if ($existing = $lookup()) return $existing;
+            if ($this->row('SELECT id FROM launch_payments WHERE payment_id = ?', [$paymentId])
+                || $this->row('SELECT native_id FROM launch_woo_orders WHERE provider_order_id = ?', [$providerOrder])) {
+                throw new KiweCheckoutError('This provider payment or order is already linked to a purchase.', 409);
+            }
+            $id = 'kiwe_' . bin2hex(random_bytes(16));
+            $this->query('INSERT INTO launch_payments (id, account_id, draft_id, draft_revision, quote, consent_at, link_expires_at,
+                    payment_id, payment_refunded, confirmed_at, first_term_end) VALUES (?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?)',
+                [$id, $accountId, 'woo:' . $orderId, $quote, $paidAt, $paidAt, $paymentId, $payment['amount_refunded'] ?? 0,
+                    $paidAt, kiwe_billing_month_end($paidAt, 12)]);
+            $this->query('INSERT INTO launch_woo_orders (native_id, provider_order_id, purchase_id) VALUES (?, ?, ?)', [$orderId, $providerOrder, $id]);
+            return $id;
+        });
+    }
+
     public function refresh(string $accountId): ?array
     {
         $purchase = $this->active($accountId);
@@ -280,9 +361,9 @@ final class KiweBilling
         return $this->status($accountId);
     }
 
-    public function deliver(string $accountId): ?string
+    public function deliver(string $accountId, ?string $purchaseId = null): ?string
     {
-        $purchase = $this->active($accountId);
+        $purchase = $this->ownedPurchase($accountId, $purchaseId);
         if (!$purchase || !$purchase['payment_id']) return null;
         $quote = $this->quote($purchase);
         if ($this->refunded($purchase['payment_id'], $purchase['payment_refunded']) >= $quote['upfrontMinor']) return $purchase['start_project_id'];
@@ -313,10 +394,10 @@ final class KiweBilling
         return $this->purchase($purchase['id'])['start_project_id'];
     }
 
-    public function handoff(string $accountId): array
+    public function handoff(string $accountId, ?string $purchaseId = null): array
     {
-        if (!$this->deliver($accountId)) throw new KiweCheckoutError('Start opens after the first-year payment is confirmed.', 409);
-        $purchase = $this->active($accountId);
+        if (!$this->deliver($accountId, $purchaseId)) throw new KiweCheckoutError('Start opens after the first-year payment is confirmed.', 409);
+        $purchase = $this->ownedPurchase($accountId, $purchaseId);
         $reply = ($this->start)('handoffs', ['entitlementId' => $purchase['id'], 'accountId' => $accountId]);
         $action = $this->startOrigin . '/projects/open';
         if (($reply['action'] ?? '') !== $action || !is_string($reply['ticket'] ?? null)
@@ -337,7 +418,8 @@ final class KiweBilling
         if ($mode === 'register') $selection['category'] = 'standard';
         if (!$purchase || $purchase['retired_at'] || !$purchase['confirmed_at'] || !$purchase['start_project_id']
             || ($mode === 'register' && $purchase['first_term_end'] <= time())
-            || ($quote['planId'] ?? null) !== $this->checkout->plan['id'] || ($quote['domain'] ?? null) !== $selection) {
+            || (($quote['planId'] ?? null) !== $this->checkout->plan['id'] && !isset($this->nativePlans[$quote['planId'] ?? '']))
+            || ($quote['domain'] ?? null) !== $selection) {
             throw new KiweCheckoutError('Use the exact domain and a confirmed purchase that was delivered to Start.', 409);
         }
         $dispute = $this->row('SELECT COALESCE(SUM(deducted + held), 0) AS withheld FROM launch_disputes WHERE payment_id = ?',
@@ -695,7 +777,7 @@ final class KiweBilling
                 [time(), $row['id'], time() - 180])->rowCount() !== 1) continue;
             try {
                 if (!$row['payment_id']) $this->refresh($row['account_id']);
-                if ($this->deliver($row['account_id'])) $delivered++;
+                if ($this->deliver($row['account_id'], $row['id'])) $delivered++;
             } catch (Throwable $error) {
                 $retry++;
                 $errors[] = $error instanceof KiweCheckoutError ? $error->getMessage() : 'Launch billing could not reconcile this record.';

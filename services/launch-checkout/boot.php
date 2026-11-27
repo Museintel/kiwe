@@ -6,7 +6,7 @@ require_once __DIR__ . '/store.php';
 require_once __DIR__ . '/billing.php';
 require_once __DIR__ . '/registration.php';
 
-function kiwe_checkout_billing(mixed $config, KiweCheckout $checkout, string $database, string $origin, bool $test): ?KiweBilling
+function kiwe_checkout_billing(mixed $config, KiweCheckout $checkout, string $database, string $origin, bool $test, array $nativePlans = []): ?KiweBilling
 {
     if (!is_array($config)) return null;
     $startOrigin = $config['startOrigin'] ?? '';
@@ -41,7 +41,32 @@ function kiwe_checkout_billing(mixed $config, KiweCheckout $checkout, string $da
         }
         $razorpay = kiwe_billing_gateway($keyId, $config['keySecret']);
     }
-    return new KiweBilling($database, $checkout, $origin, $startOrigin, $merchant, $secret, $plans, $cycles, $razorpay, $start);
+    return new KiweBilling($database, $checkout, $origin, $startOrigin, $merchant, $secret, $plans, $cycles, $razorpay, $start, $nativePlans);
+}
+
+function kiwe_checkout_native_plans(string $root): array
+{
+    $path = $root . '/launch-catalogue.json';
+    if (!is_file($path)) return [];
+    $catalogue = json_decode(file_get_contents($path, length: 65536), true, flags: JSON_THROW_ON_ERROR);
+    $plans = [];
+    $websitePlans = $catalogue['websitePlans'] ?? [];
+    if (!is_array($websitePlans) || !$websitePlans) throw new RuntimeException('The website catalogue is missing its plans.');
+    foreach ($websitePlans as $plan) {
+        $id = $plan['id'] ?? '';
+        $sku = $plan['sku'] ?? '';
+        $renewal = $plan['direct']['renewalMinor'] ?? null;
+        if (!is_string($id) || !preg_match('/^kiwe-[a-z]+-v[1-9][0-9]*$/D', $id) || isset($plans[$id])
+            || !is_string($sku) || !preg_match('/^KIWE-[A-Z]+-FIRST-12-MONTHS$/D', $sku)
+            || ($plan['currency'] ?? '') !== 'INR' || ($plan['hostingIncluded'] ?? false) !== true
+            || ($plan['domain']['includedExtension'] ?? '') !== 'in' || ($plan['firstTermMonths'] ?? null) !== 12
+            || ($plan['renewalIntervalMonths'] ?? null) !== 1 || !is_int($renewal) || $renewal < 1 || $renewal > 10000000
+            || ($plan['direct']['upfrontMinor'] ?? null) !== $renewal * 12) {
+            throw new RuntimeException('The website catalogue has invalid billing terms.');
+        }
+        $plans[$id] = $plan;
+    }
+    return $plans;
 }
 
 function kiwe_checkout_boot(string $root): ?array
@@ -84,7 +109,7 @@ function kiwe_checkout_boot(string $root): ?array
     $checkout = new KiweCheckout($database, $plan, $origin, $secret, $mailer, $registrar);
     return [
         'origin' => $origin, 'test' => $test, 'sessions' => $storage . '/sessions',
-        'checkout' => $checkout, 'billing' => kiwe_checkout_billing($settings['billing'] ?? null, $checkout, $database, $origin, $test),
+        'checkout' => $checkout, 'billing' => kiwe_checkout_billing($settings['billing'] ?? null, $checkout, $database, $origin, $test, kiwe_checkout_native_plans($root)),
         'registrar' => PHP_SAPI === 'cli' ? static fn (): ?KiweRegistration => kiwe_registration_provider($settings, $test) : null,
     ];
 }

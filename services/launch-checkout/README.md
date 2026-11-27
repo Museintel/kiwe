@@ -56,6 +56,12 @@ Configure Razorpay to send Payment Link paid, expired and cancelled events, Subs
 
 Set `KIWE_LAUNCH_CHECKOUT_ROOT` on the private Launch office MCP process. Its `kiwe_launch_check_domain`, `kiwe_launch_enrol_partner`, `kiwe_launch_checkout_quote`, `kiwe_launch_billing_status`, `kiwe_launch_reconcile_billing` and `kiwe_launch_recover_renewal` tools use the same checkout service. The reads exclude contact fields, payment links and handoff credentials. Operators can use `php operator.php` from the service directory through the existing approved SSH access.
 
+### Native WooCommerce purchases
+
+Generate `launch-catalogue.json` from `launchCatalogue` in `services/start-projects/src/client-plan.mjs` using the same private configuration export as the original plan. Keep the versioned offers used by existing purchases available to the reconciler. With the catalogue present, the private `kiwe_launch_import_woo_purchase` tool and `php operator.php import-woo-purchase JSON` accept the native order ID, verified Launch account ID, exact plan and SKU, Razorpay order and payment IDs, WooCommerce paid timestamp, and selected domain. The operator must obtain these fields from the trusted Kiwe Launch WooCommerce order and verified buyer binding. The tool is for direct first-year payments and does not create charges. Razorpay must independently confirm the exact order receipt, captured payment and amount. [Razorpay order readback](https://razorpay.com/docs/api/orders/fetch-with-id/)
+
+The billing reconciliation job delivers by exact purchase ID, so one buyer can have separate native orders and Start projects. Read a purchase with `kiwe_launch_billing_status` and `purchaseId`. Omitting it selects the original Payment Link flow. Before migrating an existing billing database, keep a consistent SQLite backup including pending writes. The new schema retains the legacy single-open-payment constraint for original orders and permits multiple native purchases. If a migrated database already contains multiple purchases, preserve it for reconciliation before restoring any older code and index.
+
 Partner tools in that private MCP process are `kiwe_launch_partner_summary`, `kiwe_launch_reconcile_partner_deliveries`, `kiwe_launch_withdrawals`, `kiwe_launch_review_withdrawal` and `kiwe_launch_record_payout`. They use the same ledger as the dashboard. The withdrawal read can page through pending, paid or all records. The tool results use Launch account and withdrawal IDs and omit client contact and bank details.
 
 ## Included domain registration
@@ -77,6 +83,8 @@ See the [Start move and recovery workflow](../start-projects/README.md#reviewed-
 ## Qualification and recovery
 
 Run `node services/launch-checkout/test/checkout.mjs` using the same PHP and Playwright environment as the [Launch site checks](../launch-office/README.md#qualification-and-release). The browser suite uses an isolated SQLite database, captured fixture email, simulated Razorpay responses and an isolated Start server. It covers partner isolation, exact-month accrual, request replays, dispute holds, payout recording and a refund after payout. The Hostinger PHP proof in `test/hosted-proof.php` uses the same PHP store and synthetic Start and transfer receipts. It covers a full first year and a monthly renewal, a chargeback and duplicate transfer reference rejection. Live mail, registrar access, Razorpay Test Mode and the external payout process require their respective rehearsals before use.
+
+Run `node services/launch-checkout/test/woo-purchases.mjs` with the same PHP settings to check the old index migration, ownership and duplicate rejection, and real Start service delivery from two simulated captured provider orders.
 
 The PHP proof also checks the registration payment gate, matching registrar contact, catalogue cap, lost request recovery, verification hold and durable receipt. Keep `launch_domain_orders` and the Start domain setup records through code rollback. Reconcile any intervening registrar and billing state before re-enabling purchase. The domain purchase and renewal lifecycle still need real provider qualification.
 

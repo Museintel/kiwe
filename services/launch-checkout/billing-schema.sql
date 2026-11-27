@@ -16,7 +16,15 @@ CREATE TABLE IF NOT EXISTS launch_payments (
     start_project_id TEXT,
     reviewed_at INTEGER NOT NULL DEFAULT 0
 ) STRICT;
-CREATE UNIQUE INDEX IF NOT EXISTS launch_one_open_payment ON launch_payments(account_id) WHERE retired_at IS NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS launch_one_open_legacy_payment ON launch_payments(account_id)
+    WHERE retired_at IS NULL AND draft_id NOT GLOB 'woo:*';
+DROP INDEX IF EXISTS launch_one_open_payment;
+
+CREATE TABLE IF NOT EXISTS launch_woo_orders (
+    native_id INTEGER PRIMARY KEY CHECK(native_id > 0),
+    provider_order_id TEXT NOT NULL UNIQUE,
+    purchase_id TEXT NOT NULL UNIQUE REFERENCES launch_payments(id)
+) STRICT;
 
 CREATE TABLE IF NOT EXISTS launch_domain_orders (
     purchase_id TEXT PRIMARY KEY REFERENCES launch_payments(id),
