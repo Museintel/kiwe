@@ -342,7 +342,7 @@
     },
     "assets/js/guest-app.js": {
       "bytes": 25635,
-      "sha256": "42b325eb7deecb28c34b0a9c137467797b9c2c98af379af32d4929ebb1d5e772"
+      "sha256": "1913145facc859b984ac7997bc656142a172657e32fdb22f68c22690c21926e4"
     },
     "assets/js/identity-app.js": {
       "bytes": 18122,
@@ -410,7 +410,7 @@
     },
     "assets/js/notification-app.js": {
       "bytes": 70220,
-      "sha256": "1b2c51959bc824afd5e5afcbaede0f11e7556798edbb5935c945f5e0ae4276e3"
+      "sha256": "7201a8ce0528c164e1e2ee15783f7664e6e9ab9ffccdb442ceb2d1bce2908fe8"
     },
     "assets/js/onboarding.js": {
       "bytes": 11348,
