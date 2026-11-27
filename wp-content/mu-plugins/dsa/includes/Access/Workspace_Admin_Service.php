@@ -336,6 +336,10 @@ final class Workspace_Admin_Service {
 			$app = \DSA\Apps\Razorpay_App_Service::card();
 			$apps[] = [ 'label'=>__( 'Razorpay', 'dsa' ), 'description'=>$app['description'], 'url'=>$app['url'], 'icon'=>'dashicons-money-alt', 'app'=>$app ];
 		}
+		if ( \DSA\Apps\Shiprocket_App_Service::allowed() ) {
+			$app = \DSA\Apps\Shiprocket_App_Service::card();
+			$apps[] = [ 'label'=>__( 'Shiprocket', 'dsa' ), 'description'=>$app['description'], 'url'=>$app['url'], 'icon'=>'dashicons-location-alt', 'app'=>$app ];
+		}
 
 		foreach ( [ \DSA\Apps\Guest_App_Service::class=>'dashicons-welcome-write-blog',\DSA\Apps\AI_App_Service::class=>'dashicons-lightbulb',\DSA\Apps\SiteGraph_App_Service::class=>'dashicons-networking',\DSA\Apps\MCP_App_Service::class=>'dashicons-admin-links' ] as $owner=>$icon ) {
 			if ( ! $owner::allowed() && ! ( $owner === \DSA\Apps\MCP_App_Service::class && $owner::enabled() && $owner::can_connect() ) ) continue;

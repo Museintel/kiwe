@@ -5296,6 +5296,14 @@
 		return runtimeHydrationPromise.then( function () { return dsaGet( '/checkout/review' ); } );
 	};
 
+	window.DSA.updateCheckoutShipping = function ( choice ) {
+		return runtimeHydrationPromise.then( function () { return dsaPost( '/checkout/review', choice ); } );
+	};
+
+	window.DSA.readDeliveryEstimate = function ( details ) {
+		return runtimeHydrationPromise.then( function () { return dsaPost( '/store/delivery-estimate', details ); } );
+	};
+
 	function navigateFromCheckoutSheet( checkoutUrl ) {
 		// Use the sheet's history entry for checkout so closing cannot race the page load with Back.
 		const replaceHistoryEntry = surfaceHistoryActive;
@@ -5975,7 +5983,8 @@
 	} );
 
 	function dsaPost( path, payload, retried, keepalive ) {
-		debugLog( 'REST POST start', { path: path, payload: path === '/links/enquiry' ? '[private enquiry]' : payload || {}, retried: Boolean( retried ) } );
+		const debugPayload = path === '/store/delivery-estimate' ? '[private delivery estimate]' : payload || {};
+		debugLog( 'REST POST start', { path: path, payload: path === '/links/enquiry' ? '[private enquiry]' : debugPayload, retried: Boolean( retried ) } );
 
 		return fetch( noStoreUrl( data.restUrl + path ), {
 			method: 'POST',

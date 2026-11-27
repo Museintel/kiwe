@@ -1,3 +1,8 @@
+## 8.0.0-rc.515 (2026-11-27)
+
+- Show Shiprocket setup in Kiwe Apps and expose connection status to permitted Store MCP users.
+- Refresh native Bricks Shipping options and WooCommerce totals when authored checkout addresses, carts or shipping choices change. Add an optional product PIN-code estimate through the official Shiprocket plugin.
+
 ## 8.0.0-rc.514 (2026-11-27)
 
 - Keep the native Bricks Checkout Coupon element and add an editable offers query for WooCommerce coupons selected by the store.

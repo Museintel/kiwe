@@ -1,8 +1,8 @@
 {
   "schema": 1,
-  "version": "8.0.0-rc.514",
+  "version": "8.0.0-rc.515",
   "algorithm": "sha256",
-  "file_count": 1059,
+  "file_count": 1063,
   "files": {
     "assets/css/admin.css": {
       "bytes": 19334,
@@ -285,8 +285,8 @@
       "sha256": "a8a0e93c023acd5e593af9cc1c5ecf3f0c77acbfc5602773456fb6fdd48d6b33"
     },
     "assets/js/apps-app.js": {
-      "bytes": 17154,
-      "sha256": "9186e21bcb13b6b73338ae19af9563f43a411fffc8d9e4eec697f851e5eef249"
+      "bytes": 17240,
+      "sha256": "ac8e8651838fa0e7b02913b16fe1ad031628d2baf5d8c75b15e69e9b625929d3"
     },
     "assets/js/backups-app.js": {
       "bytes": 69999,
@@ -297,8 +297,8 @@
       "sha256": "3fba86300eaf6dbec7d27b7d8230d41a9b55f633e1af7e84337ff93981099e08"
     },
     "assets/js/checkout-experience.js": {
-      "bytes": 15344,
-      "sha256": "c5dd4b43d0d4cdf086b31ec977ebf5151ad97c6ee5c93f3b4fa914cff994c886"
+      "bytes": 19966,
+      "sha256": "9b3a14077c6f1d0ef847e46ff2d836c8d40efae251b0581f4700d52de4f991aa"
     },
     "assets/js/commerce-app.js": {
       "bytes": 309255,
@@ -425,8 +425,8 @@
       "sha256": "21a4e3666dad3ade9cc96b78e64de4a96de5f41f506842ffc3570cb111f5361e"
     },
     "assets/js/public-contract.js": {
-      "bytes": 44975,
-      "sha256": "7d805133f7464b1754cfa4ba60aeda994e350d0fa57fd5b2ed1ae3019202b7be"
+      "bytes": 45357,
+      "sha256": "20c2465d90101dc4bdddb9120b391fe962198600cc88e0ff56eaeecc905dfe25"
     },
     "assets/js/public-preview.js": {
       "bytes": 8668,
@@ -452,6 +452,10 @@
       "bytes": 49151,
       "sha256": "2a39e682279328448008576fae66b350ba36d0caeae324df0d1b531fb05a6b3a"
     },
+    "assets/js/shiprocket-estimate.js": {
+      "bytes": 1197,
+      "sha256": "d5525a6fc50f3530211097da6bd5194309abc7049637bcf8025099c394f6e0a6"
+    },
     "assets/js/source-runtime.js": {
       "bytes": 16915,
       "sha256": "468060031279686b507d251219a8da4ac691689dbf0d1ce33a5c027db8da899c"
@@ -461,8 +465,8 @@
       "sha256": "0b7e10b4fe4b9649f92e360bfa96737f7d5d271d43cf5912aa140bf9ea5820c2"
     },
     "assets/js/surface.js": {
-      "bytes": 518368,
-      "sha256": "6ce5970a9e4e12fb9d5d7a611228efa2e876055a884d76ae38a069537eaad9cf"
+      "bytes": 518819,
+      "sha256": "a53f4055611c99468a971189547af075922d114f8e001b00d044089b9faebd37"
     },
     "assets/js/system-app.js": {
       "bytes": 14025,
@@ -522,7 +526,7 @@
     },
     "dsa.php": {
       "bytes": 4536,
-      "sha256": "cdeca0b73887b931cd39c6d1171dacf1f1435eb6db6f400b535b18ff56511fe4"
+      "sha256": "868049fe8202221535095bfc0ca2a0c1291378ee8dfc70c31ea870e5f8895f22"
     },
     "framework-system/HANDOFF-LITE.md": {
       "bytes": 4119,
@@ -1089,8 +1093,8 @@
       "sha256": "4b1fb0512aae43570c466fb795ebb549aefb1baf3875c6cc52993b4e16c4d4e8"
     },
     "includes/Access/Workspace_Admin_Service.php": {
-      "bytes": 38795,
-      "sha256": "9cc3fd9fa3fc1741ddc734e531255328a5bd1e1dee9a895e578a149d0f286c01"
+      "bytes": 39062,
+      "sha256": "f7af2932fa2494912c5d6db80985cecc88c5505e3a36e0825dd0a6e66b2fd851"
     },
     "includes/Access/Workspace_Chrome_Service.php": {
       "bytes": 5398,
@@ -1197,8 +1201,8 @@
       "sha256": "ad69a7ce2990e9e6f44b318b303876f5e6392f0403c430af8b9ee80c02907499"
     },
     "includes/Apps/Library_Service.php": {
-      "bytes": 8081,
-      "sha256": "65c2d858e05b0d12a7450e06ab0e102cadc2742b30f3d0ea8edf17f0467a50df"
+      "bytes": 8393,
+      "sha256": "5702da29fb59339c21e1375d400c626d043ce6c3ba67ba19656a003fe33a64e9"
     },
     "includes/Apps/MCP_App_Service.php": {
       "bytes": 3130,
@@ -1225,8 +1229,8 @@
       "sha256": "dee715e6b99e14938d13cc380a119864aa054d0a2e85e74751e57158d2cc3471"
     },
     "includes/Apps/Package_Layout.php": {
-      "bytes": 29811,
-      "sha256": "0672ff6f856d51fcc1a1537cc1911edcb5b21b066bbecbb94ca560167709c5dd"
+      "bytes": 29958,
+      "sha256": "f6e3e79b3fa0facf3bf631eccefd58bb259285cb170303bb18f8126efd7f9a33"
     },
     "includes/Apps/Package_Verifier.php": {
       "bytes": 6864,
@@ -1255,6 +1259,10 @@
     "includes/Apps/SEO_App_Service.php": {
       "bytes": 8673,
       "sha256": "1285f653fc4d4356cde05f7ce9de77507ea50e67bf10ff499d411fdd2fc80cc6"
+    },
+    "includes/Apps/Shiprocket_App_Service.php": {
+      "bytes": 3152,
+      "sha256": "8d7c76e87b23a2afdf12e3a956c749aed18112414bdc0aff9b6ed557fe844414"
     },
     "includes/Apps/Signed_Packet.php": {
       "bytes": 5378,
@@ -1425,8 +1433,8 @@
       "sha256": "ed8220e07ee40468dfd8a30ef54c6ece7ed265b7bec145e3ab3eb6842083d263"
     },
     "includes/Bricks/Authoring_Reference.php": {
-      "bytes": 7652,
-      "sha256": "5b9c4dde158433df37860a930bc7ec624b995b1bc795c21fc143749511168898"
+      "bytes": 8593,
+      "sha256": "097fd257243cdd406015678f264a46d7d3c11749b04fb61a414ebcdac1bcc20c"
     },
     "includes/Bricks/Bricks_Integration.php": {
       "bytes": 136858,
@@ -1549,8 +1557,8 @@
       "sha256": "e61e4fc3e756dade76ca708958440ddc6077837fbd6376cd3e348f4b87c8a681"
     },
     "includes/Commerce/Checkout_Experience_Service.php": {
-      "bytes": 8401,
-      "sha256": "ea51f617443e8453732dd547bd1b0b9ffd159ddfbd3bc086380bacbc67505cd0"
+      "bytes": 8921,
+      "sha256": "59e15023d4087950ba78ab23d2774d002666d267014efb60d6a1a11363175ce1"
     },
     "includes/Commerce/Checkout_Field_Service.php": {
       "bytes": 1155,
@@ -1567,6 +1575,10 @@
     "includes/Commerce/Checkout_Session_Details.php": {
       "bytes": 3257,
       "sha256": "4eccdddf5f77815d3cbfeca6152554eecd3f72d006c45166fa6198ae6976a3a7"
+    },
+    "includes/Commerce/Checkout_Shipping_Service.php": {
+      "bytes": 4220,
+      "sha256": "356fa7e0c742c9a1292885f89710e814e9af02828cafed39b9fef37e6717dba5"
     },
     "includes/Commerce/Commerce_Context_Service.php": {
       "bytes": 12909,
@@ -1589,8 +1601,8 @@
       "sha256": "6669b946a9157d1aa6b75a8f228c40ad72b6f12a32c7b0068d9da44bd7730b34"
     },
     "includes/Commerce/MCP_Store_Provider.php": {
-      "bytes": 26014,
-      "sha256": "e1d6a22ca9107c279aed5d75015ea233c19324f5469a2535824e299d7bd53a8c"
+      "bytes": 26734,
+      "sha256": "494f796b1083473e3d3beac5e982fee6ebf5ff8705154d3259325d242ad15b1a"
     },
     "includes/Commerce/Membership_Account_Service.php": {
       "bytes": 16066,
@@ -1635,6 +1647,10 @@
     "includes/Commerce/Razorpay_Subscription_Provider.php": {
       "bytes": 6297,
       "sha256": "1eaea8ddc1654b97cc5f63cd439618af329785d0eaba6396c7b2c3f04548894e"
+    },
+    "includes/Commerce/Shiprocket_Delivery_Estimate.php": {
+      "bytes": 4821,
+      "sha256": "287d40f7470654bcb915f86d9691ec44ee6712b650440f33b8b4cf57d392cb46"
     },
     "includes/Commerce/Store_Analytics_Service.php": {
       "bytes": 33308,
@@ -1693,8 +1709,8 @@
       "sha256": "c3fb591495c82f340ebb69ecb3d7cda203ecf6332608f1c3d760bd408a2bd7c6"
     },
     "includes/Design/Seam_Vocabulary_Schema.php": {
-      "bytes": 27704,
-      "sha256": "b205aeffac3bfec569b69beaf6faad0ba3e4c41f9346c5dca187625746871158"
+      "bytes": 28116,
+      "sha256": "e1287e173fb0a4e688a4df5c3b56f019ae8e0f577c4813b93d1d507cf11a6797"
     },
     "includes/Design/Token_Schema.php": {
       "bytes": 8257,
@@ -2153,8 +2169,8 @@
       "sha256": "15ad2a94a5e8c6b0aced13ea100c3a30fc6329d29bbd83dc5f8b7e7582bc0714"
     },
     "includes/Plugin.php": {
-      "bytes": 25883,
-      "sha256": "1745d1740a027c0ec8cce01ff08359450f899f5db3d9842361f926b12f22522d"
+      "bytes": 26036,
+      "sha256": "366b84298de2b245205ac41188317082ed46f1aabab51d63f77366ac75def1d7"
     },
     "includes/Protected_Flow/Flow_Context.php": {
       "bytes": 489,
@@ -2201,8 +2217,8 @@
       "sha256": "31a564f54d69c4941fb8864f70cea6302f8efaa7d75f82dc0bb22c2e6a01f299"
     },
     "includes/Rest/Checkout_Controller.php": {
-      "bytes": 2536,
-      "sha256": "f08db65a95f50b5a9d9674a923ab38f86b9f6dab0252fdd74f7277062410b345"
+      "bytes": 3375,
+      "sha256": "61f076f6a12f6db203d8f6d8093613db85cd2c65df7c72e61a28d45e0ae49559"
     },
     "includes/Rest/Discussion_Controller.php": {
       "bytes": 7738,

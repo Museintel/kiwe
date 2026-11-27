@@ -59,6 +59,14 @@ async function run() {
  };
  let reviewFails = false;
  let reviewReads = 0;
+ let fragment = null;
+ const courier = {value: 'courier:102', dataset: {index: '0'}, matches: () => true, closest: () => fragment};
+ const nativeFragment = {
+  dataset: {brxWooFragmentId: 'abc123', brxWooFragmentRootId: 'abc123', brxWooFragmentSource: '24', brxWooFragmentArea: 'content', brxWooFragmentToken: 'signed'},
+  querySelectorAll: () => [courier], contains: () => false, replaceWith: () => {},
+ };
+ const originalQuery = page.querySelector;
+ page.querySelector = selector => selector === '[data-kiwe-checkout-shipping][data-brx-woo-fragment]' ? fragment : originalQuery(selector);
  const settle = async () => { for (let i = 0; i < 25; i++) await Promise.resolve(); };
  async function click(button) {
   events.click({target: {closest: () => button}, preventDefault() {}});
@@ -69,16 +77,36 @@ async function run() {
   window: {
    location: {href: base + '/checkout/', origin: base, assign: url => receipt.push(url)},
    addEventListener: (name, handler) => { events[name] = handler; },
-   DSA: {readCheckoutReview: async () => {
-    reviewReads++;
-    if (reviewFails) throw new Error('Temporary review failure');
-    return {...review};
-   }},
+   DSA: {
+    readCheckoutReview: async () => {
+     reviewReads++;
+     if (reviewFails) throw new Error('Temporary review failure');
+     return {...review};
+    },
+    updateCheckoutShipping: async selection => {
+     if (selection.mode === 'cod') {
+      review.total = '₹560';
+      review.shipping = ['courier_cod:102'];
+      review.shippingReview = {...review.shippingReview, mode: 'cod', token: 'cod-proof'};
+     } else {
+      assert.equal(selection.index, 0);
+      assert.equal(selection.rate, 'courier:102');
+      review.total = '₹535';
+      review.shipping = ['courier:102'];
+      review.shippingReview = {...review.shippingReview, token: 'updated-proof'};
+     }
+     return {...review};
+    },
+   },
   },
   URL, URLSearchParams,
-  DOMParser: class { parseFromString(text) { return {body: {textContent: text}}; } },
+  DOMParser: class { parseFromString(text) { return {body: {textContent: text}, querySelector: () => nativeFragment}; } },
   fetch: async (url, options) => {
    requests.push([url.href, Object.fromEntries(options.body)]);
+   if (url.href.endsWith('bricks_get_woo_dynamic_fragments')) {
+    assert.equal(JSON.parse(options.body.get('fragments'))[0].token, 'signed');
+    return {json: async () => ({data: {fragments: {selector: '<div>Native Bricks Shipping options</div>'}}})};
+   }
    if (url.href.endsWith('apply_coupon')) {
     review.total = options.body.get('coupon_code') === 'LISTED' ? '₹495' : '₹275';
     if (options.body.get('coupon_code') === 'LISTED') review.offers['42'] = {state: 'applied'};
@@ -162,6 +190,28 @@ async function run() {
  assert.equal(offer.disabled, true);
  await click(offer);
  assert.equal(requests.length, 5);
+ fragment = nativeFragment;
+ review.shippingFragmentUrl = '/?wc-ajax=bricks_get_woo_dynamic_fragments';
+ review.shippingReview = {required: true, state: 'address', mode: 'prepaid', modeSensitive: true};
+ await events['dsa:checkout:draft-applied']();
+ assert.equal(fragment.hidden, true);
+ assert.equal(cod.disabled, true);
+ review.shippingReview = {...review.shippingReview, state: 'ready', token: 'original-proof'};
+ await events['dsa:checkout:draft-applied']();
+ assert.equal(fragment.hidden, false);
+ assert.equal(cod.disabled, false);
+ events.change({target: courier, stopImmediatePropagation() {}});
+ await settle();
+ assert.equal(total.textContent, '₹535');
+ const submitted = () => requests.filter(([url]) => url.endsWith('wc-ajax=checkout'));
+ const count = submitted().length;
+ await click(cod);
+ assert.equal(total.textContent, '₹560');
+ assert.equal(submitted().length, count);
+ await click(cod);
+ assert.equal(submitted().length, count + 1);
+ assert.equal(submitted().at(-1)[1]['shipping_method[0]'], 'courier_cod:102');
+ assert.equal(submitted().at(-1)[1].kiwe_checkout_shipping_quote, 'cod-proof');
  reviewFails = true;
  events['dsa:checkout:cart-updated']();
  await settle();

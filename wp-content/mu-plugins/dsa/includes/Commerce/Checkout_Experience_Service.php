@@ -21,6 +21,8 @@ final class Checkout_Experience_Service {
 		if ( self::authored() ) {
 			add_action( 'template_redirect', [ $this, 'protect_review_page' ] );
 			add_filter( 'pre_do_shortcode_tag', [ $this, 'render_authored_template' ], 15, 2 );
+			add_action( 'woocommerce_after_checkout_validation', [ Checkout_Shipping_Service::class, 'validate' ], 15, 2 );
+			add_filter( 'woocommerce_cart_shipping_packages', [ Checkout_Shipping_Service::class, 'vary_shiprocket_packages' ], 99 );
 		} else {
 			add_action( 'template_redirect', [ $this, 'restore_shortcode_coupon' ] );
 			add_action( 'woocommerce_checkout_before_order_review', [ $this, 'payment_choices' ] );
@@ -95,6 +97,8 @@ final class Checkout_Experience_Service {
 		foreach ( $contract['groups']['account'] ?? [] as $field ) {
 			if ( 'password' === $field['type'] ) unset( $values[ $field['key'] ] );
 		}
+		$delivery = Checkout_Shipping_Service::review();
+		$delivery['codOption'] = $delivery['modeSensitive'] && Checkout_Shipping_Service::can_quote_cod( $terms );
 		return [
 			'available'=>true, 'empty'=>$cart->is_empty(), 'address'=>$address,
 			'total'=>self::plain( $cart->get_total() ), 'renewal'=>$terms['summary'] ?? $terms['message'] ?? '',
@@ -102,9 +106,11 @@ final class Checkout_Experience_Service {
 			'sharedAgreement'=>! empty( $terms['sharedAgreement'] ),
 			'subscriptionQuote'=>$terms['quote'] ?? '', 'methods'=>empty( $methods ) ? (object) [] : $methods,
 			'fields'=>$values, 'shipping'=>(array) WC()->session->get( 'chosen_shipping_methods', [] ),
+			'shippingReview'=>$delivery,
 			'termsRequired'=>wc_terms_and_conditions_checkbox_enabled(),
 			'offers'=>(object) Checkout_Offers::review( $cart ),
 			'coupons'=>wc_coupons_enabled(), 'checkoutUrl'=>\WC_AJAX::get_endpoint( 'checkout' ),
+			'shippingFragmentUrl'=>\WC_AJAX::get_endpoint( 'bricks_get_woo_dynamic_fragments' ),
 			'couponUrl'=>\WC_AJAX::get_endpoint( 'apply_coupon' ),
 			'checkoutNonce'=>wp_create_nonce( 'woocommerce-process_checkout' ), 'couponNonce'=>wp_create_nonce( 'apply-coupon' ),
 		];

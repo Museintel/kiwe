@@ -4187,7 +4187,7 @@
     },
     {
       "source": "wp-content/mu-plugins/dsa/includes/Commerce/Checkout_Experience_Service.php",
-      "sha256": "ea51f617443e8453732dd547bd1b0b9ffd159ddfbd3bc086380bacbc67505cd0",
+      "sha256": "59e15023d4087950ba78ab23d2774d002666d267014efb60d6a1a11363175ce1",
       "symbols": [
         {
           "kind": "method",
@@ -4226,78 +4226,88 @@
         },
         {
           "kind": "hook",
-          "name": "template_redirect",
+          "name": "woocommerce_after_checkout_validation",
+          "line": 24
+        },
+        {
+          "kind": "hook",
+          "name": "woocommerce_cart_shipping_packages",
           "line": 25
         },
         {
           "kind": "hook",
+          "name": "template_redirect",
+          "line": 27
+        },
+        {
+          "kind": "hook",
           "name": "woocommerce_checkout_before_order_review",
-          "line": 26
+          "line": 28
         },
         {
           "kind": "method",
           "name": "checkout_page",
-          "line": 30
+          "line": 32
         },
         {
           "kind": "method",
           "name": "protect_review_page",
-          "line": 34
+          "line": 36
         },
         {
           "kind": "method",
           "name": "render_authored_template",
-          "line": 38
+          "line": 40
         },
         {
           "kind": "method",
           "name": "binding",
-          "line": 56
+          "line": 58
         },
         {
           "kind": "method",
           "name": "review",
-          "line": 65
+          "line": 67
         },
         {
           "kind": "method",
           "name": "address_text",
-          "line": 113
+          "line": 119
         },
         {
           "kind": "method",
           "name": "plain",
-          "line": 122
+          "line": 128
         },
         {
           "kind": "method",
           "name": "restore_shortcode_coupon",
-          "line": 126
+          "line": 132
         },
         {
           "kind": "hook",
           "name": "woocommerce_before_checkout_form",
-          "line": 130
+          "line": 136
         },
         {
           "kind": "method",
           "name": "assets",
-          "line": 134
+          "line": 140
         },
         {
           "kind": "method",
           "name": "body_classes",
-          "line": 146
+          "line": 152
         },
         {
           "kind": "method",
           "name": "address_summary",
-          "line": 151
+          "line": 157
         },
         {
           "kind": "method",
           "name": "payment_choices",
-          "line": 161
+          "line": 167
         }
       ]
     },
@@ -4802,6 +4812,47 @@
           "kind": "method",
           "name": "cart_key",
           "line": 44
+        }
+      ]
+    },
+    {
+      "source": "wp-content/mu-plugins/dsa/includes/Commerce/Checkout_Shipping_Service.php",
+      "sha256": "356fa7e0c742c9a1292885f89710e814e9af02828cafed39b9fef37e6717dba5",
+      "symbols": [
+        {
+          "kind": "method",
+          "name": "payment_mode",
+          "line": 10
+        },
+        {
+          "kind": "method",
+          "name": "shiprocket_rates",
+          "line": 14
+        },
+        {
+          "kind": "method",
+          "name": "vary_shiprocket_packages",
+          "line": 18
+        },
+        {
+          "kind": "method",
+          "name": "review",
+          "line": 26
+        },
+        {
+          "kind": "method",
+          "name": "update",
+          "line": 61
+        },
+        {
+          "kind": "method",
+          "name": "can_quote_cod",
+          "line": 84
+        },
+        {
+          "kind": "method",
+          "name": "validate",
+          "line": 89
         }
       ]
     },
@@ -5387,62 +5438,62 @@
     },
     {
       "source": "wp-content/mu-plugins/dsa/includes/Commerce/MCP_Store_Provider.php",
-      "sha256": "e1d6a22ca9107c279aed5d75015ea233c19324f5469a2535824e299d7bd53a8c",
+      "sha256": "494f796b1083473e3d3beac5e982fee6ebf5ff8705154d3259325d242ad15b1a",
       "symbols": [
         {
           "kind": "method",
           "name": "register",
-          "line": 11
+          "line": 12
         },
         {
           "kind": "method",
           "name": "text",
-          "line": 15
-        },
-        {
-          "kind": "method",
-          "name": "integer",
           "line": 16
         },
         {
           "kind": "method",
-          "name": "choice",
+          "name": "integer",
           "line": 17
         },
         {
           "kind": "method",
-          "name": "object",
+          "name": "choice",
           "line": 18
         },
         {
           "kind": "method",
-          "name": "operations",
+          "name": "object",
           "line": 19
         },
         {
           "kind": "method",
+          "name": "operations",
+          "line": 20
+        },
+        {
+          "kind": "method",
           "name": "coupon_target_operations",
-          "line": 108
+          "line": 117
         },
         {
           "kind": "method",
           "name": "subscription_pilot_operations",
-          "line": 167
+          "line": 176
         },
         {
           "kind": "method",
           "name": "membership_operations",
-          "line": 198
+          "line": 207
         },
         {
           "kind": "method",
           "name": "group",
-          "line": 288
+          "line": 297
         },
         {
           "kind": "method",
           "name": "change_group",
-          "line": 291
+          "line": 300
         }
       ]
     },
@@ -6284,6 +6335,42 @@
           "kind": "method",
           "name": "request",
           "line": 107
+        }
+      ]
+    },
+    {
+      "source": "wp-content/mu-plugins/dsa/includes/Commerce/Shiprocket_Delivery_Estimate.php",
+      "sha256": "287d40f7470654bcb915f86d9691ec44ee6712b650440f33b8b4cf57d392cb46",
+      "symbols": [
+        {
+          "kind": "method",
+          "name": "register",
+          "line": 11
+        },
+        {
+          "kind": "hook",
+          "name": "rest_api_init",
+          "line": 14
+        },
+        {
+          "kind": "method",
+          "name": "routes",
+          "line": 17
+        },
+        {
+          "kind": "method",
+          "name": "shortcode",
+          "line": 28
+        },
+        {
+          "kind": "method",
+          "name": "estimate",
+          "line": 40
+        },
+        {
+          "kind": "hook",
+          "name": "http_request_args",
+          "line": 72
         }
       ]
     },
@@ -8899,7 +8986,7 @@
     },
     {
       "source": "wp-content/mu-plugins/dsa/includes/Plugin.php",
-      "sha256": "1745d1740a027c0ec8cce01ff08359450f899f5db3d9842361f926b12f22522d",
+      "sha256": "366b84298de2b245205ac41188317082ed46f1aabab51d63f77366ac75def1d7",
       "symbols": [
         {
           "kind": "method",
@@ -9114,42 +9201,42 @@
         {
           "kind": "hook",
           "name": "after_setup_theme",
-          "line": 435
+          "line": 438
         },
         {
           "kind": "method",
           "name": "cart_payload",
-          "line": 442
-        },
-        {
-          "kind": "method",
-          "name": "linked_products",
           "line": 445
         },
         {
           "kind": "method",
-          "name": "store_analytics",
+          "name": "linked_products",
           "line": 448
         },
         {
           "kind": "method",
-          "name": "abandoned_carts",
+          "name": "store_analytics",
           "line": 451
         },
         {
           "kind": "method",
+          "name": "abandoned_carts",
+          "line": 454
+        },
+        {
+          "kind": "method",
           "name": "ai_broker",
-          "line": 460
+          "line": 463
         },
         {
           "kind": "method",
           "name": "modules",
-          "line": 464
+          "line": 467
         },
         {
           "kind": "method",
           "name": "registry",
-          "line": 468
+          "line": 471
         }
       ]
     },

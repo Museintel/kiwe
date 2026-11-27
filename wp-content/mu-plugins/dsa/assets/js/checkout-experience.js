@@ -83,6 +83,9 @@
 		const status = page.querySelector( '[data-kiwe-checkout-status]' );
 		const offers = Array.from( page.querySelectorAll( '[data-kiwe-checkout-offer]' ) );
 		const offerPanel = page.querySelector( '[data-kiwe-checkout-offers]' );
+		const deliveryButtons = Array.from( page.querySelectorAll( '[data-kiwe-checkout-delivery-mode]' ) );
+		const saveShipping = window.DSA.updateCheckoutShipping;
+		const deliveryFragment = () => page.querySelector( '[data-kiwe-checkout-shipping][data-brx-woo-fragment]' );
 		const offerLabels = {
 			apply: 'Apply', applied: 'Applied', join: 'Add membership',
 			'in-cart': 'Membership in cart', choose: 'Choose a plan', unavailable: 'Unavailable for this cart',
@@ -97,15 +100,55 @@
 			if ( status ) status.textContent = message || '';
 		}
 
+		async function refreshShippingFragment( data, order ) {
+			const fragment = deliveryFragment();
+			if ( ! fragment || ! data.shippingReview?.required || ! data.shippingFragmentUrl
+				|| data.shippingReview.state === 'address' ) return;
+			const attrs = fragment.dataset;
+			const target = {
+				id: attrs.brxWooFragmentId, rootId: attrs.brxWooFragmentRootId,
+				source: attrs.brxWooFragmentSource, area: attrs.brxWooFragmentArea, token: attrs.brxWooFragmentToken,
+			};
+			const fields = new URLSearchParams( {
+				postId: window.bricksData?.postId || 0, bricks_woo_current_url: window.location.href.split( '#' )[0],
+				fragments: JSON.stringify( [ target ] ),
+			} );
+			const response = await request( data.shippingFragmentUrl, fields );
+			const payload = await response.json();
+			if ( order !== revision ) return;
+			const html = Object.values( payload.data?.fragments || {} )[0];
+			const fresh = typeof html === 'string'
+				? new DOMParser().parseFromString( html, 'text/html' ).querySelector( '[data-kiwe-checkout-shipping][data-brx-woo-fragment]' ) : null;
+			if ( ! fresh || fresh.dataset.brxWooFragmentId !== target.id ) throw new Error( 'Delivery options could not refresh.' );
+			const active = fragment.contains( document.activeElement ) ? document.activeElement : null;
+			( deliveryFragment() || fragment ).replaceWith( fresh );
+			if ( active ) Array.from( fresh.querySelectorAll( 'input.shipping_method' ) )
+				.find( input => input.name === active.name && input.value === active.value )?.focus();
+		}
+
 		function updateControls() {
 			const ready = review && review.available && ! review.empty;
 			const updating = busy || refreshing || Boolean( pendingCart );
 			const disabled = updating || ! ready;
+			const delivery = review?.shippingReview;
+			const fragment = deliveryFragment();
+			const shippingPending = Boolean( fragment && delivery?.required && delivery.state !== 'ready' );
+			if ( fragment ) {
+				fragment.hidden = ! delivery?.required || delivery.state === 'address';
+				fragment.querySelectorAll( 'input.shipping_method' ).forEach( input => { input.disabled = disabled; } );
+			}
+			deliveryButtons.forEach( button => {
+				const mode = button.dataset.kiweCheckoutDeliveryMode;
+				button.hidden = ! fragment || ! delivery?.required || delivery.state === 'address'
+					|| ( mode === 'cod' ? ! delivery.codOption : ! ( delivery.codOption || delivery.mode === 'cod' ) );
+				button.disabled = disabled;
+				button.setAttribute( 'aria-pressed', String( delivery?.mode === mode ) );
+			} );
 			page.toggleAttribute( 'data-kiwe-checkout-ready', Boolean( review ) );
 			payments.forEach( function ( button ) {
 				button.hidden = ! ready || ! Object.hasOwn( review.methods, button.dataset.kiweCheckoutPay );
-				if ( 'disabled' in button ) button.disabled = disabled;
-				button.setAttribute( 'aria-disabled', disabled ? 'true' : 'false' );
+				if ( 'disabled' in button ) button.disabled = disabled || shippingPending;
+				button.setAttribute( 'aria-disabled', disabled || shippingPending ? 'true' : 'false' );
 			} );
 			consents.forEach( function ( control ) {
 				control.hidden = ! ready || !( control.dataset.kiweCheckoutConsent === 'terms' ? review.termsRequired : review.subscriptionQuote );
@@ -131,11 +174,13 @@
 			page.setAttribute( 'aria-busy', updating ? 'true' : 'false' );
 		}
 
-		function refresh() {
+		function refresh( nextReview ) {
 			const order = ++revision;
 			refreshing = true;
 			updateControls();
-			return readReview().then( function ( data ) {
+			return ( nextReview || readReview() ).then( async function ( data ) {
+				if ( order !== revision ) return;
+				await refreshShippingFragment( data, order );
 				if ( order !== revision ) return;
 				if ( ! review || review.subscriptionQuote !== data.subscriptionQuote ) {
 					consents.filter( control => control.dataset.kiweCheckoutConsent === 'renewal' )
@@ -149,6 +194,8 @@
 				if ( ! data.available ) announce( 'Checkout details are unavailable. Open the address editor to continue.' );
 				else if ( data.empty ) announce( 'Your cart is empty.' );
 				else if ( data.purchaseError ) announce( data.purchaseError );
+				else if ( deliveryFragment() && data.shippingReview?.state === 'address' ) announce( 'Add your delivery address to see shipping options.' );
+				else if ( deliveryFragment() && data.shippingReview?.state === 'unavailable' ) announce( 'No delivery option is available for this address and cart.' );
 				else if ( data.sharedAgreement ) announce( 'These plans share one billing agreement. Buy them separately to manage renewals independently.' );
 				else if ( ! Object.keys( data.methods ).length && ! data.renewal ) announce( 'No payment method is available for this cart.' );
 				else announce( '' );
@@ -179,6 +226,17 @@
 
 		async function placeOrder( choice ) {
 			if ( ! review || ! review.available || review.empty || ! Object.hasOwn( review.methods, choice ) ) return;
+			const delivery = deliveryFragment() && review.shippingReview;
+			if ( delivery?.required && delivery.state !== 'ready' ) {
+				announce( 'Choose an available delivery option before paying.' );
+				return;
+			}
+			const mode = choice === 'cod' ? 'cod' : 'prepaid';
+			if ( delivery?.required && delivery.modeSensitive && delivery.mode !== mode ) {
+				await changeShipping( { mode } );
+				announce( 'Review your updated delivery rates and total before continuing.' );
+				return;
+			}
 			if ( review.termsRequired && ! accepted( 'terms' ) ) {
 				announce( 'Accept the terms before continuing.' );
 				return;
@@ -196,6 +254,7 @@
 			fields.set( 'woocommerce-process-checkout-nonce', review.checkoutNonce );
 			fields.set( 'payment_method', review.methods[choice] );
 			fields.set( 'kiwe_checkout_method', choice );
+			if ( delivery?.token ) fields.set( 'kiwe_checkout_shipping_quote', delivery.token );
 			if ( review.termsRequired ) {
 				fields.set( 'terms-field', '1' );
 				fields.set( 'terms', 'on' );
@@ -207,6 +266,7 @@
 			const response = await request( review.checkoutUrl, fields );
 			const result = await response.json();
 			if ( result.result !== 'success' || ! result.redirect ) {
+				if ( delivery?.required ) await refresh();
 				throw new Error( noticeText( result.messages ) || 'Review your details and try again.' );
 			}
 			const destination = new URL( result.redirect, window.location.href );
@@ -268,14 +328,34 @@
 			} );
 		}
 
+		async function changeShipping( selection ) {
+			try {
+				await refresh( Promise.resolve( await saveShipping( selection ) ) );
+			} catch ( error ) {
+				await refresh();
+				throw error;
+			}
+		}
+
+		if ( saveShipping ) page.addEventListener( 'change', function ( event ) {
+			const input = event.target;
+			if ( ! input.matches( 'input.shipping_method' ) || ! input.closest( '[data-kiwe-checkout-shipping]' ) ) return;
+			event.stopImmediatePropagation();
+			run( () => changeShipping( { index: Number( input.dataset.index ), rate: input.value } ), 'Updating delivery and total…' );
+		}, true );
+
 		page.addEventListener( 'click', function ( event ) {
-			const button = event.target.closest( '[data-kiwe-checkout-pay], [data-kiwe-checkout-consent], [data-kiwe-checkout-apply-coupon], [data-kiwe-checkout-offer]' );
+			const button = event.target.closest( '[data-kiwe-checkout-pay], [data-kiwe-checkout-consent], [data-kiwe-checkout-apply-coupon], [data-kiwe-checkout-offer], [data-kiwe-checkout-delivery-mode]' );
 			if ( ! button || ! page.contains( button ) ) return;
 			event.preventDefault();
 			if ( button.hasAttribute( 'data-kiwe-checkout-consent' ) ) {
 				button.setAttribute( 'aria-pressed', button.getAttribute( 'aria-pressed' ) === 'true' ? 'false' : 'true' );
 			} else if ( button.hasAttribute( 'data-kiwe-checkout-pay' ) ) {
 				run( () => placeOrder( button.dataset.kiweCheckoutPay ), 'Checking your order…' );
+			} else if ( button.hasAttribute( 'data-kiwe-checkout-delivery-mode' ) ) {
+				if ( review?.shippingReview?.mode !== button.dataset.kiweCheckoutDeliveryMode ) {
+					run( () => changeShipping( { mode: button.dataset.kiweCheckoutDeliveryMode } ), 'Updating delivery rates…' );
+				}
 			} else if ( button.hasAttribute( 'data-kiwe-checkout-offer' ) ) {
 				if ( button.getAttribute( 'aria-disabled' ) === 'true' ) return;
 				run( () => actOnOffer( button.dataset.kiweCheckoutOffer ), 'Updating your offers…' );
@@ -329,7 +409,7 @@
 				}, 'Updating your order…' );
 			}, true );
 		}
-		window.addEventListener( 'dsa:checkout:draft-applied', refresh );
+		window.addEventListener( 'dsa:checkout:draft-applied', () => refresh() );
 		window.addEventListener( 'dsa:checkout:cart-updating', function ( event ) {
 			const pending = pendingCart = event.detail;
 			updateControls();

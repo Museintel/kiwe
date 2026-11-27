@@ -5,6 +5,7 @@ if(!defined('ABSPATH'))exit;
 use DSA\MCP\Authoring_Service as Native;
 use DSA\Apps\MCP_Provider_Contract as Contract;
 use DSA\Apps\Razorpay_App_Service;
+use DSA\Apps\Shiprocket_App_Service;
 
 /** Local Store capabilities plug into MCP's existing provider boundary. */
 final class MCP_Store_Provider {
@@ -29,6 +30,14 @@ final class MCP_Store_Provider {
    'effect'=>'read','approval'=>'none','accessVersion'=>1,'inputSchema'=>self::object([]),
    'outputSchema'=>self::object($gatewayFields,array_keys($gatewayFields)),
    'permission'=>$gatewayAllowed,'discoverPermission'=>$gatewayAllowed,'execute'=>static fn()=>Razorpay_App_Service::status(),
+  ];
+  $shiprocketFields=array_fill_keys(['storeEnabled','pluginInstalled','pluginActive','accountConfigured','realtimeRatesConfigured','usesShippingZones'],['type'=>'boolean']);
+  $shiprocketAllowed=static fn()=>Shiprocket_App_Service::allowed();
+  $ops['store.shiprocket.status']=[
+   'scope'=>'store.authoring.read','label'=>'Check Shiprocket delivery integration setup',
+   'effect'=>'read','approval'=>'none','accessVersion'=>1,'inputSchema'=>self::object([]),
+   'outputSchema'=>self::object($shiprocketFields,array_keys($shiprocketFields)),
+   'permission'=>$shiprocketAllowed,'discoverPermission'=>$shiprocketAllowed,'execute'=>static fn()=>Shiprocket_App_Service::status(),
   ];
   $quoteFields=array_fill_keys(['firstChargeMinor','renewalMinor','firstTermMonths','intervalMonths','recurringLines','oneTimeLines'],self::integer());
   $quoteFields['currency']=self::choice(['INR']);

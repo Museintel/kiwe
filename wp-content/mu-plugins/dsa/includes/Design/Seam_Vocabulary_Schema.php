@@ -249,6 +249,8 @@ final class Seam_Vocabulary_Schema {
 						'attributes' => [
 							[ 'attribute'=>'data-kiwe-checkout', 'purpose'=>'Root Bricks container on the Store checkout page. Put native Bricks headings, text tags, controls and the status element inside it.' ],
 							[ 'attribute'=>'data-kiwe-checkout-pay', 'values'=>[ 'upi','card','netbanking','wallet','razorpay','cod','subscription','free' ], 'purpose'=>'Place the order with the currently available Woo gateway. Hidden when ineligible. The Razorpay gateway owns payment authorization.' ],
+							[ 'attribute'=>'data-kiwe-checkout-shipping', 'purpose'=>'Add to a native Bricks Dynamic fragment containing Shipping options. Shiprocket supplies courier names and dates when configured.' ],
+							[ 'attribute'=>'data-kiwe-checkout-delivery-mode', 'values'=>[ 'prepaid','cod' ], 'purpose'=>'Optional Bricks buttons that refresh delivery rates for the selected payment mode before placing the order.' ],
 							[ 'attribute'=>'data-kiwe-checkout-consent', 'values'=>[ 'terms','renewal' ], 'purpose'=>'Accessible toggle button. Include aria-pressed="false". Only applicable consents appear. A changed recurring quote resets approval.' ],
 							[ 'attribute'=>'data-kiwe-checkout-coupon', 'purpose'=>'Mark the native Bricks Checkout Coupon element. WooCommerce applies and validates coupons using the current Checkout DSA details.' ],
 							[ 'attribute'=>'data-kiwe-checkout-apply-coupon', 'purpose'=>'Apply the coupon and refresh the native total and renewal quote.' ],

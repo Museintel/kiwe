@@ -4,6 +4,7 @@ namespace DSA\Rest;
 
 use DSA\Commerce\Checkout_Service;
 use DSA\Commerce\Checkout_Experience_Service;
+use DSA\Commerce\Checkout_Shipping_Service;
 use DSA\Utilities\Origin_Checker;
 use WP_Error;
 use WP_REST_Request;
@@ -28,9 +29,8 @@ final class Checkout_Controller {
 	public function routes(): void {
 		if ( Checkout_Experience_Service::authored() ) {
 			register_rest_route( 'dsa/v1', '/checkout/review', [
-				'methods'=>'GET',
-				'callback'=>[ $this, 'review' ],
-				'permission_callback'=>[ $this, 'same_site' ],
+				[ 'methods'=>'GET', 'callback'=>[ $this, 'review' ], 'permission_callback'=>[ $this, 'same_site' ] ],
+				[ 'methods'=>'POST', 'callback'=>[ $this, 'save_shipping' ], 'permission_callback'=>[ $this, 'can_mutate' ] ],
 			] );
 		}
 		register_rest_route(
@@ -61,6 +61,18 @@ final class Checkout_Controller {
 
 	public function same_site(): bool {
 		return Origin_Checker::is_same_site_request();
+	}
+
+	public function save_shipping( WP_REST_Request $request ) {
+		if ( ! Origin_Checker::transient_rate_limit( 'dsa_checkout_shipping', 60 ) ) {
+			return new WP_Error( 'kiwe_shipping_rate_limit', __( 'Wait a moment before updating delivery again.', 'dsa' ), [ 'status'=>429 ] );
+		}
+		if ( ! $this->checkout->available() ) {
+			return new WP_Error( 'kiwe_shipping_unavailable', __( 'Checkout is unavailable.', 'dsa' ), [ 'status'=>409 ] );
+		}
+		wc_maybe_define_constant( 'WOOCOMMERCE_CHECKOUT', true );
+		$error = Checkout_Shipping_Service::update( $request->get_param( 'index' ), $request->get_param( 'rate' ), $request->get_param( 'mode' ) );
+		return $error ?? $this->review();
 	}
 
 	public function can_mutate( WP_REST_Request $request ) {

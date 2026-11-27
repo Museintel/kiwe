@@ -40,6 +40,11 @@ final class Library_Service {
     'recoveryRemovesApp'=>($recovery['before']??null)===[],
     'canRecover'=>Native_State::can_recover()&&($recovery['id']??'')===$id&&in_array($recovery['phase']??'',['accepted','removed'],true),'recoveryExpected'=>($recovery['id']??'')===$id?hash('sha256',Signed_Packet::canonical($recovery)):''];
   }
+  if(Shiprocket_App_Service::allowed()){
+   $app=Shiprocket_App_Service::card();
+   $items[]=['id'=>'shiprocket','name'=>'Shiprocket','description'=>$app['description'],'enabled'=>$app['enabled'],'installed'=>$app['installed'],
+    'vendorManaged'=>true,'status'=>$app['status'],'settingsUrl'=>$app['url']];
+  }
   return['items'=>$items,'canInstall'=>Native_State::allowed(),'installationMessage'=>is_multisite()?'This first Apps release supports individual WordPress sites. Ask the network administrator for a qualified network migration.':(!wp_is_file_mod_allowed('kiwe_apps')?'WordPress file changes are disabled on this hosting account. Your website manager can review that restriction.':''),'catalogue'=>['available'=>$catalogue['available'],'message'=>$catalogue['message'],'checkedAt'=>$catalogue['checkedAt']],'woo'=>$native['woo'],'nativeUpdatesUrl'=>admin_url('plugins.php')];
  }
  public function listing(\WP_REST_Request $request): \WP_REST_Response {

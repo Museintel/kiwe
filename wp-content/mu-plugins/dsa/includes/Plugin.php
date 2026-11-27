@@ -427,6 +427,9 @@ final class Plugin {
 		$this->register_woo_capture_analytics();
 		$this->abandoned_carts()->register();
 		if ( $surface ) {
+			if ( class_exists( \DSA\Commerce\Shiprocket_Delivery_Estimate::class ) ) {
+				( new \DSA\Commerce\Shiprocket_Delivery_Estimate() )->register();
+			}
 			$this->checkout ??= new Checkout_Service( $this->settings, $this->cart_payload );
 			( new Cart_Controller( $this->cart_payload, $this->store_analytics() ) )->register();
 			( new Checkout_Controller( $this->checkout ) )->register();
