@@ -3,7 +3,7 @@ import { isIP } from 'node:net';
 import { DatabaseSync } from 'node:sqlite';
 import { domainToASCII } from 'node:url';
 import { z } from 'zod';
-import { clientPlan } from './client-plan.mjs';
+import { clientPlan, freelancerPass, websitePlanFor, websitePlans } from './client-plan.mjs';
 import { siteSetupMode } from './site-setup.mjs';
 
 export class StartError extends Error {
@@ -24,6 +24,7 @@ const verifiedClientOrder = z.strictObject({
   paidMinor: z.number().int().positive(),
   renewalMinor: z.number().int().positive(),
   referralId: id.nullable(),
+  pricingSource: z.literal('pass').optional(),
   domain: z.discriminatedUnion('mode', [
     z.strictObject({ mode: z.literal('register'), name: domainName, category: z.literal('standard') }),
     z.strictObject({ mode: z.literal('owned'), name: domainName }),
@@ -122,7 +123,7 @@ const projectOutput = z.strictObject({
   revision: z.number().int().positive(),
   site: connectedSite.nullable(),
   managedSite: managedSite.nullable(),
-  setup: z.strictObject({ mode: siteSetupMode.nullable(), locked: z.boolean() }).optional(),
+  setup: z.strictObject({ mode: siteSetupMode.nullable(), locked: z.boolean(), allowedModes: z.array(siteSetupMode).optional() }).optional(),
   domainSetup: domainSetup.optional(),
   domainMove: z.strictObject({
     status: z.enum(['awaiting_wordpress', 'wordpress_verified', 'key_verified', 'activating', 'active']),
@@ -157,20 +158,26 @@ function normalizeDomain(value) {
 
 function validateClientOrder(receipt) {
   const order = receipt.clientOrder;
-  if (receipt.planId !== clientPlan.id) {
-    if (order) throw new StartError(400, 'plan_details_mismatch', 'This order requires the current Kiwe Client plan.');
+  const plan = websitePlanFor(receipt.planId);
+  if (!plan) {
+    if (order || receipt.planId === freelancerPass.id) {
+      throw new StartError(400, 'plan_details_mismatch', 'A managed website plan is required to create this project.');
+    }
     return null;
   }
   if (!order || receipt.accountType !== 'client' || !receipt.hostingIncluded) {
     throw new StartError(400, 'plan_details_mismatch', 'Provide the confirmed Kiwe Client payment and domain details.');
   }
-  const price = order.referralId ? clientPlan.referred : clientPlan.direct;
+  if (order.pricingSource && (plan === clientPlan || order.referralId)) {
+    throw new StartError(400, 'plan_details_mismatch', 'The verified quote needs a single eligible pricing source.');
+  }
+  const price = order.referralId || order.pricingSource === 'pass' ? plan.referred : plan.direct;
   if (order.paidMinor !== price.upfrontMinor || order.renewalMinor !== price.renewalMinor) {
     throw new StartError(400, 'price_mismatch', 'The payment and renewal must match the confirmed Kiwe Client price.');
   }
   const name = normalizeDomain(order.domain.name);
   const labels = name.split('.');
-  if (order.domain.mode === 'register' && (labels.length !== 2 || labels[1] !== clientPlan.domain.includedExtension)) {
+  if (order.domain.mode === 'register' && (labels.length !== 2 || labels[1] !== plan.domain.includedExtension)) {
     throw new StartError(400, 'domain_not_included', 'Choose an eligible standard .in domain or bring a domain you own.');
   }
   return { ...order, domain: { ...order.domain, name } };
@@ -200,7 +207,7 @@ function domainView(row, time) {
 }
 
 function managedClient(row) {
-  return row.plan_id === clientPlan.id && row.account_type === 'client' && row.hosting === 'included';
+  return Boolean(websitePlanFor(row.plan_id)) && row.account_type === 'client' && row.hosting === 'included';
 }
 
 function view(row, launchWebsite, time) {
@@ -213,7 +220,11 @@ function view(row, launchWebsite, time) {
   const hosted = row.managed_status ? {
     status: row.managed_status, url: row.managed_status === 'ready' ? 'https://' + row.setup_domain : null,
   } : null;
-  const setup = managedClient(row) ? { mode: row.setup_mode, locked: Boolean(row.managed_status || row.site_url) } : null;
+  const allowedModes = websitePlanFor(row.plan_id)?.siteSetupModes;
+  const setup = managedClient(row) ? { mode: row.setup_mode,
+    locked: Boolean(row.managed_status || row.site_url || allowedModes?.length === 1),
+    ...(allowedModes ? { allowedModes } : {}),
+  } : null;
   const domainSetup = domainView(row, time);
   const reviewedMove = row.move_id && row.move_revision === row.revision && row.move_source_url === row.site_url;
   const currentKeyProof = row.move_key_verified_until > time;
@@ -521,7 +532,8 @@ export function openProjects(filename, { now = Date.now, launchWebsite = 'https:
     + 'WHERE id = ? AND account_id = ?',
   );
   const updateSetup = db.prepare('UPDATE projects SET setup_mode = ?, revision = revision + 1 WHERE id = ?');
-  const setupOwner = db.prepare("SELECT 1 FROM projects WHERE account_id = ? AND plan_id = ? AND account_type = 'client' AND hosting = 'included' LIMIT 1");
+  const selectablePlanIds = [clientPlan.id, ...websitePlans.filter(plan => plan.siteSetupModes.length > 1).map(plan => plan.id)];
+  const setupOwner = db.prepare(`SELECT 1 FROM projects WHERE account_id = ? AND plan_id IN (${selectablePlanIds.map(() => '?').join(', ')}) AND account_type = 'client' AND hosting = 'included' LIMIT 1`);
   const addHandoff = db.prepare('INSERT INTO handoffs(digest, project_id, expires_at) VALUES (?, ?, ?)');
   const consumeHandoff = db.prepare('DELETE FROM handoffs WHERE digest = ? AND expires_at > ? RETURNING project_id');
   const addSession = db.prepare('INSERT INTO sessions(digest, account_id, expires_at) VALUES (?, ?, ?)');
@@ -611,8 +623,7 @@ export function openProjects(filename, { now = Date.now, launchWebsite = 'https:
       throw new StartError(409, 'project_changed', 'The project changed. Reload it before verifying Key.');
     }
     const workspaceId = keyWorkspace.get(accountId)?.workspace_id;
-    if (!workspaceId || !/^launch:[a-f0-9]{32}$/.test(accountId) || row.account_type !== 'client'
-        || row.plan_id !== clientPlan.id || row.hosting !== 'included' || row.managed_status !== 'ready'
+    if (!workspaceId || !/^launch:[a-f0-9]{32}$/.test(accountId) || !managedClient(row) || row.managed_status !== 'ready'
         || row.domain_mode !== 'owned' || !row.owner_verified_at || !row.move_verified_at || row.move_revision !== revision
         || row.move_source_url !== row.site_url || row.site_url !== 'https://' + row.setup_domain
         || row.move_target_url !== 'https://' + row.domain) {
@@ -917,7 +928,7 @@ export function openProjects(filename, { now = Date.now, launchWebsite = 'https:
           }
           return { created: false, projectId: row.id };
         }
-        if (!order && !preserveLegacy) throw new StartError(410, 'plan_retired', 'New purchases use the Kiwe Client plan.');
+        if (!order && !preserveLegacy) throw new StartError(410, 'plan_retired', 'New purchases require a managed Kiwe website plan.');
         if (order && (clientOrderByPayment.get(receipt.purchaseId) || (order.referralId && clientOrderByReferral.get(order.referralId)))) {
           throw new StartError(409, 'client_order_used', 'This payment or referral is already linked to a project.');
         }
@@ -931,6 +942,8 @@ export function openProjects(filename, { now = Date.now, launchWebsite = 'https:
         if (order) {
           insertClientOrder.run(projectId, receipt.purchaseId, order.referralId, details);
           newClientDomain.run(order.domain.name, projectId);
+          const modes = websitePlanFor(receipt.planId).siteSetupModes;
+          if (modes?.length === 1) updateSetup.run(modes[0], projectId);
         }
         return { created: true, projectId };
       });
@@ -953,7 +966,7 @@ export function openProjects(filename, { now = Date.now, launchWebsite = 'https:
       const { entitlementId, accountId } = parse(handoffInput, input);
       const purchase = byEntitlement.get(entitlementId);
       if (!purchase || purchase.account_id !== accountId || purchase.account_type !== 'client'
-          || purchase.plan_id !== clientPlan.id || !clientOrderByProject.get(purchase.id)?.referral_id) {
+          || !websitePlanFor(purchase.plan_id) || !clientOrderByProject.get(purchase.id)?.referral_id) {
         throw missingProject();
       }
       const row = owned.get(purchase.id, accountId);
@@ -1282,7 +1295,7 @@ export function openProjects(filename, { now = Date.now, launchWebsite = 'https:
           throw new StartError(409, 'hosting_unavailable', 'This purchase uses an existing site.');
         }
         if (row.domain === domain && row.hosting === details.hosting) return projectView(row);
-        if (row.plan_id === clientPlan.id) {
+        if (websitePlanFor(row.plan_id)) {
           throw new StartError(409, 'domain_set_at_checkout', 'The domain and hosting were set at checkout.');
         }
         if (row.key_project_id) throw new StartError(409, 'key_setup_started', 'This website already has a Key request.');
@@ -1304,7 +1317,7 @@ export function openProjects(filename, { now = Date.now, launchWebsite = 'https:
     },
 
     canChooseSiteSetup(accountId) {
-      return Boolean(setupOwner.get(accountId, clientPlan.id));
+      return Boolean(setupOwner.get(accountId, ...selectablePlanIds));
     },
 
     setSiteSetup(accountId, input) {
@@ -1313,6 +1326,10 @@ export function openProjects(filename, { now = Date.now, launchWebsite = 'https:
         const row = owned.get(details.projectId, accountId);
         if (!row) throw missingProject();
         if (!managedClient(row)) throw new StartError(409, 'site_setup_unavailable', 'This setup is for a new website with included Kiwe hosting.');
+        const allowedModes = websitePlanFor(row.plan_id).siteSetupModes;
+        if (allowedModes && !allowedModes.includes(details.mode)) {
+          throw new StartError(409, 'site_setup_not_included', 'Choose a setup included in this website plan.');
+        }
         if (row.setup_mode === details.mode) return projectView(row);
         if (row.revision !== details.revision) {
           throw new StartError(409, 'project_changed', 'The project changed. Reload it before saving your website setup.');
@@ -1435,8 +1452,7 @@ export function openProjects(filename, { now = Date.now, launchWebsite = 'https:
       const row = owned.get(details.projectId, accountId);
       if (!row || row.revision !== details.revision) throw missingProject();
       requireSteadySite(row);
-      if (!/^launch:[a-f0-9]{32}$/.test(accountId) || row.account_type !== 'client'
-          || row.plan_id !== clientPlan.id || row.hosting !== 'included' || !row.setup_domain) return null;
+      if (!/^launch:[a-f0-9]{32}$/.test(accountId) || !managedClient(row) || !row.setup_domain) return null;
       const origin = 'https://' + row.setup_domain;
       if (connected && (row.managed_status !== 'ready' || row.site_url !== origin)) return null;
       ensureKeyWorkspace.run(accountId, randomUUID());

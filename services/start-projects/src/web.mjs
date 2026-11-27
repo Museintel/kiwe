@@ -1,5 +1,5 @@
 import { documentPath, wooPresentation } from './document-targets.mjs';
-import { clientPlan } from './client-plan.mjs';
+import { websitePlanFor } from './client-plan.mjs';
 import { siteSetups } from './site-setup.mjs';
 
 const escape = (value) => String(value ?? '').replace(/[&<>"']/g, (character) => ({
@@ -106,7 +106,7 @@ function hostingStep(project, available) {
   if (hosted?.status === 'ready') {
     const address = new URL(hosted.url).hostname;
     const link = address === project.domain ? escape(address) : 'temporary address';
-    const needsKiwe = project.planId === clientPlan.id ? '' : ' Install Kiwe and its MCP App there before connecting it here.';
+    const needsKiwe = websitePlanFor(project.planId) ? '' : ' Install Kiwe and its MCP App there before connecting it here.';
     return `<p class="status">WordPress is ready on your <a href="${escape(hosted.url)}">${link}</a>.${needsKiwe}</p>`;
   }
   if (hosted?.status === 'needs_attention') {
@@ -229,7 +229,7 @@ function siteSetupStep(project) {
     return setup.mode ? `<section class="card"><h2>Website setup</h2>
 <p>${escape(siteSetups[setup.mode].label)}</p></section>` : '';
   }
-  const choices = Object.entries(siteSetups).map(([mode, { label }]) =>
+  const choices = Object.entries(siteSetups).filter(([mode]) => !setup.allowedModes || setup.allowedModes.includes(mode)).map(([mode, { label }]) =>
     `<option value="${mode}"${setup.mode === mode ? ' selected' : ''}>${escape(label)}</option>`,
   ).join('');
   return `<section class="card"><h2>Website setup</h2>
@@ -247,7 +247,7 @@ ${choices}
 
 export function projectPage(project, { error, managed = false, keyEnabled = false, managedKey = false, verifyDomainKey = false, clientAccess = null, invitation = null } = {}) {
   const alert = error ? `<p class="error" role="alert">${escape(error)}</p>` : '';
-  const purchased = project.planId === clientPlan.id;
+  const purchased = Boolean(websitePlanFor(project.planId));
   const moving = project.domainMove?.status === 'activating';
   const status = moving ? '' : project.site
     ? `<p class="status">Website verified at <a href="${escape(project.site.url)}">${escape(new URL(project.site.url).hostname)}</a>.${project.next === 'fill_design_context' ? ' Next, fill in Design Context in WordPress.' : ''}</p>`

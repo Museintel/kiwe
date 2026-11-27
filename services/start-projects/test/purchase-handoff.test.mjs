@@ -1,7 +1,46 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { projectScope } from '../src/projects.mjs';
+import { freelancerPass, launchCatalogue, websitePlans } from '../src/client-plan.mjs';
 import { cookie, fixture, issuer, resource, purchase, clientPurchase, checkoutOrigin } from './fixture.mjs';
+
+test('versioned plans agree across web, MCP and paid provisioning without discount stacking', async (t) => {
+  const f = await fixture(t);
+  const catalogue = await (await f.request('/projects/api/launch-catalogue')).json();
+  assert.deepEqual(catalogue, launchCatalogue);
+  const customer = await f.connect('buyer-one');
+  const fromMcp = await customer.callTool({ name: 'kiwe_start_client_plan', arguments: { catalogue: true } });
+  assert.deepEqual(fromMcp.structuredContent, catalogue);
+  assert.equal((await f.postReceipt('purchases', purchase('freelancer', { planId: freelancerPass.id }))).status, 400);
+  const [portfolio, ecommerce, operations, premium] = websitePlans;
+  for (const [index, plan] of websitePlans.entries()) {
+    const receipt = clientPurchase(`offer-${index}`, { domain: { mode: 'owned', name: `offer-${index}.example` } });
+    receipt.planId = plan.id;
+    Object.assign(receipt.clientOrder, { paidMinor: plan.referred.upfrontMinor, renewalMinor: plan.referred.renewalMinor });
+    assert.equal((await f.postReceipt('purchases', receipt)).status, 400);
+    receipt.clientOrder.pricingSource = 'pass';
+    const stacked = { ...receipt, clientOrder: { ...receipt.clientOrder, referralId: 'other-partner' } };
+    assert.equal((await f.postReceipt('purchases', stacked)).status, 400);
+    const confirmation = await f.postReceipt('purchases', receipt);
+    assert.equal(confirmation.status, 201);
+    const { projectId } = await confirmation.json();
+    const callProject = () => customer.callTool({ name: 'kiwe_start_project', arguments: { projectId } });
+    const project = (await callProject()).structuredContent.project;
+    assert.deepEqual(project.setup.allowedModes, plan.siteSetupModes);
+    const session = cookie(await f.redeem(await f.ticket(receipt.entitlementId, receipt.accountId)));
+    const setMode = (mode) => f.form('/projects/' + projectId + '/site-setup', { mode, revision: String(project.revision) }, { cookie: session });
+    if (plan === portfolio) {
+      assert.deepEqual([project.setup.mode, project.setup.locked, project.next], ['services', true, 'provision_site']);
+      assert.equal((await setMode('ecommerce')).status, 409);
+    }
+    if (plan === ecommerce || plan === operations) assert.equal((await setMode('services')).status, 409);
+    if (plan === premium) {
+      assert.equal((await setMode('services')).status, 303);
+      assert.equal((await callProject()).structuredContent.project.setup.mode, 'services');
+    }
+    assert.equal((await f.postReceipt('purchases', receipt)).status, 200);
+  }
+});
 
 test('one paid entitlement opens one durable project and checkout retries keep ownership', async (t) => {
   const f = await fixture(t);

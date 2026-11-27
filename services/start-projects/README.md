@@ -14,6 +14,8 @@ The Client plan is `kiwe-client-managed-v1`. The direct price is ₹8,400 for th
 
 `GET /projects/api/client-plan` returns the canonical catalogue. Authenticated clients can read the same catalogue through `kiwe_start_client_plan`. Amounts are in paise. The partner ledger and provider integrations are subsequent launch batches. [Launch decision](../../docs/decisions/2026-11-25-client-and-partner-launch.md)
 
+`GET /projects/api/launch-catalogue` returns the five versioned offers. Through MCP, call `kiwe_start_client_plan` with `catalogue: true` for the same projection. Start accepts verified website purchases by plan ID. Portfolio preselects the services configuration. The Freelancer Pass belongs to the buyer account and does not create a Start project. [Catalogue decision](../../docs/decisions/2026-11-27-launch-tier-catalogue.md)
+
 ## Agency workspaces
 
 Every Client buyer opens their own project under Kiwe Launch. The closed pilot and previously linked workspaces retain project access through the Start form and MCP. An agency name appears over the existing workspace's site list after the agency home is verified.

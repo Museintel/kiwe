@@ -1,3 +1,8 @@
+## Unreleased Kiwe Launch catalogue
+
+- Share the four managed website plans and annual Freelancer Pass through the Start web and MCP catalogue. Enforce the purchased site's allowed setup modes and validate paid receipt amounts by plan version.
+- Compile the plan comparison into the Kiwe Launch Bricks homepage using the same catalogue prices.
+
 ## 8.0.0-rc.498 (2026-11-24, candidate)
 
 - Preserve native WooCommerce order payment permissions when Kiwe ownership is active.
