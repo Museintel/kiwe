@@ -4187,7 +4187,7 @@
     },
     {
       "source": "wp-content/mu-plugins/dsa/includes/Commerce/Checkout_Experience_Service.php",
-      "sha256": "3db457aa5a009b06938df2d8f585834d14bfbc75929d0bd079a82e5a2e3b7dfb",
+      "sha256": "31adb56ec33805a96dccdce04e2a44a0acf2132686b5d6c2626b8a4c819ef4fc",
       "symbols": [
         {
           "kind": "method",
@@ -4505,7 +4505,7 @@
     },
     {
       "source": "wp-content/mu-plugins/dsa/includes/Commerce/Checkout_Service.php",
-      "sha256": "3ea7902dc3038325616dbdc8cca89ae05df620708eae4617c3d9c4383fe98190",
+      "sha256": "cb4f63a06e2a44be5f2def6ab9363b69753c445516c42a392b0bc442bebc65fd",
       "symbols": [
         {
           "kind": "method",
@@ -4669,133 +4669,133 @@
         },
         {
           "kind": "method",
-          "name": "prime_saved_billing_for_authored_shipping",
+          "name": "prime_authored_shipping_address",
           "line": 469
         },
         {
           "kind": "method",
           "name": "prime_customer_session",
-          "line": 481
+          "line": 488
         },
         {
           "kind": "method",
           "name": "persist_customer_address_drafts",
-          "line": 522
+          "line": 529
         },
         {
           "kind": "method",
           "name": "address_group_ready_for_persistence",
-          "line": 544
+          "line": 551
         },
         {
           "kind": "method",
           "name": "address_group_has_validation_errors",
-          "line": 570
+          "line": 577
         },
         {
           "kind": "method",
           "name": "persist_customer_address_group",
-          "line": 583
+          "line": 590
         },
         {
           "kind": "method",
           "name": "submitted_shipping_fields_have_values",
-          "line": 619
+          "line": 626
         },
         {
           "kind": "method",
           "name": "persist_customer_addresses",
-          "line": 634
+          "line": 641
         },
         {
           "kind": "method",
           "name": "customer_address_properties",
-          "line": 675
+          "line": 682
         },
         {
           "kind": "method",
           "name": "should_persist_shipping_address",
-          "line": 679
+          "line": 686
         },
         {
           "kind": "method",
           "name": "needs_shipping_address",
-          "line": 683
+          "line": 690
         },
         {
           "kind": "method",
           "name": "draft",
-          "line": 692
+          "line": 699
         },
         {
           "kind": "method",
           "name": "stored_errors",
-          "line": 705
+          "line": 712
         },
         {
           "kind": "method",
           "name": "set_session_value",
-          "line": 719
+          "line": 726
         },
         {
           "kind": "method",
           "name": "load_checkout",
-          "line": 725
+          "line": 732
         },
         {
           "kind": "method",
           "name": "prepare_cart_totals",
-          "line": 737
+          "line": 744
         },
         {
           "kind": "method",
           "name": "supported_type",
-          "line": 749
+          "line": 756
         },
         {
           "kind": "method",
           "name": "ship_to_different_address",
-          "line": 753
+          "line": 760
         },
         {
           "kind": "method",
           "name": "product_total",
-          "line": 758
+          "line": 765
         },
         {
           "kind": "method",
           "name": "can_create_account",
-          "line": 770
+          "line": 777
         },
         {
           "kind": "method",
           "name": "account_required",
-          "line": 774
+          "line": 781
         },
         {
           "kind": "method",
           "name": "identity_allowed",
-          "line": 778
+          "line": 785
         },
         {
           "kind": "method",
           "name": "create_account",
-          "line": 783
+          "line": 790
         },
         {
           "kind": "method",
           "name": "field_from_error_code",
-          "line": 792
-        },
-        {
-          "kind": "method",
-          "name": "humanize_key",
           "line": 799
         },
         {
           "kind": "method",
+          "name": "humanize_key",
+          "line": 806
+        },
+        {
+          "kind": "method",
           "name": "money_text",
-          "line": 804
+          "line": 811
         }
       ]
     },

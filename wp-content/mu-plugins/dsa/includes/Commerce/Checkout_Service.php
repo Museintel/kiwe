@@ -466,8 +466,15 @@ final class Checkout_Service {
 		return $errors;
 	}
 
-	public function prime_saved_billing_for_authored_shipping(): void {
-		if ( ! WC()->cart->needs_shipping() || $this->draft() || ! WC()->customer->get_billing_address_1() ) return;
+	public function prime_authored_shipping_address(): void {
+		// Load WooCommerce's deferred cart before checking whether it needs delivery.
+		if ( ! WC()->cart->get_cart() || ! WC()->cart->needs_shipping() ) return;
+		$draft = $this->draft();
+		if ( $draft ) {
+			$this->prime_customer_session( $draft );
+			return;
+		}
+		if ( ! WC()->customer->get_billing_address_1() ) return;
 		foreach ( [ 'country', 'state', 'city', 'postcode', 'address_1', 'address_2' ] as $field ) {
 			$billing = 'get_billing_' . $field;
 			$shipping = 'get_shipping_' . $field;
