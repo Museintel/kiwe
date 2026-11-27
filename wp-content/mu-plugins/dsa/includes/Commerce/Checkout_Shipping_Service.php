@@ -12,7 +12,7 @@ final class Checkout_Shipping_Service {
 	}
 
 	public static function shiprocket_rates(): bool {
-		return Shiprocket_App_Service::realtime_configured();
+		return class_exists( Shiprocket_App_Service::class ) && Shiprocket_App_Service::realtime_configured();
 	}
 
 	public static function vary_shiprocket_packages( array $packages ): array {

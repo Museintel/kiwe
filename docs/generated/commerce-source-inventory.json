@@ -4817,7 +4817,7 @@
     },
     {
       "source": "wp-content/mu-plugins/dsa/includes/Commerce/Checkout_Shipping_Service.php",
-      "sha256": "356fa7e0c742c9a1292885f89710e814e9af02828cafed39b9fef37e6717dba5",
+      "sha256": "34f4624c3a59deb23da35e53ba5fe65fbc0058cc900d66888932ff0f0ccb179b",
       "symbols": [
         {
           "kind": "method",
@@ -5438,7 +5438,7 @@
     },
     {
       "source": "wp-content/mu-plugins/dsa/includes/Commerce/MCP_Store_Provider.php",
-      "sha256": "494f796b1083473e3d3beac5e982fee6ebf5ff8705154d3259325d242ad15b1a",
+      "sha256": "8dc9cc906539a63c1e6ba5dd45113529d917cc7a3cdb6b61762ceb298a86854f",
       "symbols": [
         {
           "kind": "method",

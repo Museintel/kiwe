@@ -32,7 +32,7 @@ final class MCP_Store_Provider {
    'permission'=>$gatewayAllowed,'discoverPermission'=>$gatewayAllowed,'execute'=>static fn()=>Razorpay_App_Service::status(),
   ];
   $shiprocketFields=array_fill_keys(['storeEnabled','pluginInstalled','pluginActive','accountConfigured','realtimeRatesConfigured','usesShippingZones'],['type'=>'boolean']);
-  $shiprocketAllowed=static fn()=>Shiprocket_App_Service::allowed();
+  $shiprocketAllowed=static fn()=>class_exists(Shiprocket_App_Service::class)&&Shiprocket_App_Service::allowed();
   $ops['store.shiprocket.status']=[
    'scope'=>'store.authoring.read','label'=>'Check Shiprocket delivery integration setup',
    'effect'=>'read','approval'=>'none','accessVersion'=>1,'inputSchema'=>self::object([]),

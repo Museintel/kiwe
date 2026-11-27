@@ -1577,8 +1577,8 @@
       "sha256": "4eccdddf5f77815d3cbfeca6152554eecd3f72d006c45166fa6198ae6976a3a7"
     },
     "includes/Commerce/Checkout_Shipping_Service.php": {
-      "bytes": 4220,
-      "sha256": "356fa7e0c742c9a1292885f89710e814e9af02828cafed39b9fef37e6717dba5"
+      "bytes": 4269,
+      "sha256": "34f4624c3a59deb23da35e53ba5fe65fbc0058cc900d66888932ff0f0ccb179b"
     },
     "includes/Commerce/Commerce_Context_Service.php": {
       "bytes": 12909,
@@ -1601,8 +1601,8 @@
       "sha256": "6669b946a9157d1aa6b75a8f228c40ad72b6f12a32c7b0068d9da44bd7730b34"
     },
     "includes/Commerce/MCP_Store_Provider.php": {
-      "bytes": 26734,
-      "sha256": "494f796b1083473e3d3beac5e982fee6ebf5ff8705154d3259325d242ad15b1a"
+      "bytes": 26779,
+      "sha256": "8dc9cc906539a63c1e6ba5dd45113529d917cc7a3cdb6b61762ceb298a86854f"
     },
     "includes/Commerce/Membership_Account_Service.php": {
       "bytes": 16066,
