@@ -466,6 +466,18 @@ final class Checkout_Service {
 		return $errors;
 	}
 
+	public function prime_saved_billing_for_authored_shipping(): void {
+		if ( ! WC()->cart->needs_shipping() || $this->draft() || ! WC()->customer->get_billing_address_1() ) return;
+		foreach ( [ 'country', 'state', 'city', 'postcode', 'address_1', 'address_2' ] as $field ) {
+			$billing = 'get_billing_' . $field;
+			$shipping = 'get_shipping_' . $field;
+			if ( WC()->customer->{$billing}() !== WC()->customer->{$shipping}() ) {
+				$this->prime_customer_session( [] );
+				return;
+			}
+		}
+	}
+
 	private function prime_customer_session( array $draft ): void {
 		if ( ! WC()->customer ) {
 			return;

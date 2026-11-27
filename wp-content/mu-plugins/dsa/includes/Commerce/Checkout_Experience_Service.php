@@ -69,6 +69,7 @@ final class Checkout_Experience_Service {
 
 		wc_maybe_define_constant( 'WOOCOMMERCE_CHECKOUT', true );
 		$cart = WC()->cart;
+		$checkout->prime_saved_billing_for_authored_shipping();
 		$cart->calculate_totals();
 		$contract = $checkout->contract();
 		$address_type = $contract['needsShipping'] && $contract['shipToDifferent'] ? 'shipping' : 'billing';

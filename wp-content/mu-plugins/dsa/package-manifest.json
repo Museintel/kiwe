@@ -1557,8 +1557,8 @@
       "sha256": "e61e4fc3e756dade76ca708958440ddc6077837fbd6376cd3e348f4b87c8a681"
     },
     "includes/Commerce/Checkout_Experience_Service.php": {
-      "bytes": 8921,
-      "sha256": "59e15023d4087950ba78ab23d2774d002666d267014efb60d6a1a11363175ce1"
+      "bytes": 8979,
+      "sha256": "3db457aa5a009b06938df2d8f585834d14bfbc75929d0bd079a82e5a2e3b7dfb"
     },
     "includes/Commerce/Checkout_Field_Service.php": {
       "bytes": 1155,
@@ -1569,8 +1569,8 @@
       "sha256": "5d1f494b5cd3bf898cc974421919e2bca225bce752a37d507f622370d6d09e89"
     },
     "includes/Commerce/Checkout_Service.php": {
-      "bytes": 27367,
-      "sha256": "453be12b76ab89ba841610c4f2874e2940e25efd2232fd22d27c96d3cec1743e"
+      "bytes": 27863,
+      "sha256": "3ea7902dc3038325616dbdc8cca89ae05df620708eae4617c3d9c4383fe98190"
     },
     "includes/Commerce/Checkout_Session_Details.php": {
       "bytes": 3257,
@@ -1649,8 +1649,8 @@
       "sha256": "1eaea8ddc1654b97cc5f63cd439618af329785d0eaba6396c7b2c3f04548894e"
     },
     "includes/Commerce/Shiprocket_Delivery_Estimate.php": {
-      "bytes": 4821,
-      "sha256": "287d40f7470654bcb915f86d9691ec44ee6712b650440f33b8b4cf57d392cb46"
+      "bytes": 4961,
+      "sha256": "c94062eafc6d05a80b76624fe9aa381477f6896739f4007b28bb9db5d5bb8ac3"
     },
     "includes/Commerce/Store_Analytics_Service.php": {
       "bytes": 33308,
@@ -2217,8 +2217,8 @@
       "sha256": "31a564f54d69c4941fb8864f70cea6302f8efaa7d75f82dc0bb22c2e6a01f299"
     },
     "includes/Rest/Checkout_Controller.php": {
-      "bytes": 3375,
-      "sha256": "61f076f6a12f6db203d8f6d8093613db85cd2c65df7c72e61a28d45e0ae49559"
+      "bytes": 3439,
+      "sha256": "a009bdab6e3145c4bca94be134493d7066ad1bb891c9557c264c31ac75606495"
     },
     "includes/Rest/Discussion_Controller.php": {
       "bytes": 7738,

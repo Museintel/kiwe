@@ -71,6 +71,7 @@ final class Checkout_Controller {
 			return new WP_Error( 'kiwe_shipping_unavailable', __( 'Checkout is unavailable.', 'dsa' ), [ 'status'=>409 ] );
 		}
 		wc_maybe_define_constant( 'WOOCOMMERCE_CHECKOUT', true );
+		$this->checkout->prime_saved_billing_for_authored_shipping();
 		$error = Checkout_Shipping_Service::update( $request->get_param( 'index' ), $request->get_param( 'rate' ), $request->get_param( 'mode' ) );
 		return $error ?? $this->review();
 	}

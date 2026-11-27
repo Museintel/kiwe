@@ -4187,7 +4187,7 @@
     },
     {
       "source": "wp-content/mu-plugins/dsa/includes/Commerce/Checkout_Experience_Service.php",
-      "sha256": "59e15023d4087950ba78ab23d2774d002666d267014efb60d6a1a11363175ce1",
+      "sha256": "3db457aa5a009b06938df2d8f585834d14bfbc75929d0bd079a82e5a2e3b7dfb",
       "symbols": [
         {
           "kind": "method",
@@ -4272,42 +4272,42 @@
         {
           "kind": "method",
           "name": "address_text",
-          "line": 119
+          "line": 120
         },
         {
           "kind": "method",
           "name": "plain",
-          "line": 128
+          "line": 129
         },
         {
           "kind": "method",
           "name": "restore_shortcode_coupon",
-          "line": 132
+          "line": 133
         },
         {
           "kind": "hook",
           "name": "woocommerce_before_checkout_form",
-          "line": 136
+          "line": 137
         },
         {
           "kind": "method",
           "name": "assets",
-          "line": 140
+          "line": 141
         },
         {
           "kind": "method",
           "name": "body_classes",
-          "line": 152
+          "line": 153
         },
         {
           "kind": "method",
           "name": "address_summary",
-          "line": 157
+          "line": 158
         },
         {
           "kind": "method",
           "name": "payment_choices",
-          "line": 167
+          "line": 168
         }
       ]
     },
@@ -4505,7 +4505,7 @@
     },
     {
       "source": "wp-content/mu-plugins/dsa/includes/Commerce/Checkout_Service.php",
-      "sha256": "453be12b76ab89ba841610c4f2874e2940e25efd2232fd22d27c96d3cec1743e",
+      "sha256": "3ea7902dc3038325616dbdc8cca89ae05df620708eae4617c3d9c4383fe98190",
       "symbols": [
         {
           "kind": "method",
@@ -4669,128 +4669,133 @@
         },
         {
           "kind": "method",
-          "name": "prime_customer_session",
+          "name": "prime_saved_billing_for_authored_shipping",
           "line": 469
         },
         {
           "kind": "method",
+          "name": "prime_customer_session",
+          "line": 481
+        },
+        {
+          "kind": "method",
           "name": "persist_customer_address_drafts",
-          "line": 510
+          "line": 522
         },
         {
           "kind": "method",
           "name": "address_group_ready_for_persistence",
-          "line": 532
+          "line": 544
         },
         {
           "kind": "method",
           "name": "address_group_has_validation_errors",
-          "line": 558
+          "line": 570
         },
         {
           "kind": "method",
           "name": "persist_customer_address_group",
-          "line": 571
+          "line": 583
         },
         {
           "kind": "method",
           "name": "submitted_shipping_fields_have_values",
-          "line": 607
+          "line": 619
         },
         {
           "kind": "method",
           "name": "persist_customer_addresses",
-          "line": 622
+          "line": 634
         },
         {
           "kind": "method",
           "name": "customer_address_properties",
-          "line": 663
+          "line": 675
         },
         {
           "kind": "method",
           "name": "should_persist_shipping_address",
-          "line": 667
+          "line": 679
         },
         {
           "kind": "method",
           "name": "needs_shipping_address",
-          "line": 671
+          "line": 683
         },
         {
           "kind": "method",
           "name": "draft",
-          "line": 680
+          "line": 692
         },
         {
           "kind": "method",
           "name": "stored_errors",
-          "line": 693
+          "line": 705
         },
         {
           "kind": "method",
           "name": "set_session_value",
-          "line": 707
+          "line": 719
         },
         {
           "kind": "method",
           "name": "load_checkout",
-          "line": 713
-        },
-        {
-          "kind": "method",
-          "name": "prepare_cart_totals",
           "line": 725
         },
         {
           "kind": "method",
-          "name": "supported_type",
+          "name": "prepare_cart_totals",
           "line": 737
         },
         {
           "kind": "method",
+          "name": "supported_type",
+          "line": 749
+        },
+        {
+          "kind": "method",
           "name": "ship_to_different_address",
-          "line": 741
+          "line": 753
         },
         {
           "kind": "method",
           "name": "product_total",
-          "line": 746
-        },
-        {
-          "kind": "method",
-          "name": "can_create_account",
           "line": 758
         },
         {
           "kind": "method",
+          "name": "can_create_account",
+          "line": 770
+        },
+        {
+          "kind": "method",
           "name": "account_required",
-          "line": 762
+          "line": 774
         },
         {
           "kind": "method",
           "name": "identity_allowed",
-          "line": 766
+          "line": 778
         },
         {
           "kind": "method",
           "name": "create_account",
-          "line": 771
+          "line": 783
         },
         {
           "kind": "method",
           "name": "field_from_error_code",
-          "line": 780
+          "line": 792
         },
         {
           "kind": "method",
           "name": "humanize_key",
-          "line": 787
+          "line": 799
         },
         {
           "kind": "method",
           "name": "money_text",
-          "line": 792
+          "line": 804
         }
       ]
     },
@@ -6340,37 +6345,37 @@
     },
     {
       "source": "wp-content/mu-plugins/dsa/includes/Commerce/Shiprocket_Delivery_Estimate.php",
-      "sha256": "287d40f7470654bcb915f86d9691ec44ee6712b650440f33b8b4cf57d392cb46",
+      "sha256": "c94062eafc6d05a80b76624fe9aa381477f6896739f4007b28bb9db5d5bb8ac3",
       "symbols": [
         {
           "kind": "method",
           "name": "register",
-          "line": 11
+          "line": 12
         },
         {
           "kind": "hook",
           "name": "rest_api_init",
-          "line": 14
+          "line": 15
         },
         {
           "kind": "method",
           "name": "routes",
-          "line": 17
+          "line": 18
         },
         {
           "kind": "method",
           "name": "shortcode",
-          "line": 28
+          "line": 29
         },
         {
           "kind": "method",
           "name": "estimate",
-          "line": 40
+          "line": 44
         },
         {
           "kind": "hook",
           "name": "http_request_args",
-          "line": 72
+          "line": 76
         }
       ]
     },

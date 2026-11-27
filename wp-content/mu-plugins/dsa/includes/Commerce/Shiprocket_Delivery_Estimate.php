@@ -2,6 +2,7 @@
 namespace DSA\Commerce;
 
 use DSA\Apps\Shiprocket_App_Service;
+use DSA\Apps\Asset_Locator;
 use DSA\Utilities\Origin_Checker;
 
 if ( ! defined( 'ABSPATH' ) ) exit;
@@ -30,7 +31,10 @@ final class Shiprocket_Delivery_Estimate {
 		$id = get_queried_object_id();
 		$product = is_product() ? wc_get_product( $id ) : false;
 		if ( ! $product || ! $product->needs_shipping() ) return '';
-		wp_enqueue_script( 'kiwe-shiprocket-estimate', plugin_dir_url( DSA_FILE ) . 'assets/js/shiprocket-estimate.js', [ 'dsa-surface' ], DSA_VERSION, true );
+		$asset = 'assets/js/shiprocket-estimate.js';
+		$version = Asset_Locator::version( $asset );
+		$url = add_query_arg( 'kiwe-build', $version, Asset_Locator::url( $asset ) );
+		wp_enqueue_script( 'kiwe-shiprocket-estimate', $url, [ 'dsa-surface' ], $version, true );
 		return '<form data-kiwe-delivery-estimate="' . esc_attr( (string) $id ) . '"><label>'
 			. esc_html__( 'Delivery PIN code', 'dsa' )
 			. ' <input name="pin" inputmode="numeric" autocomplete="postal-code" maxlength="6" pattern="[1-9][0-9]{5}" required></label> '
