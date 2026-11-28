@@ -15,7 +15,7 @@ $date = static fn (int $time): string => (new DateTimeImmutable('@' . $time))
     <?php if ($balance['held'] > 0): ?><div><dt>Held for payment disputes</dt><dd><?= $money($balance['held']) ?></dd></div><?php endif; ?>
     <?php if ($balance['adjustmentDue'] > 0): ?><div><dt>Adjustment from future earnings</dt><dd><?= $money($balance['adjustmentDue']) ?></dd></div><?php endif; ?>
   </dl>
-  <form action="/checkout/" method="post" class="billing-actions">
+  <form action="<?= $e($route) ?>" method="post" class="billing-actions">
     <?= kiwe_checkout_post_fields('request-withdrawal') ?>
     <input type="hidden" name="amount_minor" value="<?= $balance['available'] ?>">
     <input type="hidden" name="withdrawal" value="<?= $balance['available'] > 0 ? 'wd_' . bin2hex(random_bytes(16)) : '' ?>">
@@ -32,7 +32,7 @@ $date = static fn (int $time): string => (new DateTimeImmutable('@' . $time))
               <span><?= $date($entry['created_at']) ?></span>
               <small><?= $e($entry['id']) ?></small></div>
             <?php if ($entry['status'] === 'requested'): ?>
-              <form action="/checkout/" method="post" class="billing-actions">
+              <form action="<?= $e($route) ?>" method="post" class="billing-actions">
                 <?= kiwe_checkout_post_fields('cancel-withdrawal') ?>
                 <input type="hidden" name="withdrawal" value="<?= $e($entry['id']) ?>">
                 <button class="billing-link" aria-label="Cancel withdrawal <?= $e($entry['id']) ?>">Cancel request</button>

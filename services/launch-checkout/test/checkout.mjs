@@ -238,6 +238,18 @@ try {
   await verifyPartners({ origin, data, partner, anotherPartner: mismatched, buyer: referred, start, paid,
     buyerId: account.id, partnerId: enrolment.account.id, call: (name, args) => mcp.callTool({ name, arguments: args }) });
   await verifyWebsitePurchases(referred, direct, account.id, paid.purchaseId);
+  const accountRoute = await browser.newPage();
+  await accountRoute.goto(origin + '/launch-account/#sign-in');
+  await accountRoute.locator('#sign-in').getByLabel('Your email').fill('buyer@example.invalid');
+  await accountRoute.locator('#sign-in').getByLabel('Password', { exact: true }).fill(resetPassword);
+  await accountRoute.locator('#sign-in').getByRole('button', { name: 'Sign in' }).click();
+  await accountRoute.getByRole('heading', { name: 'Your Kiwe Launch account' }).waitFor();
+  await accountRoute.getByText('You’re signed in.', { exact: true }).waitFor();
+  const accountCookie = (await accountRoute.context().cookies()).find(cookie => cookie.name === 'kiwe_launch_account');
+  assert.deepEqual([accountCookie.path, accountCookie.httpOnly, accountCookie.sameSite], ['/', true, 'Lax']);
+  assert.equal(await accountRoute.locator('form:has(input[value="pay-first-year"])').count(), 0);
+  await accountRoute.getByRole('button', { name: 'Sign out' }).click();
+  await accountRoute.getByText('You’re signed out.', { exact: true }).waitFor();
   process.stdout.write('Verified checkout, Razorpay billing and retries, renewal consent, refunds and same-account Kiwe Start handoff passed.\n');
   process.stdout.write('Partner service proof, commission adjustments, private withdrawals and payout readback passed.\n');
 } finally {

@@ -23,7 +23,7 @@ $settings = [
     },
 ];
 if ($start = getenv('KIWE_BILLING_TEST_START_ORIGIN')) {
-    require __DIR__ . '/billing-fixture.php';
+    require_once __DIR__ . '/billing-fixture.php';
     $settings['billing'] = [
         'startOrigin' => $start,
         'merchant' => 'acc_KiweTestFixture',
@@ -36,6 +36,7 @@ if ($start = getenv('KIWE_BILLING_TEST_START_ORIGIN')) {
             kiwe_test_start(__DIR__, $start, getenv('KIWE_BILLING_TEST_START_TOKEN'), $action, $data),
     ];
     if (is_file(__DIR__ . '/launch-catalogue.json')) {
+        $settings['nativeWoo'] = true;
         $settings['billing']['plans']['websitePlans'] = [
             'kiwe-portfolio-v1' => 'plan_PortfolioFixture',
             'kiwe-ecommerce-v1' => 'plan_EcommerceFixture',

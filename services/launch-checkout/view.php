@@ -9,8 +9,8 @@ $mode = $formInput['mode'] ?? 'register';
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="stylesheet" href="/assets/launch/site.css?v=2">
-  <link rel="stylesheet" href="/checkout/checkout.css">
-  <script src="/checkout/checkout.js" defer></script>
+  <link rel="stylesheet" href="/assets/launch/checkout.css">
+  <script src="/assets/launch/checkout.js" defer></script>
   <title>Kiwe Launch checkout</title>
 </head>
 <body>
@@ -20,7 +20,7 @@ $mode = $formInput['mode'] ?? 'register';
       <a class="brand" href="/" aria-label="Kiwe Launch home"><span class="brand-mark" aria-hidden="true"></span>kiwe<span class="brand-sub">launch</span></a>
       <a class="login" href="/#plan">Kiwe Client plan</a>
       <?php if ($account): ?>
-        <form action="/checkout/" method="post" class="checkout-signout"><?= kiwe_checkout_post_fields('sign-out') ?><button class="button button-small button-outline">Sign out</button></form>
+        <form action="<?= $e($route) ?>" method="post" class="checkout-signout"><?= kiwe_checkout_post_fields('sign-out') ?><button class="button button-small button-outline">Sign out</button></form>
       <?php else: ?>
         <a class="button button-small button-outline checkout-signout" href="#sign-in">Sign in</a>
       <?php endif; ?>
@@ -29,20 +29,20 @@ $mode = $formInput['mode'] ?? 'register';
   <main class="wrap checkout" id="main">
     <div class="checkout-heading">
       <p class="eyebrow">Kiwe Launch</p>
-      <h1><?= $partnerTab ? 'Partner area' : 'Set up your Appsite.' ?></h1>
-      <p><?= $partnerTab ? 'Refer businesses to Kiwe and track your earnings.' : 'Verify your account, choose a domain and save your setup.' ?></p>
+      <h1><?= $partnerTab ? 'Partner area' : ($native ? 'Your Kiwe Launch account' : 'Set up your Appsite.') ?></h1>
+      <p><?= $partnerTab ? 'Refer businesses to Kiwe and track your earnings.' : ($native ? 'Verify your email to buy a website plan and manage billing.' : 'Verify your account, choose a domain and save your setup.') ?></p>
     </div>
     <?php if ($flash): ?>
       <p class="form-status checkout-notice<?= $flash['error'] ? ' error' : '' ?>" role="<?= $flash['error'] ? 'alert' : 'status' ?>"><?= $e($flash['message']) ?></p>
     <?php endif; ?>
-    <form action="/checkout/" method="post" id="checkout-link" hidden>
+    <form action="<?= $e($route) ?>" method="post" id="checkout-link" hidden>
       <?= kiwe_checkout_post_fields('verification-link') ?>
       <input type="hidden" name="code">
     </form>
     <div class="checkout-grid">
       <section class="checkout-card">
         <?php if ($account && $partnerTab): ?>
-          <div class="checkout-card-head"><h2>Refer a client</h2><a class="text-link" href="/checkout/?tab=client">Client setup</a></div>
+          <div class="checkout-card-head"><h2>Refer a client</h2><a class="text-link" href="<?= $e($route) ?>?tab=client">Client setup</a></div>
           <?php if ($account['partner']): ?>
             <?php if ($share): ?>
               <div class="share-card">
@@ -52,7 +52,7 @@ $mode = $formInput['mode'] ?? 'register';
                 <p>Copy the link before leaving this page. It’s valid for 30 days.</p>
               </div>
             <?php endif; ?>
-            <form action="/checkout/" method="post" class="checkout-form">
+            <form action="<?= $e($route) ?>" method="post" class="checkout-form">
               <?= kiwe_checkout_post_fields('make-referral') ?>
               <label>Client email<input name="email" type="email" required maxlength="254"></label>
               <div class="field-pair">
@@ -70,7 +70,7 @@ $mode = $formInput['mode'] ?? 'register';
                 ?>
                 <li><div><strong><?= $e($entry['domain']) ?></strong><span><?= $e($entry['client_email']) ?></span><small><?= $status ?></small></div>
                   <?php if ($status === 'Awaiting client'): ?>
-                    <form action="/checkout/" method="post">
+                    <form action="<?= $e($route) ?>" method="post">
                       <?= kiwe_checkout_post_fields('revoke-referral') ?><input type="hidden" name="id" value="<?= $e($entry['id']) ?>">
                       <button class="button button-small button-outline" aria-label="Revoke referral for <?= $e($entry['domain']) ?>">Revoke link</button>
                     </form>
@@ -95,36 +95,40 @@ $mode = $formInput['mode'] ?? 'register';
                 <?php endif; ?>
                 <?php if ($clientPage > 1 || $partnerDashboard['more']): ?>
                   <nav class="partner-pages" aria-label="Enrolled clients">
-                    <?php if ($clientPage > 1): ?><a class="text-link" href="/checkout/?tab=partner&amp;clients_page=<?= $clientPage - 1 ?>#partner-clients">Previous clients</a><?php endif; ?>
-                    <?php if ($partnerDashboard['more']): ?><a class="text-link" href="/checkout/?tab=partner&amp;clients_page=<?= $clientPage + 1 ?>#partner-clients">Next clients</a><?php endif; ?>
+                    <?php if ($clientPage > 1): ?><a class="text-link" href="<?= $e($route) ?>?tab=partner&amp;clients_page=<?= $clientPage - 1 ?>#partner-clients">Previous clients</a><?php endif; ?>
+                    <?php if ($partnerDashboard['more']): ?><a class="text-link" href="<?= $e($route) ?>?tab=partner&amp;clients_page=<?= $clientPage + 1 ?>#partner-clients">Next clients</a><?php endif; ?>
                   </nav>
                 <?php endif; ?>
               </div>
             <?php endif; ?>
           <?php else: ?>
             <p>Join with your verified email to create referral links for your clients.</p>
-            <form action="/checkout/" method="post" class="checkout-form">
+            <form action="<?= $e($route) ?>" method="post" class="checkout-form">
               <?= kiwe_checkout_post_fields('join-partner') ?>
               <button class="button">Join the Partner Program</button>
             </form>
           <?php endif; ?>
         <?php elseif ($account): ?>
-          <div class="checkout-card-head"><h2>Your setup</h2><a class="text-link" href="/checkout/?tab=partner"><?= $account['partner'] ? 'Partner area' : 'Become a partner' ?></a></div>
+          <div class="checkout-card-head"><h2>Your setup</h2>
+            <?php if (!$native): ?><a class="text-link" href="<?= $e($route) ?>?tab=partner"><?= $account['partner'] ? 'Partner area' : 'Become a partner' ?></a><?php endif; ?>
+          </div>
           <p>Verified email <strong><?= $e($account['email']) ?></strong></p>
           <?php if ($websitePurchases): ?>
             <h3>Your website purchases</h3>
             <ul>
               <?php foreach ($websitePurchases as $website): ?>
-                <li><a href="/checkout/?purchase=<?= $e($website['id']) ?>"<?= $purchaseId === $website['id'] ? ' aria-current="page"' : '' ?>><?= $e($website['domain']) ?></a></li>
+                <li><a href="<?= $e($route) ?>?purchase=<?= $e($website['id']) ?>"<?= $purchaseId === $website['id'] ? ' aria-current="page"' : '' ?>><?= $e($website['domain']) ?></a></li>
               <?php endforeach; ?>
             </ul>
-            <?php if ($purchaseId): ?><p><a href="/checkout/?tab=client">Back to checkout</a></p><?php endif; ?>
+            <?php if ($purchaseId): ?><p><a href="<?= $e($route) ?>?tab=client"><?= $native ? 'Back to your account' : 'Back to checkout' ?></a></p><?php endif; ?>
           <?php endif; ?>
-          <?php if ($referral && !$purchaseId): ?><p class="checkout-note">Your partner price is applied.</p><?php endif; ?>
+          <?php if ($referral && !$purchaseId && !$native): ?><p class="checkout-note">Your partner price is applied.</p><?php endif; ?>
           <?php if ($billingState): ?>
             <p class="checkout-note">Domain on this payment <strong><?= $e($billingState['quote']['domain']['name']) ?></strong></p>
+          <?php elseif ($native): ?>
+            <p><a class="button" href="/checkout/">Return to checkout</a></p>
           <?php else: ?>
-          <form action="/checkout/" method="post" class="checkout-form">
+          <form action="<?= $e($route) ?>" method="post" class="checkout-form">
             <?= kiwe_checkout_post_fields('save-draft') ?>
             <input type="hidden" name="revision" value="<?= $e($draft['revision'] ?? 0) ?>">
             <label>Domain name<input name="domain" value="<?= $value('domain') ?>" required maxlength="254" placeholder="example.in" autocapitalize="none" spellcheck="false"></label>
@@ -155,7 +159,7 @@ $mode = $formInput['mode'] ?? 'register';
         <?php elseif ($link): ?>
           <h2><?= $link['purpose'] === 'reset' ? 'Choose a new password' : 'Create your password' ?></h2>
           <p>Verified email <strong><?= $e($link['email']) ?></strong></p>
-          <form class="checkout-form" action="/checkout/" method="post">
+          <form class="checkout-form" action="<?= $e($route) ?>" method="post">
             <?= kiwe_checkout_post_fields('password') ?>
             <input type="email" name="username" value="<?= $e($link['email']) ?>" autocomplete="username" hidden>
             <label>Password<input name="password" type="password" autocomplete="new-password" required minlength="12" maxlength="128"></label>
@@ -165,14 +169,14 @@ $mode = $formInput['mode'] ?? 'register';
         <?php else: ?>
           <h2>Create your account</h2>
           <p>We’ll send a secure link so you can verify your email and create a password.</p>
-          <form class="checkout-form" action="/checkout/" method="post">
+          <form class="checkout-form" action="<?= $e($route) ?>" method="post">
             <?= kiwe_checkout_post_fields('signup') ?>
             <label id="signup-label">Your email<input name="email" type="email" autocomplete="email" maxlength="254" required></label>
             <button class="button">Send my verification link</button>
           </form>
           <details class="checkout-details" id="sign-in">
             <summary>Sign in to an existing account</summary>
-            <form class="checkout-form" action="/checkout/" method="post">
+            <form class="checkout-form" action="<?= $e($route) ?>" method="post">
               <?= kiwe_checkout_post_fields('sign-in') ?>
               <label>Your email<input name="email" type="email" autocomplete="username" required maxlength="254"></label>
               <label>Password<input name="password" type="password" autocomplete="current-password" required maxlength="128"></label>
@@ -181,7 +185,7 @@ $mode = $formInput['mode'] ?? 'register';
           </details>
           <details class="checkout-details" id="recover">
             <summary>Reset your password</summary>
-            <form class="checkout-form" action="/checkout/" method="post">
+            <form class="checkout-form" action="<?= $e($route) ?>" method="post">
               <?= kiwe_checkout_post_fields('reset') ?>
               <label>Your email<input name="email" type="email" autocomplete="email" required maxlength="254"></label>
               <button class="button">Send my reset link</button>
@@ -189,7 +193,7 @@ $mode = $formInput['mode'] ?? 'register';
           </details>
           <details class="checkout-details">
             <summary>Enter a code from your email</summary>
-            <form class="checkout-form" action="/checkout/" method="post">
+            <form class="checkout-form" action="<?= $e($route) ?>" method="post">
               <?= kiwe_checkout_post_fields('verification-link') ?>
               <label>Email code<input name="code" autocomplete="off" required maxlength="72" spellcheck="false" autocapitalize="none"></label>
               <button class="button button-outline">Verify code</button>
@@ -198,7 +202,10 @@ $mode = $formInput['mode'] ?? 'register';
         <?php endif; ?>
       </section>
       <aside class="checkout-summary">
-        <?php if ($partnerTab): ?>
+        <?php if ($native && !$billingState && !$partnerTab): ?>
+          <h2>Website purchases</h2>
+          <p>After payment is verified, select the website in your account to open Kiwe Start or manage its renewal.</p>
+        <?php elseif ($partnerTab): ?>
           <?php if ($partnerDashboard): ?>
             <?php require $root . '/partner-view.php'; ?>
           <?php else: ?>
@@ -227,7 +234,7 @@ $mode = $formInput['mode'] ?? 'register';
                 <?php if ($draft['quote']['registryIdentityRequired']): ?><p>The registry requires identity verification at registration.</p><?php endif; ?>
               <?php endif; ?>
               <?php if ($quoteActive && $billing): ?>
-                <form method="post" action="/checkout/" class="billing-actions">
+                <form method="post" action="<?= $e($route) ?>" class="billing-actions">
                   <?= kiwe_checkout_post_fields('pay-first-year') ?>
                   <input type="hidden" name="revision" value="<?= $e($draft['revision']) ?>">
                   <label><input type="checkbox" name="payment_consent" value="yes" required> I agree to pay <?= $money($price['upfrontMinor']) ?> for the first 12 months.</label>

@@ -1,0 +1,142 @@
+<?php
+
+declare(strict_types=1);
+
+[$script, $root, $site] = $argv;
+if (PHP_SAPI !== 'cli' || !str_starts_with(basename($root), 'kiwe-launch-woo-native-')
+    || basename(dirname($site)) !== 'wordpress-checkout-lab') exit(1);
+define('WPMU_PLUGIN_DIR', $root . '/mu-plugins');
+require $site . '/wp-includes/plugin.php';
+add_filter('pre_wp_mail', '__return_true');
+add_filter('pre_http_request', static fn () => new WP_Error('fixture', 'External HTTP disabled for the isolated test.'));
+add_filter('pre_option_active_plugins', static fn () => ['woocommerce/woocommerce.php']);
+add_filter('pre_option_template', static fn () => 'twentytwentyfive');
+add_filter('pre_option_stylesheet', static fn () => 'twentytwentyfive');
+require $site . '/wp-load.php';
+if (wp_get_environment_type() !== 'local' || DB_NAME !== 'kiwe_checkout_lab') exit(2);
+define('KIWE_LAUNCH_NATIVE_CHECKOUT_ROOT', $root);
+require __DIR__ . '/../wordpress.php';
+require $root . '/boot.php';
+require $root . '/web.php';
+
+function nativeProof(bool $passed, string $label): void
+{
+    if (!$passed) throw new RuntimeException($label);
+}
+
+function nativeBuyerSession(array $state, array $account): void
+{
+    session_id('');
+    unset($_COOKIE['kiwe_launch_account']);
+    nativeProof(kiwe_checkout_session($state, true), 'Open the fixture buyer session.');
+    kiwe_checkout_establish_session($account);
+    $_COOKIE['kiwe_launch_account'] = session_id();
+    session_write_close();
+}
+
+add_filter('pre_option_woocommerce_currency', static fn () => 'INR');
+add_filter('pre_option_woocommerce_price_num_decimals', static fn () => 2);
+add_filter('pre_option_woocommerce_calc_taxes', static fn () => 'no');
+
+$state = kiwe_checkout_boot($root);
+$checkout = $state['checkout'];
+$buyer = 'launch:' . str_repeat('a', 32);
+$other = 'launch:' . str_repeat('b', 32);
+$account = ['id' => $buyer, 'email' => 'native-buyer@example.invalid', 'version' => 1];
+$otherAccount = ['id' => $other, 'email' => 'native-other@example.invalid', 'version' => 1];
+$db = new PDO('sqlite:' . $root . '/data/checkout.sqlite');
+$insert = $db->prepare('INSERT INTO checkout_accounts (id, email, password_hash, verified_at) VALUES (?, ?, ?, ?)');
+foreach ([$account, $otherAccount] as $person) $insert->execute([$person['id'], $person['email'], 'synthetic', time()]);
+$plan = $state['nativeWoo']['plans']['kiwe-portfolio-v1'];
+$amount = $plan['direct']['upfrontMinor'];
+$product = new WC_Product_Simple();
+$order = null;
+$cleanup = false;
+try {
+    nativeProof(!wc_get_product_id_by_sku($plan['sku']), 'The fixture SKU must be free.');
+    $product->set_props(['name' => 'Synthetic Kiwe Portfolio', 'sku' => $plan['sku'], 'virtual' => true,
+        'regular_price' => (string) ($amount / 100), 'status' => 'publish']);
+    $product->save();
+    wc_load_cart();
+    WC()->cart->add_to_cart($product->get_id());
+    WC()->cart->calculate_totals();
+    nativeProof((float) WC()->cart->get_total('edit') === (float) ($amount / 100), 'Native cart price must match the catalogue.');
+
+    $data = ['billing_email' => $account['email'], 'payment_method' => 'razorpay'];
+    $_POST = ['kiwe_launch_domain' => 'buyer.example.invalid', 'kiwe_launch_domain_mode' => 'owned'];
+    $guest = new WP_Error();
+    do_action('woocommerce_after_checkout_validation', $data, $guest);
+    nativeProof(str_contains($guest->get_error_message(), 'Sign in'), 'A Woo guest without a verified Launch session must be denied.');
+    nativeBuyerSession($state, $otherAccount);
+    $wrong = new WP_Error();
+    do_action('woocommerce_after_checkout_validation', $data, $wrong);
+    nativeProof(str_contains($wrong->get_error_message(), 'verified email'), 'Woo billing email cannot impersonate a Launch buyer.');
+    nativeBuyerSession($state, $account);
+    $valid = new WP_Error();
+    do_action('woocommerce_after_checkout_validation', $data, $valid);
+    nativeProof(!$valid->has_errors(), 'Allow the verified buyer. ' . $valid->get_error_message());
+    nativeProof(!is_user_logged_in(), 'Launch sign-in must not create a WordPress identity.');
+
+    $order = wc_create_order(['created_via' => 'checkout']);
+    $order->add_product($product, 1);
+    $order->set_billing_email($account['email']);
+    $order->set_payment_method('razorpay');
+    $order->set_currency('INR');
+    $order->calculate_totals();
+    $id = $order->get_id();
+    do_action('woocommerce_checkout_order_processed', $id, $data, $order);
+    $order = wc_get_order($id);
+    nativeProof((bool) $order->get_meta('_kiwe_launch_website_intent'), 'Persist the signed Woo record.');
+    do_action('woocommerce_before_pay_action', $order);
+    nativeBuyerSession($state, $otherAccount);
+    $denied = false;
+    try {
+        do_action('woocommerce_before_pay_action', $order);
+    } catch (Exception $error) {
+        $denied = str_contains($error->getMessage(), 'verified Kiwe Launch');
+    }
+    nativeProof($denied, 'A separate buyer must not reopen the order for payment.');
+    $blocked = false;
+    try {
+        do_action('woocommerce_store_api_checkout_order_processed', $order);
+    } catch (Automattic\WooCommerce\StoreApi\Exceptions\RouteException) {
+        $blocked = true;
+    }
+    nativeProof($blocked, 'Block native API payment outside the reviewed classic flow.');
+
+    $providerOrder = 'order_WooNativeFixture';
+    $providerPayment = 'pay_WooNativeFixture';
+    $order->update_meta_data('razorpay_order_id' . $id, $providerOrder);
+    $order->save_meta_data();
+    $provider = ['links' => [], 'subscriptions' => [],
+        'orders' => [$providerOrder => ['id' => $providerOrder, 'receipt' => (string) $id,
+            'notes' => ['woocommerce_order_id' => (string) $id], 'currency' => 'INR', 'status' => 'paid',
+            'amount' => $amount, 'amount_paid' => $amount, 'amount_due' => 0]],
+        'payments' => [$providerPayment => ['id' => $providerPayment, 'order_id' => $providerOrder,
+            'status' => 'captured', 'currency' => 'INR', 'created_at' => time() - 1, 'amount' => $amount, 'amount_refunded' => 0]],
+    ];
+    file_put_contents($root . '/data/gateway.json', json_encode($provider, JSON_THROW_ON_ERROR));
+    $order->payment_complete($providerPayment);
+    nativeProof(as_has_scheduled_action('kiwe_launch_reconcile_website_order', [$id, 0], 'kiwe-launch'), 'Payment must enqueue a protected receipt check.');
+    do_action('kiwe_launch_reconcile_website_order', $id, 0);
+    $purchase = wc_get_order($id)->get_meta('_kiwe_launch_website_purchase');
+    do_action('kiwe_launch_reconcile_website_order', $id, 0);
+    nativeProof($purchase && wc_get_order($id)->get_meta('_kiwe_launch_website_purchase') === $purchase, 'Repeat exact paid check without another purchase.');
+    $status = $state['billing']->status($buyer, $purchase);
+    nativeProof($status['projectId'] && $status['quote']['domain']['name'] === 'buyer.example.invalid'
+        && $state['billing']->status($other, $purchase) === null, 'Delivery must use the order’s saved buyer and domain.');
+} finally {
+    if ($order instanceof WC_Order) {
+        $id = $order->get_id();
+        $actions = ActionScheduler::store();
+        foreach (range(0, 5) as $attempt) {
+            $query = ['hook' => 'kiwe_launch_reconcile_website_order', 'group' => 'kiwe-launch', 'args' => [$id, $attempt]];
+            foreach ($actions->query_actions($query) as $scheduled) $actions->delete_action($scheduled);
+        }
+        wc_get_order($id)->delete(true);
+    }
+    $productId = $product->get_id();
+    if ($productId) $product->delete(true);
+    $cleanup = (!$order || !wc_get_order($id)) && (!$productId || !wc_get_product($productId));
+}
+echo json_encode(['passed' => true, 'cleanup' => $cleanup, 'buyer' => $buyer, 'other' => $other], JSON_THROW_ON_ERROR), PHP_EOL;

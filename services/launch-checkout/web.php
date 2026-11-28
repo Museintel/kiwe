@@ -36,16 +36,17 @@ function kiwe_checkout_current_account(KiweCheckout $checkout): ?array
 }
 
 function kiwe_checkout_action(
-    KiweCheckout $checkout, ?KiweBilling $billing, ?array $account, string $action, ?string $purchaseId = null
+    KiweCheckout $checkout, ?KiweBilling $billing, ?array $account, string $action, ?string $purchaseId = null, bool $native = false
 ): string|array
 {
+    $route = $native ? '/launch-account/' : '/checkout/';
     $referral = $_SESSION['referral'] ?? null;
     $address = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
     switch ($action) {
         case 'signup':
         case 'reset':
             if ($account) throw new KiweCheckoutError('Sign out before using that form.', 409);
-            $checkout->emailLink($action, kiwe_checkout_email($_POST['email'] ?? ''), $referral, $address);
+            $checkout->emailLink($action, kiwe_checkout_email($_POST['email'] ?? ''), $referral, $address, $route);
             return 'Check your email for the next step. Open the link within 30 minutes.';
         case 'verification-link':
             $digest = kiwe_checkout_token($_POST['code'] ?? '');
@@ -158,8 +159,25 @@ function kiwe_checkout_action(
     throw new KiweCheckoutError('This checkout action is unavailable.', 400);
 }
 
-function kiwe_checkout_serve(array $state, string $root): void
+function kiwe_checkout_session(array $state, bool $native, bool $readOnly = false): bool
 {
+    $name = $native ? 'kiwe_launch_account' : 'kiwe_launch_checkout';
+    if ($readOnly && !isset($_COOKIE[$name])) return false;
+    if (session_status() === PHP_SESSION_ACTIVE) return session_name() === $name;
+    ini_set('session.use_strict_mode', '1');
+    ini_set('session.use_only_cookies', '1');
+    session_cache_limiter('');
+    session_save_path($state['sessions']);
+    session_name($name);
+    session_set_cookie_params([
+        'lifetime' => 0, 'path' => $native ? '/' : '/checkout/', 'secure' => !$state['test'], 'httponly' => true, 'samesite' => 'Lax',
+    ]);
+    return session_start(['read_and_close' => $readOnly]);
+}
+
+function kiwe_checkout_serve(array $state, string $root, bool $native = false): void
+{
+    $route = $native ? '/launch-account/' : '/checkout/';
     $checkout = $state['checkout'];
     $billing = $state['billing'];
     $method = $_SERVER['REQUEST_METHOD'] ?? '';
@@ -169,18 +187,14 @@ function kiwe_checkout_serve(array $state, string $root): void
         return;
     }
     if (!$state['test'] && $method !== 'POST' && ($_SERVER['HTTP_HOST'] ?? '') === 'www.kiwelaunch.com') {
-        header('Location: https://kiwelaunch.com/checkout/', true, 308);
+        header('Location: https://kiwelaunch.com' . $route, true, 308);
         return;
     }
-    ini_set('session.use_strict_mode', '1');
-    ini_set('session.use_only_cookies', '1');
-    session_cache_limiter('');
-    session_save_path($state['sessions']);
-    session_name('kiwe_launch_checkout');
-    session_set_cookie_params([
-        'lifetime' => 0, 'path' => '/checkout/', 'secure' => !$state['test'], 'httponly' => true, 'samesite' => 'Lax',
-    ]);
-    session_start();
+    if (!kiwe_checkout_session($state, $native)) {
+        http_response_code(503);
+        echo 'Kiwe Launch sign-in is temporarily unavailable.';
+        return;
+    }
     $_SESSION['csrf'] ??= bin2hex(random_bytes(32));
     $account = kiwe_checkout_current_account($checkout);
     if ($method === 'POST') {
@@ -197,6 +211,13 @@ function kiwe_checkout_serve(array $state, string $root): void
         try {
             if ((int) ($_SERVER['CONTENT_LENGTH'] ?? 0) > 18000) throw new KiweCheckoutError('Your request is too large.', 413);
             $action = kiwe_checkout_text($_POST['action'] ?? '', 'action', 48);
+            if ($native && in_array($action, ['save-draft', 'pay-first-year'], true)) {
+                throw new KiweCheckoutError('Choose your website plan in the Kiwe Launch store.', 409);
+            }
+            if ($native && in_array($action, ['join-partner', 'referral-link', 'make-referral', 'revoke-referral',
+                'request-withdrawal', 'cancel-withdrawal'], true)) {
+                throw new KiweCheckoutError('Partner enrolment is currently unavailable here.', 409);
+            }
             if (isset($_POST['purchase'])) {
                 $requested = $_POST['purchase'];
                 if (!in_array($action, ['check-billing', 'renewal-consent', 'cancel-renewal', 'open-start'], true)
@@ -206,7 +227,7 @@ function kiwe_checkout_serve(array $state, string $root): void
                 }
                 $purchaseId = $requested;
             }
-            $message = kiwe_checkout_action($checkout, $billing, $account, $action, $purchaseId);
+            $message = kiwe_checkout_action($checkout, $billing, $account, $action, $purchaseId, $native);
             if (is_array($message)) {
                 if (isset($message['redirect'])) {
                     header('Location: ' . $message['redirect'], true, 303);
@@ -222,7 +243,7 @@ function kiwe_checkout_serve(array $state, string $root): void
             error_log('Kiwe Launch checkout action failed.');
             $_SESSION['flash'] = ['message' => 'Kiwe could not save this step. Please try again.', 'error' => true];
         }
-        header('Location: /checkout/' . ($purchaseId ? '?purchase=' . $purchaseId : ''), true, 303);
+        header('Location: ' . $route . ($purchaseId ? '?purchase=' . $purchaseId : ''), true, 303);
         return;
     }
     $purchaseId = null;
@@ -243,7 +264,7 @@ function kiwe_checkout_serve(array $state, string $root): void
     $formInput = $_SESSION['draft_input'] ?? [];
     unset($_SESSION['flash'], $_SESSION['share'], $_SESSION['draft_input']);
     $link = $account ? null : $checkout->linkInfo($_SESSION['verification'] ?? null);
-    $partnerTab = !$purchaseId && ($_SESSION['tab'] ?? '') === 'partner';
+    $partnerTab = !$native && !$purchaseId && ($_SESSION['tab'] ?? '') === 'partner';
     $referral = $account && !$partnerTab ? $checkout->referralFor($account['id']) : null;
     $draft = $account && !$partnerTab ? $checkout->draft($account['id']) : null;
     $billingState = $selectedBilling ?? ($account && !$partnerTab ? $billing?->status($account['id']) : null);
@@ -277,7 +298,7 @@ function kiwe_checkout_start_handoff(array $handoff, string $startOrigin): void
 <!doctype html><html lang="en-IN">
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Open Kiwe Start</title><link rel="stylesheet" href="/assets/launch/site.css?v=2">
-<script src="/checkout/checkout.js" defer></script>
+<script src="/assets/launch/checkout.js" defer></script>
 <main class="section wrap"><h1>Open Kiwe Start</h1>
 <form id="start-handoff" method="post" action="$action">
 <input name="ticket" type="hidden" value="$ticket"><button class="button">Continue to Kiwe Start</button></form>

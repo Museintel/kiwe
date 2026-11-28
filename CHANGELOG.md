@@ -1,5 +1,7 @@
 ## Unreleased Kiwe Launch catalogue
 
+- Bind verified Launch accounts and site quotes to classic WooCommerce orders. Submit confirmed native payments to the existing Start delivery worker with a recoverable order-specific job.
+
 - Scope confirmed first-year payments, monthly approval and cancellation, refund history and recovery to the buyer's selected website.
 
 - Record verified native WooCommerce first-year payments by purchase ID and deliver each to its own Start project through the private Launch reconciler.

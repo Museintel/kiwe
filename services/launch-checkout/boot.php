@@ -113,9 +113,12 @@ function kiwe_checkout_boot(string $root): ?array
     }
     $database = $storage . '/checkout.sqlite';
     $checkout = new KiweCheckout($database, $plan, $origin, $secret, $mailer, $registrar);
+    $nativePlans = kiwe_checkout_native_plans($root);
     return [
         'origin' => $origin, 'test' => $test, 'sessions' => $storage . '/sessions',
-        'checkout' => $checkout, 'billing' => kiwe_checkout_billing($settings['billing'] ?? null, $checkout, $database, $origin, $test, kiwe_checkout_native_plans($root)),
+        'checkout' => $checkout, 'billing' => kiwe_checkout_billing($settings['billing'] ?? null, $checkout, $database, $origin, $test, $nativePlans),
+        'nativeWoo' => ($settings['nativeWoo'] ?? false) === true && $nativePlans
+            ? ['plans' => $nativePlans, 'key' => hash_hmac('sha256', 'kiwe-launch-native-order-v1', $secret, true)] : null,
         'registrar' => PHP_SAPI === 'cli' ? static fn (): ?KiweRegistration => kiwe_registration_provider($settings, $test) : null,
     ];
 }

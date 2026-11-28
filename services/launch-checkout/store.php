@@ -126,7 +126,7 @@ final class KiweCheckout
         }
     }
 
-    public function emailLink(string $purpose, string $email, ?string $referral, string $network): void
+    public function emailLink(string $purpose, string $email, ?string $referral, string $network, string $route = '/checkout/'): void
     {
         if (!in_array($purpose, ['signup', 'reset'], true)) throw new InvalidArgumentException('Unknown link purpose.');
         $email = kiwe_checkout_email($email);
@@ -140,7 +140,7 @@ final class KiweCheckout
         $this->run('DELETE FROM checkout_email_links WHERE expires_at <= ?', [$now]);
         $this->run('INSERT INTO checkout_email_links VALUES (?, ?, ?, ?, ?)',
             [$digest, $email, $purpose, $purpose === 'signup' ? $referral : null, $now + 1800]);
-        $url = $this->origin . '/checkout/#verify=' . $code;
+        $url = $this->origin . $route . '#verify=' . $code;
         try {
             ($this->mailer)($email, $purpose, "Open this Kiwe Launch link within 30 minutes:\n{$url}\n\n"
                 . "If your browser asks for a code, copy this line:\n{$code}\n\nIf you did not request this, you may ignore this message.");

@@ -21,9 +21,9 @@ $statuses = [
     <h3>First-year payment</h3>
     <?php if ($billingState['linkUrl']): ?>
       <p><a class="button button-lime" href="<?= $e($billingState['linkUrl']) ?>">Open saved payment link</a></p>
-    <?php else: ?>
+    <?php elseif (!$native): ?>
       <p>Check the saved payment link and confirm its status.</p>
-      <form method="post" action="/checkout/" class="billing-actions">
+      <form method="post" action="<?= $e($route) ?>" class="billing-actions">
         <?= kiwe_checkout_post_fields('pay-first-year') ?>
         <input type="hidden" name="revision" value="<?= $e($draft['revision'] ?? 1) ?>">
         <label><input type="checkbox" name="payment_consent" value="yes" required> I agree to pay <?= $money($price['upfrontMinor']) ?> for the first 12 months.</label>
@@ -38,7 +38,7 @@ $statuses = [
     <?php endif; ?>
     <?php if ($billingState['refunded']): ?><p>Refund recorded <?= $money($billingState['refunded']) ?>.</p><?php endif; ?>
     <?php if (!$fullRefund || $billingState['projectId']): ?>
-      <form method="post" action="/checkout/" class="billing-actions">
+      <form method="post" action="<?= $e($route) ?>" class="billing-actions">
         <?= kiwe_checkout_post_fields('open-start', $purchaseId) ?>
         <button class="button button-lime">Open Kiwe Start</button>
       </form>
@@ -50,7 +50,7 @@ $statuses = [
         <p><a class="button button-lime" href="<?= $e($mandate['url']) ?>">Finish renewal approval</a></p>
       <?php endif; ?>
       <?php if ($mandate['status'] !== 'creating' && !KiweBilling::terminalMandate($mandate['status'])): ?>
-        <form method="post" action="/checkout/" class="billing-actions">
+        <form method="post" action="<?= $e($route) ?>" class="billing-actions">
           <?= kiwe_checkout_post_fields('cancel-renewal', $purchaseId) ?>
           <button class="billing-link">Cancel automatic renewal</button>
         </form>
@@ -60,7 +60,7 @@ $statuses = [
       <p>Renewal approval is on hold while Launch reviews this payment.</p>
     <?php elseif (!$fullRefund && (!$mandate || KiweBilling::terminalMandate($mandate['status'])) && $billingState['renewalAvailable']): ?>
       <?php if (!$mandate): ?><h3>Monthly renewals</h3><?php endif; ?>
-      <form method="post" action="/checkout/" class="billing-actions">
+      <form method="post" action="<?= $e($route) ?>" class="billing-actions">
         <?= kiwe_checkout_post_fields('renewal-consent', $purchaseId) ?>
         <input type="hidden" name="renewal_amount" value="<?= $e($price['renewalMinor']) ?>">
         <input type="hidden" name="renewal_start" value="<?= $e($billingState['renewalStart']) ?>">
@@ -82,7 +82,7 @@ $statuses = [
       </ul>
     <?php endif; ?>
   <?php endif; ?>
-  <form method="post" action="/checkout/" class="billing-actions">
+  <form method="post" action="<?= $e($route) ?>" class="billing-actions">
     <?= kiwe_checkout_post_fields('check-billing', $purchaseId) ?>
     <button class="billing-link">Check payment and renewal status</button>
   </form>
