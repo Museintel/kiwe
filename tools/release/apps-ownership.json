@@ -135,13 +135,15 @@
       "name": "Kiwe Guest",
       "classes": {
         "DSA\\Access\\Guest_App_Service": "includes/Access/Guest_App_Service.php",
-        "DSA\\Access\\Guest_Engine_Service": "includes/Access/Guest_Engine_Service.php"
+        "DSA\\Access\\Guest_Engine_Service": "includes/Access/Guest_Engine_Service.php",
+        "DSA\\Access\\Guest_Referral_Service": "includes/Access/Guest_Referral_Service.php"
       },
       "files": [
         "assets/css/guest-app.css",
         "assets/js/guest-app.js",
         "includes/Access/Guest_App_Service.php",
-        "includes/Access/Guest_Engine_Service.php"
+        "includes/Access/Guest_Engine_Service.php",
+        "includes/Access/Guest_Referral_Service.php"
       ],
       "requiresPhp": "8.2",
       "requiresWp": "7.1",
@@ -220,6 +222,7 @@
         "includes/MCP/Engine.php",
         "includes/MCP/Featured_Image_Provider.php",
         "includes/MCP/Growth_Provider.php",
+        "includes/MCP/Guest_Provider.php",
         "includes/MCP/Guidance_Provider.php",
         "includes/MCP/Guidance_Service.php",
         "includes/MCP/HTTP_Controller.php",

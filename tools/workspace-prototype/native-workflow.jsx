@@ -101,6 +101,8 @@ function SubmissionEditor({item,work,onClose,onSaved,create=false}){
   </section>;
 }
 
+const guestGrantLabels={post:'Guest articles',product:'Product proposals',referral:'Referrals'};
+
 export function NativeGuests({config}){
   const params=new URLSearchParams(location.search);
   const area=params.get('area');
@@ -108,32 +110,47 @@ export function NativeGuests({config}){
   const initialView=requestedView||(area==='setup'?'setup':area==='mine'?'mine':undefined);
   const requestedId=Number(params.get('id'))||0;
   const work=useWorkspace(config,'guest',{page:1,search:'',sort:'date_desc',status:'all',kind:'all',...(initialView?{view:initialView}:{}),...(requestedId>0?{id:requestedId}:{})});
-  const [selected,setSelected]=useState(null),[adding,setAdding]=useState(false),[reason,setReason]=useState(''),[search,setSearch]=useState('');
+  const [selected,setSelected]=useState(null),[adding,setAdding]=useState(false),[reason,setReason]=useState(''),[search,setSearch]=useState(''),[grants,setGrants]=useState([]);
   const reset=()=>{setSelected(null);setAdding(false);setReason('');};
   const refresh=()=>{if((selected||adding||reason||work.blocked)&&!confirm('Discard local edits and load the current website records?'))return;reset();work.refresh();};
   const data=work.data,disabled=work.busy||work.blocked;
   const setup=data?.view==='setup';
   const ownWork=data?.view==='mine'&&!data?.views.includes('review')&&!data?.canManage;
   async function decision(value){
-    const next=await work.mutate('/applications/'+selected.id,{decision:value,reason,expected:selected.expected},record=>checkRecord(record,'name'));
+    const next=await work.mutate('/applications/'+selected.id,{decision:value,reason,expected:selected.expected,grants},record=>checkRecord(record,'name'));
     if(next){work.setData({...data,items:data.items.map(item=>item.id===next.id?next:item)});reset();}
   }
   async function setting(key,value){
-    const next=await work.mutate('/settings',{postsEnabled:data.settings.postsEnabled,productsEnabled:data.settings.productsEnabled,[key]:value,expected:data.settingsExpected},result=>{if(!result.settings||!/^[a-f0-9]{64}$/.test(result.settingsExpected))throw Error('Guest settings were not confirmed.');return result;});
+    const next=await work.mutate('/settings',{postsEnabled:data.settings.postsEnabled,productsEnabled:data.settings.productsEnabled,referralsEnabled:data.settings.referralsEnabled,[key]:value,expected:data.settingsExpected},result=>{if(!result.settings||!/^[a-f0-9]{64}$/.test(result.settingsExpected))throw Error('Guest settings were not confirmed.');return result;});
     if(next)work.setData({...data,...next});
   }
   return <Shell config={config} title={setup?'Guests.':ownWork?'My contributions.':'Guests.'} intro={setup?'Choose which guest contributions your website accepts.':ownWork?'Prepare and follow the contributions you send to the website.':'Review new applications and guest contributions.'} work={work} dirty={!!selected||adding} onRefresh={refresh}>
     {data&&(setup?
       <section className="wf-settings" aria-label="Contribution availability">
-        {[['postsEnabled','Guest articles'],...(data.settings.commerceAvailable?[['productsEnabled','Product proposals']]:[])].map(([key,title])=><article className="wf-tile" key={key}><label className="wf-choice"><span><strong>{title}</strong><br/><small>{data.settings[key]?'Accepting applications':'Applications paused'}</small></span><input type="checkbox" aria-label={'Accept '+title} disabled={disabled} checked={data.settings[key]} onChange={event=>setting(key,event.target.checked)}/></label></article>)}
+        {[['postsEnabled','Guest articles'],...(data.settings.commerceAvailable?[['productsEnabled','Product proposals']]:[]),['referralsEnabled','Referrals']].map(([key,title])=><article className="wf-tile" key={key}><label className="wf-choice"><span><strong>{title}</strong><br/><small>{data.settings[key]?'Accepting applications':'Applications paused'}</small></span><input type="checkbox" aria-label={'Accept '+title} disabled={disabled} checked={data.settings[key]} onChange={event=>setting(key,event.target.checked)}/></label></article>)}
       </section>
       :<>
         {!selected&&!adding&&<><div className="kiwe-task-tabs wf-guest-tabs"><nav aria-label="Guest work">{data.views.map(view=><button key={view} disabled={disabled} aria-pressed={data.view===view} onClick={()=>{setSearch('');work.setQuery({view,page:1,id:0,search:'',sort:'date_desc',status:'all',kind:'all'});}}>{labels[view]}</button>)}</nav>{data.canSubmit&&data.view==='mine'&&data.submitTypes.length>0&&<button type="button" className="kiwe-new-action" disabled={disabled} onClick={()=>setAdding(true)}>+ New contribution</button>}</div><div className="kiwe-task-filters wf-guest-filters"><form role="search" onSubmit={event=>{event.preventDefault();work.setQuery({...work.query,search:search.trim(),page:1});}}><label>Find {data.view==='applications'?'an applicant':'a contribution'}<input type="search" maxLength="80" value={search} onChange={event=>setSearch(event.target.value)}/></label><button disabled={disabled}>Search</button></form><label>Sort by<select value={work.query.sort||'date_desc'} disabled={disabled} onChange={event=>work.setQuery({...work.query,sort:event.target.value,page:1})}><option value="date_desc">Newest first</option><option value="date_asc">Oldest first</option><option value="title_asc">Name A–Z</option><option value="title_desc">Name Z–A</option></select></label>{data.view!=='applications'&&<label>Status<select value={work.query.status||'all'} disabled={disabled} onChange={event=>work.setQuery({...work.query,status:event.target.value,page:1})}><option value="all">All statuses</option><option value="draft">Drafts</option><option value="pending">Awaiting review</option><option value="publish">Published</option><option value="future">Scheduled</option><option value="private">Private</option></select></label>}{data.view!=='applications'&&(data.view==='mine'?data.submitTypes:data.reviewTypes).length>1&&<label>Type<select value={work.query.kind||'all'} disabled={disabled} onChange={event=>work.setQuery({...work.query,kind:event.target.value,page:1})}><option value="all">All contributions</option>{(data.view==='mine'?data.submitTypes:data.reviewTypes).includes('post')&&<option value="post">Articles</option>}{(data.view==='mine'?data.submitTypes:data.reviewTypes).includes('product')&&<option value="product">Product proposals</option>}</select></label>}</div></>}
         {adding?<SubmissionEditor key={'new-'+work.epoch} create item={{title:'',content:'',type:data.submitTypes[0],status:'pending',price:''}} work={work} onClose={reset} onSaved={()=>{reset();work.refresh();work.setQuery({view:'mine',page:1,id:0});}}/>:
-        selected&&data.view==='applications'?<section className="wf-detail" aria-label="Application decision"><header><h2>{selected.name}</h2><button disabled={work.busy} onClick={()=>{if(!reason||confirm('Discard this decision note?'))reset();}}>Close</button></header><p>{selected.roles.join(' · ')} · {selected.verified?'Contact verified':'Verification incomplete'}</p><p>Requested: {selected.intents.map(type=>type==='product'?'Product proposals':'Articles').join(', ')}</p>{selected.status==='pending'?<><label>Decision note<input maxLength={180} value={reason} disabled={disabled} onChange={event=>setReason(event.target.value)}/></label><div className="wf-actions"><button className="wf-primary" disabled={disabled||!selected.verified} onClick={()=>decision('approved')}>Approve Guest</button><button disabled={disabled} onClick={()=>decision('denied')}>Decline</button></div></>:<p>{selected.status} · {selected.reason}</p>}</section>:
+        selected&&data.view==='applications'?<section className="wf-detail" aria-label="Application decision">
+          <header><h2>{selected.name}</h2><button disabled={work.busy} onClick={()=>{if((!reason&&same(grants,selected.grants||[]))||confirm('Discard these permission changes?'))reset();}}>Close</button></header>
+          <p>{selected.roles.join(' · ')} · {selected.verified?'Contact verified':'Verification incomplete'}</p>
+          <p>Requested {selected.intents.map(type=>guestGrantLabels[type]).join(', ')}</p>
+          {['pending','approved'].includes(selected.status)?<>
+            <fieldset disabled={disabled}><legend>Guest permissions</legend>
+              {(selected.availableGrants||[]).map(grant=><label className="wf-choice" key={grant}>
+                <span>{guestGrantLabels[grant]}</span>
+                <input type="checkbox" checked={grants.includes(grant)} onChange={event=>setGrants(event.target.checked?[...grants,grant]:grants.filter(item=>item!==grant))}/>
+              </label>)}
+            </fieldset>
+            <label>Decision note<input maxLength={180} value={reason} disabled={disabled} onChange={event=>setReason(event.target.value)}/></label>
+            <div className="wf-actions"><button className="wf-primary" disabled={disabled||!selected.verified||!grants.length} onClick={()=>decision('approved')}>{selected.status==='pending'?'Approve Guest':'Update permissions'}</button>
+              <button disabled={disabled} onClick={()=>decision(selected.status==='pending'?'denied':'revoked')}>{selected.status==='pending'?'Decline':'Revoke access'}</button></div>
+          </>:<p>{selected.status} {selected.reason}</p>}
+        </section>:
         selected&&data.view==='review'?<SubmissionEditor key={selected.id} item={selected} work={work} onClose={reset} onSaved={next=>{work.setData({...data,items:data.items.map(item=>item.id===next.id?next:item)});reset();}}/>:
         selected?<section className="wf-detail"><header><h2>{selected.title}</h2><button onClick={reset}>Close</button></header><p>{selected.type} · {selected.status} · Read-only</p><pre>{selected.content}</pre></section>:
-        <><div className="wf-grid">{data.items.map(item=><article className="wf-tile" key={item.id}><button className="wf-open" disabled={disabled} onClick={()=>setSelected(item)}><span className="wf-meta">{data.view==='applications'?item.roles.join(' · '):item.type==='product'?'Product proposal':'Guest article'}</span><h2>{item.name||item.title}</h2><p>{data.view==='applications'?(item.verified?'Contact verified':'Verification incomplete'):item.authorName}</p></button><span className="wf-pill">{item.status}</span></article>)}</div>{!data.items.length&&work.state==='ready'&&<p className="wf-notice">No contributions in this view yet.</p>}<Pages work={work}/></>}
+        <><div className="wf-grid">{data.items.map(item=><article className="wf-tile" key={item.id}><button className="wf-open" disabled={disabled} onClick={()=>{setSelected(item);setGrants(item.grants||[]);}}><span className="wf-meta">{data.view==='applications'?item.roles.join(' · '):item.type==='product'?'Product proposal':'Guest article'}</span><h2>{item.name||item.title}</h2><p>{data.view==='applications'?(item.verified?'Contact verified':'Verification incomplete'):item.authorName}</p></button><span className="wf-pill">{item.status}</span></article>)}</div>{!data.items.length&&work.state==='ready'&&<p className="wf-notice">No contributions in this view yet.</p>}<Pages work={work}/></>}
       </>)}
   </Shell>;
 }

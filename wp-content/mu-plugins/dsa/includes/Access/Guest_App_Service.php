@@ -61,7 +61,8 @@ final class Guest_App_Service {
 	public function decide( \WP_REST_Request $request ): \WP_REST_Response {
 		if ( ! $this->permission( $request ) ) return $this->response( new \WP_Error( 'kiwe_guest_forbidden', __( 'Guest applications are unavailable for your account.', 'dsa' ), [ 'status' => 403 ] ), 403 );
 		$body = $request->get_json_params(); $body = is_array( $body ) ? $body : [];
-		$result = ( new Guest_Contribution_Service() )->decide_application( Task_Workspace_UI::id( $request->get_url_params()['id'] ?? 0 ), is_string( $body['decision'] ?? null ) ? $body['decision'] : '', is_string( $body['reason'] ?? null ) ? $body['reason'] : '', is_string( $body['expected'] ?? null ) ? $body['expected'] : '' );
+		if ( array_key_exists( 'grants', $body ) && ! is_array( $body['grants'] ) ) return $this->response( new \WP_Error( 'kiwe_guest_grants', 'Select the requested Guest permissions you want to grant.', [ 'status' => 400 ] ) );
+		$result = ( new Guest_Contribution_Service() )->decide_application( Task_Workspace_UI::id( $request->get_url_params()['id'] ?? 0 ), is_string( $body['decision'] ?? null ) ? $body['decision'] : '', is_string( $body['reason'] ?? null ) ? $body['reason'] : '', is_string( $body['expected'] ?? null ) ? $body['expected'] : '', $body['grants'] ?? null );
 		return $this->response( $result, 409 );
 	}
 

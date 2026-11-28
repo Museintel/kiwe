@@ -234,7 +234,7 @@ final class WordPress_Role_Access_Service {
 		if ( in_array( 'contributor', $roles, true ) ) {
 			// Guests create through Kiwe's create-once form. Removing native post
 			// primitives closes wp-admin, REST, XML-RPC and application-password edits.
-			return [ 'read' => true, 'kiwe_guest_submit' => Guest_Contribution_Service::approved( (int) $user->ID ), 'kiwe_use_notifications' => true ];
+			return [ 'read' => true, 'kiwe_guest_submit' => Guest_Contribution_Service::has_submission_grant( (int) $user->ID ), 'kiwe_use_notifications' => true ];
 		}
 		if ( in_array( 'shop_manager', $roles, true ) && ! in_array( 'administrator', $roles, true ) && ! ( is_multisite() && is_super_admin( $user->ID ) ) ) {
 			$allowed = self::shop_manager_capabilities();

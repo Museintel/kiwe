@@ -217,10 +217,13 @@ final class Admin_Event_Notification_Service {
 
 	public function queue_guest_decision( int $user_id, string $decision, array $application ): void {
 		$title = 'approved' === $decision ? __( 'Your Guest application was approved', 'dsa' ) : __( 'Your Guest application was reviewed', 'dsa' );
-		$message = 'approved' === $decision
-			? __( 'You can now open the protected Guest workspace and send an article for editorial review.', 'dsa' )
-			: ( (string) ( $application['reason'] ?? '' ) ?: __( 'The publisher did not approve this application.', 'dsa' ) );
-		$url = 'approved' === $decision ? add_query_arg( [ 'page' => 'kiwe-guests', 'view' => 'mine' ], admin_url( 'admin.php' ) ) : home_url( '/' );
+		$workspace = 'approved' === $decision && \DSA\Access\Guest_Contribution_Service::has_submission_grant( $user_id );
+		$message = match ( $decision ) {
+			'approved' => $workspace ? __( 'Your approved contribution types are available in your Guest workspace.', 'dsa' ) : __( 'Your Guest referral permission has been approved.', 'dsa' ),
+			'revoked' => (string) ( $application['reason'] ?? '' ) ?: __( 'The publisher revoked your Guest permissions.', 'dsa' ),
+			default => (string) ( $application['reason'] ?? '' ) ?: __( 'The publisher did not approve this application.', 'dsa' ),
+		};
+		$url = $workspace ? add_query_arg( [ 'page' => 'kiwe-guests', 'view' => 'mine' ], admin_url( 'admin.php' ) ) : home_url( '/' );
 		$this->dispatch_to_user( $user_id, 'guest_post_status', 'guest-decision-' . $user_id . '-' . time(), $title, $message, $url );
 	}
 

@@ -100,6 +100,14 @@ The former browser converter is quarantined under `packages/seam-bricks-adapter/
 
 Raw `/convert /bricks` output remains a self-contained, Framework-neutral HTML/CSS/JS project plus `kiwe.bricks-bindings.v1`; it never contains Bricks JSON. Dynamic tags and query loops are both prepared by default, while `/dynamictags` or `/queryloop` selects only one binding lane. The user then submits the package to `seam.kiwe`, the sole native Bricks JSON compiler. Seam Framework is an explicit compiler option, not another slash command. Framework mode emits one project-wide Framework Profile, stable Bricks class IDs and profile-dependent templates. The profile must be installed from Kiwe > Build > Framework before those templates are imported. The deterministic Framework validator fails closed when a referenced class, variable, palette entry or theme-style owner is missing. Accessibility remains its own audit/fix stage and cannot silently rewrite an accepted design.
 
+### Guest permissions and referral reporting
+
+Guest managers use **Kiwe → Work → Guests** to approve article submissions, product proposals and referrals independently. A referral-only account keeps its customer or subscriber access. WordPress contribution roles continue to use the protected submission and review workspace.
+
+Enable referral applications in Guest setup. Once approved, a verified Guest can share a referral link from the Links or Profile DSA. The recipient chooses whether to credit the referral. **Kiwe → Analytics → Guest** shows attributed accounts and, for staff with WooCommerce order access, paid orders and sales of the Guest’s approved product contributions. Existing WooCommerce coupons continue to supply customer discounts.
+
+MCP tools `mcp.guest.read`, `mcp.guest.decide` and `mcp.guest.analytics` use the same permissions. The decision tool requires reviewed approval. [Guest permissions and attribution](docs/decisions/2026-11-28-guest-permissions-and-attribution.md)
+
 ## Emergency Disable
 
 Rename `wp-content/mu-plugins/dsa.php` to `dsa.disabled.php`. Restore it only with a complete, matching loader/package release. Do not delete Kiwe tables or options as a routine rollback.

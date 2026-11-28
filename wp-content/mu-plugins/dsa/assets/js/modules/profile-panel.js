@@ -131,18 +131,22 @@ function verificationStatus( user ) {
 
 function guestApplicationControl( user, hasWoo ) {
 	const guest = user.guestApplication || {};
-	if ( guest.status === 'approved' ) return '<span class="dsa-guest-status is-approved"><span aria-hidden="true">&#10003;</span> Guest</span>';
+	if ( guest.status === 'approved' ) return '<span class="dsa-guest-status is-approved"><span aria-hidden="true">&#10003;</span> Guest</span>'
+		+ ( guest.canRefer ? '<button type="button" class="dsa-panel__button" data-dsa-referral-share>Share referral link</button>' : '' );
 	if ( guest.status === 'pending' ) return '<span class="dsa-guest-status is-pending">Guest application pending</span>';
 	if ( guest.status === 'denied' ) return '<span class="dsa-guest-status is-denied">Guest application denied</span>';
+	if ( guest.status === 'revoked' ) return '<span class="dsa-guest-status is-denied">Guest access revoked</span>';
 	if ( ! guest.eligible || guest.hasAdminAccess || ! guest.applicationsEnabled ) return '';
 	const postsAvailable = Boolean( guest.postsAvailable );
 	const productsAvailable = Boolean( hasWoo && guest.productsAvailable );
-	if ( ! postsAvailable && ! productsAvailable ) return '';
+	const referralsAvailable = Boolean( guest.referralsAvailable );
+	if ( ! postsAvailable && ! productsAvailable && ! referralsAvailable ) return '';
 	return [
 		'<span class="dsa-guest-application" data-dsa-guest-application>',
 		'<span class="dsa-guest-application__choices">',
 		postsAvailable ? '<label><input type="checkbox" value="post" checked> Guest posts</label>' : '',
 		productsAvailable ? '<label><input type="checkbox" value="product"' + ( postsAvailable ? '' : ' checked' ) + '> Sell products</label>' : '',
+		referralsAvailable ? '<label><input type="checkbox" value="referral"' + ( postsAvailable || productsAvailable ? '' : ' checked' ) + '> Referrals</label>' : '',
 		'</span><button type="button" class="dsa-guest-status" data-dsa-guest-apply>Apply for Guest</button>',
 		'</span>',
 	].join( '' );

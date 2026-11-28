@@ -16,8 +16,18 @@ final class Share_Controller {
 		if ( ! $this->permission( $r ) ) return new \WP_REST_Response( [ 'ok'=>false,'message'=>'Open sharing on this website.' ], 403, $headers );
 		$q = $r->get_query_params(); $raw = $q['subjectId'] ?? '0';
 		$id = is_int( $raw ) || is_string( $raw ) ? filter_var( $raw, FILTER_VALIDATE_INT, [ 'options'=>[ 'min_range'=>0,'max_range'=>9007199254740991 ] ] ) : false;
-		if ( false === $id || array_diff( array_keys( $q ), [ 'subjectId','_dsa_rt','rest_route','_locale' ] ) ) return new \WP_REST_Response( [ 'ok'=>false,'message'=>'This sharing context is unavailable.' ], 400, $headers );
+		if ( false === $id || array_diff( array_keys( $q ), [ 'subjectId','referral','_dsa_rt','rest_route','_locale' ] )
+			|| ( array_key_exists( 'referral', $q ) && '1' !== $q['referral'] ) ) return new \WP_REST_Response( [ 'ok'=>false,'message'=>'This sharing context is unavailable.' ], 400, $headers );
 		if ( ! Atomic_Rate_Limiter::allow( 'public-share|' . get_current_blog_id() . '|' . Origin_Checker::client_ip(), 30, 60, false ) ) return new \WP_REST_Response( [ 'ok'=>false,'message'=>'Please wait a moment before sharing again.' ], 429, $headers );
+		if ( isset( $q['referral'] ) ) {
+			$subject = Public_Subject_Service::resolve( (int) $id );
+			$url = class_exists( \DSA\Access\Guest_Referral_Service::class )
+				? \DSA\Access\Guest_Referral_Service::url( get_current_user_id(), $subject )
+				: null;
+			if ( ! $url ) return new \WP_REST_Response( [ 'ok'=>false,'message'=>'Your account cannot share a referral link.' ], 403, $headers );
+			$subject['url'] = $url;
+			return new \WP_REST_Response( [ 'ok'=>true, ...Share_Service::for_subject( $subject ), 'referral'=>true ], 200, $headers );
+		}
 		return new \WP_REST_Response( [ 'ok'=>true, ...Share_Service::document( (int) $id ) ], 200, $headers );
 	}
 }

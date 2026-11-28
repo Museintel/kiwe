@@ -1,3 +1,8 @@
+## Unreleased Guest permissions and attribution
+
+- Give verified Guest applicants independently reviewed article, product proposal and referral permissions.
+- Share consent-based Guest referral links through DSA and report attributed registrations, paid WooCommerce orders and contributed product sales in Analytics and MCP.
+
 ## 8.0.0-rc.516 (2026-11-27)
 
 - Add checkout savings, live amounts on native Bricks payment buttons and a responsive opt-in sticky order summary.
@@ -3668,4 +3673,3 @@ Start the existing private runtime read in the early public head, alongside page
 ## 8.0.0-rc.453 — 29 October 2026
 
 The final Kiwe1 candidate retains Core452's community testimonials, named native forms, required Auth/Security Apps and contextual Menu Edit. Forms now accepts the text-valued native WordPress notification ID, opens the intended private message, and keeps the complete inbox behind it. The PhoneKey engine and Store1.1.8 remain unchanged. Publication and native/browser acceptance are recorded separately in the completion ledger.
-

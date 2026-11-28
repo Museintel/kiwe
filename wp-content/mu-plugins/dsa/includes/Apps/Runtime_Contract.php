@@ -35,7 +35,7 @@ final class Runtime_Contract {
     || !is_string($path) || !self::relative(rtrim($path, '/')) || !str_ends_with($path, '/')) return false;
   }
   foreach ($value['classes'] as $name => $path) {
-   if (!is_string($name) || !match($value['id']){'seo'=>$name === 'DSA\\Schema\\Schema_Geo_Service','store'=>preg_match('/^DSA\\\\(?:Access|Rest|Bricks|Notifications)\\\\[A-Za-z_][A-Za-z0-9_]*$/D',$name) === 1,'guest'=>in_array($name,['DSA\\Access\\Guest_App_Service','DSA\\Access\\Guest_Engine_Service'],true),'ai'=>in_array($name,['DSA\\Access\\AI_Workspace_Service','DSA\\AI\\AI_Provider_Service','DSA\\AI\\AI_Configuration_Service'],true),'sitegraph'=>$name === 'DSA\\Access\\SiteGraph_Workspace_Service','mcp'=>$name === 'DSA\\Access\\MCP_Workspace_Service'}
+   if (!is_string($name) || !match($value['id']){'seo'=>$name === 'DSA\\Schema\\Schema_Geo_Service','store'=>preg_match('/^DSA\\\\(?:Access|Rest|Bricks|Notifications)\\\\[A-Za-z_][A-Za-z0-9_]*$/D',$name) === 1,'guest'=>in_array($name,['DSA\\Access\\Guest_App_Service','DSA\\Access\\Guest_Engine_Service','DSA\\Access\\Guest_Referral_Service'],true),'ai'=>in_array($name,['DSA\\Access\\AI_Workspace_Service','DSA\\AI\\AI_Provider_Service','DSA\\AI\\AI_Configuration_Service'],true),'sitegraph'=>$name === 'DSA\\Access\\SiteGraph_Workspace_Service','mcp'=>$name === 'DSA\\Access\\MCP_Workspace_Service'}
     || !is_string($path) || !self::relative($path) || !str_ends_with($path, '.php')) return false;
   }
   foreach ($value['assets'] as $name => $path) if (!is_string($name) || !self::relative($name) || !is_string($path) || !self::relative($path) || preg_match('/\.(?:css|js|json|svg)$/D', $path) !== 1) return false;

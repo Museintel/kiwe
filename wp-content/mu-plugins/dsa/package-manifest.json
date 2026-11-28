@@ -1,8 +1,8 @@
 {
   "schema": 1,
-  "version": "8.0.0-rc.516",
+  "version": "8.0.0-rc.517",
   "algorithm": "sha256",
-  "file_count": 1063,
+  "file_count": 1065,
   "files": {
     "assets/css/admin.css": {
       "bytes": 19334,
@@ -273,8 +273,8 @@
       "sha256": "2f649dd994470a90252006910cdfd13d8d838624b1a26cf5b025d3a9ade094d4"
     },
     "assets/js/analytics-app.js": {
-      "bytes": 28099,
-      "sha256": "c64a2f4feedbe592da5aa78a2684605183182190d003b20c8f599c121c8dbe62"
+      "bytes": 30538,
+      "sha256": "fcaf8d5b1e81eb1b27b5f777be1422e3202d7cb7ea77ec408511f8cf9dcde17f"
     },
     "assets/js/app-app.js": {
       "bytes": 47476,
@@ -341,8 +341,8 @@
       "sha256": "76886683944a82acd06051c052b869106407fb0f192e358eceb7c542adac3501"
     },
     "assets/js/guest-app.js": {
-      "bytes": 25635,
-      "sha256": "1913145facc859b984ac7997bc656142a172657e32fdb22f68c22690c21926e4"
+      "bytes": 26294,
+      "sha256": "fb130055d492ef3a9bfbffe002894bfc9d06954eb3f9b9880f7e6c566127a34f"
     },
     "assets/js/identity-app.js": {
       "bytes": 18122,
@@ -385,20 +385,20 @@
       "sha256": "fd7f7ee44da50c09829d65e08c6f926060fcf7e4c14bfc450ad7639df60c938a"
     },
     "assets/js/modules/link-share.js": {
-      "bytes": 8321,
-      "sha256": "3d0645365bef6e46a5505f370392926f5f4b140a012c0b2c66a94c9a3cf097ef"
+      "bytes": 8409,
+      "sha256": "cbe39b2f7830f0a37dbd7b9379f5519acbee8e6bd416b3f18ba0190bb8dcb539"
     },
     "assets/js/modules/links-panel.js": {
-      "bytes": 15911,
-      "sha256": "e9eabccbe385469a379ab6a662938f34ddfbef160996ba25f4b31b79d27ab0f8"
+      "bytes": 16186,
+      "sha256": "8d25cb26ebd06e8b5123584b507b9749f31bc292d6e5065ea7da6fe1d37453d6"
     },
     "assets/js/modules/native-islands.js": {
       "bytes": 1185,
       "sha256": "c5e8f9b1f7e29de9541c26fdbf6fd2aff3e58c818f6b73022225dc28dfd3015c"
     },
     "assets/js/modules/profile-panel.js": {
-      "bytes": 15676,
-      "sha256": "5bfce7bb0bfb19062dbd8f2ad24fd418f11fbb5ad78444ff65a844aaf6f2a85c"
+      "bytes": 16174,
+      "sha256": "7e4d662ad455733af9c726b71b5aec79fe772626e9b6216cf3d2b6e5bad48c99"
     },
     "assets/js/modules/surface-panels.js": {
       "bytes": 30441,
@@ -465,8 +465,8 @@
       "sha256": "0b7e10b4fe4b9649f92e360bfa96737f7d5d271d43cf5912aa140bf9ea5820c2"
     },
     "assets/js/surface.js": {
-      "bytes": 518819,
-      "sha256": "a53f4055611c99468a971189547af075922d114f8e001b00d044089b9faebd37"
+      "bytes": 519244,
+      "sha256": "fa96796995d9a9c70f8674594c6d967fae2749d819e499467dab58d91824a969"
     },
     "assets/js/system-app.js": {
       "bytes": 14025,
@@ -526,7 +526,7 @@
     },
     "dsa.php": {
       "bytes": 4536,
-      "sha256": "a88b6650beca3769c5dafe5776969e286069675497e1419783f5ce3abc598b2f"
+      "sha256": "5dfa99e033946ac59aaec02343e15493d8433d6e9410a2167e79cc0e79c018e0"
     },
     "framework-system/HANDOFF-LITE.md": {
       "bytes": 4119,
@@ -869,8 +869,8 @@
       "sha256": "c083b7f2284bd8244c03c153c666a55801daa28a9e6cf346e6114310abd2ee01"
     },
     "includes/Access/Analytics_Workspace_Service.php": {
-      "bytes": 18026,
-      "sha256": "28cb5dbcf6e2661a7e3474c545ffbf548c2130a103c59a3eb7c8ee4dbadedc85"
+      "bytes": 19276,
+      "sha256": "037a07ef72b0902d92fa61ededcbdb55ae60181dc6a88afdcc0f85c4db2034a0"
     },
     "includes/Access/App_Workspace_Service.php": {
       "bytes": 17184,
@@ -933,16 +933,20 @@
       "sha256": "48b5c170cbe3c11323cb0a0933143df15f4d6cf58b1342f7902b0981f135886d"
     },
     "includes/Access/Guest_App_Service.php": {
-      "bytes": 7889,
-      "sha256": "846612d3019c73e8b1a5d36e729d1e00d48b88500fc96c2a82f1752865477e1f"
+      "bytes": 8138,
+      "sha256": "582f398d8f17c81477f10c1a1a63c83eaf99e485e90a72a3a0eb1b07c39d34b5"
     },
     "includes/Access/Guest_Contribution_Service.php": {
-      "bytes": 4726,
-      "sha256": "7080aa69506048d751c529f9360fc7bdd34e1540d4eea843cbd3ac2ab2bea599"
+      "bytes": 6802,
+      "sha256": "fe25243ff111aaf16215a38b947c56c27115ffd61cd5b69167b8867625ffc668"
     },
     "includes/Access/Guest_Engine_Service.php": {
-      "bytes": 33215,
-      "sha256": "258786f1dd4efb40c67255c8cec0446d7d211d6aba679648d4162a5b56675ffc"
+      "bytes": 36469,
+      "sha256": "82432de2fb26dc7d303a7457c7aaafcf607c2cb27da6f883c0919d1c08d5820c"
+    },
+    "includes/Access/Guest_Referral_Service.php": {
+      "bytes": 9167,
+      "sha256": "b92ec0874aa2d68a75b5e910c1de11ea91b1081e554406f6e51cc3dd22794ff5"
     },
     "includes/Access/Identity_App_Service.php": {
       "bytes": 5381,
@@ -1029,8 +1033,8 @@
       "sha256": "65ed33d7bf6291bd25afe66f1405e610a927313cd50d6fbec397950ee368bb54"
     },
     "includes/Access/Site_Owner_Service.php": {
-      "bytes": 18852,
-      "sha256": "99b08e32210ffdcb435b1c51fbf9a3e82baf08f6206409ea41da11babf270c86"
+      "bytes": 18888,
+      "sha256": "be7e6e609dac2d2d074ff02a5fc51a3d50571cc16706ea7f4bd3f1b2abb08f8f"
     },
     "includes/Access/System_App_Routes.php": {
       "bytes": 799,
@@ -1085,8 +1089,8 @@
       "sha256": "2103d6aadabd5d934dab58e0ed3018b9454675d771e0990bb77467386a459a22"
     },
     "includes/Access/WordPress_Role_Access_Service.php": {
-      "bytes": 63969,
-      "sha256": "601ae3ec64bf0bc23f0d263a94ef531807e1269fdeca4af5035ead97e472d30a"
+      "bytes": 63981,
+      "sha256": "e572e9b1e0d2bf55e703dfe2c26c69e700b37f9e0802f5660cc076d91c888a80"
     },
     "includes/Access/Workspace_Activity_Service.php": {
       "bytes": 18552,
@@ -1229,8 +1233,8 @@
       "sha256": "dee715e6b99e14938d13cc380a119864aa054d0a2e85e74751e57158d2cc3471"
     },
     "includes/Apps/Package_Layout.php": {
-      "bytes": 29958,
-      "sha256": "f6e3e79b3fa0facf3bf631eccefd58bb259285cb170303bb18f8126efd7f9a33"
+      "bytes": 30043,
+      "sha256": "70a7e4791615f00b7660682b9cba19bb1f955c4075a316193ec1e81b114c011c"
     },
     "includes/Apps/Package_Verifier.php": {
       "bytes": 6864,
@@ -1249,8 +1253,8 @@
       "sha256": "dd5b9e503b571e6fee038f459777990ff34a7e1cecb24e6130e42da683dfb730"
     },
     "includes/Apps/Runtime_Contract.php": {
-      "bytes": 4007,
-      "sha256": "8c565cdc32f8029ee5e4da360d46f5124857b70fbfd41033abdd5dab2cfb616e"
+      "bytes": 4045,
+      "sha256": "5c3fd8a04f0366d554eb99093a0be0987600ba55c4460830bbecf4ff1933338d"
     },
     "includes/Apps/Runtime_Registry.php": {
       "bytes": 3954,
@@ -1853,8 +1857,8 @@
       "sha256": "ddba326b9ed4b3a38397ca6e0c6d95c71d3243ab7f1cbc453f85107c341332f0"
     },
     "includes/Link_Hub/Share_Controller.php": {
-      "bytes": 1578,
-      "sha256": "90c194cf6221892de275c93b4f0ea8602e62236ac84eb1d02c6c96c861ebcac8"
+      "bytes": 2211,
+      "sha256": "ffbe36ae13692aff0ae12ef4b08c86d496eb98fc3011c1a6c44450ed0e8a1c39"
     },
     "includes/Link_Hub/Share_Service.php": {
       "bytes": 1494,
@@ -1936,6 +1940,10 @@
       "bytes": 3904,
       "sha256": "20aa028eba8124083d250061ad31357fcdcb479154aacaf7d776b1a5c7471cb5"
     },
+    "includes/MCP/Guest_Provider.php": {
+      "bytes": 5288,
+      "sha256": "8009190286cf4d2f450a6341e12317dfc3a5ae52e3e7768b46d842c6c74f06f9"
+    },
     "includes/MCP/Guidance_Provider.php": {
       "bytes": 8549,
       "sha256": "b4de8aaf525995cc6df577ad3410175d113467ef10af0bdc78c197109255ff77"
@@ -1965,8 +1973,8 @@
       "sha256": "395b735f8ef9fd5ba9f12ff387d019130c1270a9bcf63493a5d788b827d8fc51"
     },
     "includes/MCP/Native_Provider.php": {
-      "bytes": 4577,
-      "sha256": "1092b0205700d14a7c99249c0278049311ae5966e810748de6fa2801c1b256dd"
+      "bytes": 4647,
+      "sha256": "f0f0f0a4ceb32556297d6826968ef2fa04b99107999d104cc6308b4e3d7ade26"
     },
     "includes/MCP/OAuth_Failure.php": {
       "bytes": 304,
@@ -2025,8 +2033,8 @@
       "sha256": "e6f728f6cc44851d8bdf184cd69c090d07966bac3b1c1c963683abd8837282e3"
     },
     "includes/Notifications/Admin_Event_Notification_Service.php": {
-      "bytes": 52565,
-      "sha256": "93325f8354b0941f0536b8a3ec9deed72afec3dc1935bfed35e6d8aa0935c064"
+      "bytes": 52874,
+      "sha256": "7e04957ee66c12c0f3d7ad54f9619e69795f9dd82e219fddf1d4f9fe695e9fb0"
     },
     "includes/Notifications/Campaign_Unsubscribe_Service.php": {
       "bytes": 3586,

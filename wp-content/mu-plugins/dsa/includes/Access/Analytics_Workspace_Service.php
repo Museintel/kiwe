@@ -14,7 +14,10 @@ final class Analytics_Workspace_Service {
 	public const PAGE = 'kiwe-analytics';
 	private const STRATEGY = '_kiwe_analytics_strategy_v1';
 	public static function allowed(): bool {
-		return is_user_logged_in() && ( self::site_allowed() || current_user_can( 'edit_posts' ) || current_user_can( 'edit_pages' ) || self::store_allowed() );
+		return is_user_logged_in() && ( self::site_allowed() || current_user_can( 'edit_posts' ) || current_user_can( 'edit_pages' ) || self::store_allowed() || self::guest_allowed() );
+	}
+	private static function guest_allowed(): bool {
+		return current_user_can( 'kiwe_manage_guest_applications' ) && \DSA\Apps\Guest_App_Service::enabled() && class_exists( Guest_Referral_Service::class );
 	}
 	public static function site_allowed(): bool { return is_user_logged_in() && current_user_can( 'kiwe_view_analytics' ); }
 	public static function store_allowed(): bool { return \DSA\Apps\Store_App_Service::enabled() && is_user_logged_in() && ( self::site_allowed() || current_user_can( 'edit_others_products' ) ) && current_user_can( 'edit_products' ); }
@@ -53,6 +56,7 @@ final class Analytics_Workspace_Service {
 	}
 	private function scope( array $query ) {
 		$scope = $query['scope'] ?? ( self::site_allowed() ? 'site' : 'content' ); $id = Task_Workspace_UI::id( $query['id'] ?? 0 );
+		if ( 'guest' === $scope ) return self::guest_allowed() ? [ $scope,$id ] : null;
 		if ( 'product' === $scope && ! \DSA\Apps\Store_App_Service::enabled() ) return null;
 		if ( ! is_string( $scope ) || ! in_array( $scope,[ 'site','content','post','page','product','service','store','pwa','audience','security','ai' ],true ) ) return null;
 		if ( $id ) return self::can_record( $scope,$id ) ? [ $scope,$id ] : null;
@@ -69,6 +73,7 @@ final class Analytics_Workspace_Service {
 		$out = self::site_allowed() ? [ [ 'id'=>'site','label'=>'Overview' ] ] : [];
 		foreach ( [ 'post'=>[ 'Posts','edit_posts' ],'page'=>[ 'Pages','edit_pages' ],'product'=>[ 'Products','edit_products' ],'service'=>[ 'Services','kiwe_manage_context' ] ] as $key=>$spec ) if ( current_user_can( $spec[1] ) && ( 'product' !== $key || \DSA\Apps\Store_App_Service::enabled() ) ) $out[] = [ 'id'=>$key,'label'=>$spec[0] ];
 		if ( self::store_allowed() && \DSA\Apps\Store_App_Service::enabled() ) $out[] = [ 'id'=>'store','label'=>'Store' ];
+		if ( self::guest_allowed() ) $out[] = [ 'id'=>'guest','label'=>'Guest' ];
 		if ( self::site_allowed() ) foreach ( [ 'pwa'=>'App','audience'=>'Audience','security'=>'Protection','ai'=>'AI' ] as $key=>$label ) $out[] = [ 'id'=>$key,'label'=>$label ];
 		return $out;
 	}
@@ -94,6 +99,18 @@ final class Analytics_Workspace_Service {
 		if ( ! $this->permission( $request ) ) return $this->fail( 'Analytics is unavailable for your account.',403 );
 		$q = $request->get_query_params(); $context = $this->scope( $q ); if ( ! $context ) return $this->fail( 'This analytics context is unavailable for your account.',403 );
 		[ $scope,$id ] = $context; $days = in_array( (int) ( $q['days'] ?? 30 ),[ 7,30,90 ],true ) ? (int) ( $q['days'] ?? 30 ) : 30;
+		if ( 'guest' === $scope ) {
+			$page = max( 1, min( 1000, Task_Workspace_UI::id( $q['selectedPage'] ?? 1 ) ) );
+			$report = $id ? Guest_Referral_Service::report( $id, $page ) : null;
+			if ( $id && null === $report ) return $this->fail( 'This Guest report is unavailable.', 404 );
+			$records = $id ? [ 'items'=>[], 'hasNext'=>false ] : ( new Guest_Contribution_Service() )->workspace( [ 'view'=>'applications', 'page'=>$page ] );
+			return Task_Workspace_UI::response( [
+				'schema'=>'kiwe.guest-analytics.v1', 'tabs'=>$this->choices(), 'page'=>$page,
+				'guests'=>array_map( static fn ( $row ) => [ 'id'=>$row['id'], 'name'=>$row['name'], 'status'=>$row['status'] ], $records['items'] ),
+				'name'=>$id ? (string) ( get_userdata( $id )->display_name ?? '' ) : '',
+				'report'=>$report, 'hasNext'=>$report['hasMore'] ?? $records['hasNext'],
+			] );
+		}
 		$report = ( new Reports() )->report( $scope,$id,$days,is_string($q['type']??null)?$q['type']:'web' );
 		$report['reportingSetup']=Analytics_Reporting_Setup_Service::projection();
 		foreach ( $report['sections'] as &$section ) if ( empty( $section['available'] ) && in_array( $section['key'], [ 'traffic', 'security', 'carts' ], true ) ) { $section['emptyLabel']=$report['reportingSetup']['restoredBlocked']?'Review restored source':( ( 'carts'===$section['key'] ? $report['reportingSetup']['cartsReady'] : $report['reportingSetup']['secureReady'] ) ? ( 'traffic'===$section['key']&&!$report['reportingSetup']['recordingVisits'] ? 'Recording is off' : 'Waiting for measurements' ) : 'Setup needed' ); }

@@ -56,15 +56,15 @@ export function createController( bridge ) {
 	const visible = () => state.active && bridge.active() && state.lifecycle === bridge.lifecycle();
 	const current = number => generation === number && visible();
 	const repaint = () => { if ( visible() && bridge.paint( render( state ) ) !== false ) bind( bridge.panel() ); };
-	async function open( channel, subjectId, initialDocument ) {
+	async function open( channel, subjectId, initialDocument, referral = false ) {
 		if ( ! Object.hasOwn( labels, channel ) ) return;
 		const number = ++generation;
 		state = { active:true, lifecycle:bridge.lifecycle(), channel, subjectId:Number.isSafeInteger( subjectId ) && subjectId > 0 ? subjectId : 0, loading:true };
 		repaint();
 		try {
-			const doc = initialDocument || await bridge.get( '/links/share?subjectId=' + state.subjectId );
+			const doc = initialDocument || await bridge.get( '/links/share?subjectId=' + state.subjectId + ( referral ? '&referral=1' : '' ) );
 			if ( ! current( number ) ) return;
-			if ( doc.ok !== true || doc.schema !== 'kiwe.public-share.v1' || doc.sent !== false || ! publicSubject( doc.subject ) ) throw Error( 'This public link could not be prepared. Please try again.' );
+			if ( doc.ok !== true || doc.schema !== 'kiwe.public-share.v1' || doc.sent !== false || ! publicSubject( doc.subject ) || ( referral && doc.referral !== true ) ) throw Error( 'This link could not be prepared. Please try again.' );
 			state.doc = doc; state.loading = false; state.nativeAvailable = bridge.canShare( { title:doc.subject.title, url:doc.subject.url } ); repaint();
 		} catch ( error ) { if ( current( number ) ) { state.loading = false; state.error = error.message || 'Sharing could not open. Please try again.'; repaint(); } }
 	}

@@ -3051,6 +3051,7 @@
 		return {
 			label: copy.label || label || 'Links',
 			hub: linksHub,
+			canRefer: phonekey.user?.guestApplication?.canRefer === true,
 			iconSprite: iconSprite,
 			dark: currentColorMode() === 'dark',
 			logoDark: data.site && data.site.logoInverse ? data.site.logoInverse : '',
@@ -4322,11 +4323,11 @@
 		} ).catch( function () { if ( sequence === linksEnquirySequence ) openLinkShareFallback( channel, subjectId ); } );
 	}
 
-	function openLinkShareFallback( channel, subjectId, initialDocument ) {
+	function openLinkShareFallback( channel, subjectId, initialDocument, referral = false ) {
 		if ( ! overlayRoot || ! linksHub.shareAvailable || ! [ 'whatsapp','email','x','instagram','facebook','youtube','pinterest','linkedin','native','copy' ].includes( channel ) || ! externalModuleAvailable( 'links' ) ) return;
-		const sequence = ++linksEnquirySequence;
 		if ( overlayRoot.hidden || activeOverlayPanel !== 'links' ) openOverlay( 'links', 'Links' );
 		if ( overlayRoot.hidden || activeOverlayPanel !== 'links' ) return;
+		const sequence = ++linksEnquirySequence;
 		if ( linksEnquiryController ) linksEnquiryController.pause();
 		if ( linksShareController ) linksShareController.pause();
 		const lifecycle = activeOverlayLifecycle ? activeOverlayLifecycle.sequence : 0;
@@ -4344,7 +4345,7 @@
 				...linkShareBridge( subjectId ),
 			} );
 			linksPendingView = '';
-			linksShareController.open( channel, subjectId, initialDocument );
+			linksShareController.open( channel, subjectId, initialDocument, referral );
 		} ).catch( function ( error ) { if ( sequence === linksEnquirySequence && ! overlayRoot.hidden && activeOverlayPanel === 'links' && activeOverlayLifecycle && activeOverlayLifecycle.sequence === lifecycle ) { linksPendingView = ''; replaceOverlayContent( renderBasicPanel( 'Share', error.message || 'Sharing could not open. Please try again.' ), { reason:'share_error', module:getSurfaceModule( 'links' ) } ); } } );
 	}
 
@@ -11210,6 +11211,12 @@
 			closeOverlay();
 		} );
 	}
+
+	document.addEventListener( 'click', function ( event ) {
+		if ( ! closestEventTarget( event, '[data-dsa-referral-share]' ) || ! linksHub.shareAvailable ) return;
+		event.preventDefault(); event.stopImmediatePropagation();
+		openLinkShareFallback( 'native', Number( linksHub.shareSubject?.id || 0 ), undefined, true );
+	}, true );
 
 	document.addEventListener( 'click', function ( event ) {
 		const share = closestEventTarget( event, '[data-kiwe-share]' );

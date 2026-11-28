@@ -19,8 +19,10 @@ if ( ! defined( 'ABSPATH' ) ) {
  * create-once workspace; submitted posts are immutable to their author.
  */
 final class Guest_Engine_Service extends Guest_Contribution_Service {
+	public const GRANTS_API = 1;
 
 	public function register(): void {
+		Guest_Referral_Service::register();
 		add_action( 'rest_api_init', [ $this, 'routes' ] );
 		add_action( 'admin_menu', [ $this, 'menu' ], 24 );
 		add_action( 'admin_post_kiwe_guest_save_settings', [ $this, 'handle_settings' ] );
@@ -59,13 +61,7 @@ final class Guest_Engine_Service extends Guest_Contribution_Service {
 			return new WP_Error( 'kiwe_guest_application_cooldown', __( 'This application was recently reviewed. You can apply again after seven days.', 'dsa' ), [ 'status' => 429 ] );
 		}
 
-		$allowed = [];
-		if ( ! empty( $state['postsAvailable'] ) ) {
-			$allowed[] = 'post';
-		}
-		if ( ! empty( $state['productsAvailable'] ) ) {
-			$allowed[] = 'product';
-		}
+		$allowed = self::enabled_intents();
 		if ( [] === $allowed ) {
 			return new WP_Error( 'kiwe_guest_applications_disabled', __( 'Guest applications are not enabled on this site.', 'dsa' ), [ 'status' => 403 ] );
 		}
@@ -106,7 +102,7 @@ final class Guest_Engine_Service extends Guest_Contribution_Service {
 			$this->render_applications();
 			return;
 		}
-		if ( current_user_can( 'kiwe_guest_submit' ) && self::approved( get_current_user_id() ) ) {
+		if ( current_user_can( 'kiwe_guest_submit' ) && self::has_submission_grant( get_current_user_id() ) ) {
 			$this->render_workspace();
 			return;
 		}
@@ -115,13 +111,15 @@ final class Guest_Engine_Service extends Guest_Contribution_Service {
 
 	public function handle_settings(): void {
 		check_admin_referer( 'kiwe_guest_save_settings' );
-		$result = $this->save_workspace_settings( [ 'postsEnabled'=>! empty( $_POST['posts_enabled'] ), 'productsEnabled'=>! empty( $_POST['products_enabled'] ) ] );
+		$result = $this->save_workspace_settings( [ 'postsEnabled'=>! empty( $_POST['posts_enabled'] ), 'productsEnabled'=>! empty( $_POST['products_enabled'] ), 'referralsEnabled'=>! empty( $_POST['referrals_enabled'] ) ] );
 		if ( is_wp_error( $result ) ) Task_Workspace_UI::error( $result );
 		wp_safe_redirect( add_query_arg( [ 'page'=>'kiwe-guests', 'settings-updated'=>1 ], admin_url( 'admin.php' ) ) ); exit;
 	}
 	public function handle_decision(): void {
 		check_admin_referer( 'kiwe_guest_decide' );
-		$result = $this->decide_application( absint( $_POST['user_id'] ?? 0 ), sanitize_key( wp_unslash( $_POST['decision'] ?? '' ) ), sanitize_text_field( wp_unslash( $_POST['reason'] ?? '' ) ) );
+		$grants = array_map( 'sanitize_key', (array) wp_unslash( $_POST['grants'] ?? [] ) );
+		$result = $this->decide_application( absint( $_POST['user_id'] ?? 0 ), sanitize_key( wp_unslash( $_POST['decision'] ?? '' ) ),
+			sanitize_text_field( wp_unslash( $_POST['reason'] ?? '' ) ), sanitize_text_field( wp_unslash( $_POST['expected'] ?? '' ) ), $grants );
 		if ( is_wp_error( $result ) ) Task_Workspace_UI::error( $result );
 		wp_safe_redirect( add_query_arg( [ 'page'=>'kiwe-guests', 'updated'=>$result['status'] ], admin_url( 'admin.php' ) ) ); exit;
 	}
@@ -138,7 +136,7 @@ final class Guest_Engine_Service extends Guest_Contribution_Service {
 		$types = [];
 		if ( current_user_can( 'edit_posts' ) && current_user_can( 'edit_others_posts' ) ) $types[] = 'post';
 		if ( \DSA\Apps\Store_App_Service::enabled() && current_user_can( 'edit_products' ) && current_user_can( 'edit_others_products' ) ) $types[] = 'product';
-		$submit = is_user_logged_in() && current_user_can( 'kiwe_guest_submit' ) && self::approved( $user_id );
+		$submit = is_user_logged_in() && current_user_can( 'kiwe_guest_submit' ) && self::has_submission_grant( $user_id );
 		$views = array_merge( $manage ? [ 'applications' ] : [], $types ? [ 'review' ] : [], $submit ? [ 'mine' ] : [] );
 		$view = $manage && 'setup' === ( $input['view'] ?? '' ) ? 'setup' : ( in_array( $input['view'] ?? '', $views, true ) ? $input['view'] : ( $views[0] ?? '' ) );
 		$requested_id = max( 0, is_scalar( $input['id'] ?? null ) ? (int) $input['id'] : 0 );
@@ -156,7 +154,7 @@ final class Guest_Engine_Service extends Guest_Contribution_Service {
 			$terms = get_terms( [ 'taxonomy'=>$tax, 'hide_empty'=>false, 'number'=>100 ] );
 			foreach ( is_array( $terms ) ? $terms : [] as $term ) $out['categories'][] = [ 'id'=>(int) $term->term_id, 'name'=>(string) $term->name, 'type'=>$type ];
 		}
-		if ( $submit ) foreach ( (array) ( self::application( $user_id )['intents'] ?? [] ) as $type ) {
+		if ( $submit ) foreach ( self::grants( self::application( $user_id ) ) as $type ) {
 			if ( ( 'post' === $type && $out['settings']['postsEnabled'] ) || ( 'product' === $type && $out['settings']['productsEnabled'] ) ) $out['submitTypes'][] = $type;
 		}
 		if ( 'applications' === $view ) {
@@ -194,18 +192,42 @@ final class Guest_Engine_Service extends Guest_Contribution_Service {
 
 
 
-	public function decide_application( int $user_id, string $decision, string $reason = '', ?string $expected = null ) {
+	public function decide_application( int $user_id, string $decision, string $reason = '', ?string $expected = null, ?array $grants = null ) {
 		if ( ! current_user_can( 'kiwe_manage_guest_applications' ) ) return new WP_Error( 'kiwe_guest_forbidden', 'You cannot review Guest applications.', [ 'status'=>403 ] );
 		$user = get_userdata( $user_id ); $application = self::application( $user_id );
-		if ( ! $user || 'pending' !== ( $application['status'] ?? '' ) || ! in_array( $decision, [ 'approved','denied' ], true ) || ( null !== $expected && ! hash_equals( $this->project_application( $user )['expected'], $expected ) ) ) return new WP_Error( 'kiwe_guest_stale', 'The application changed. Refresh and review it.', [ 'status'=>409 ] );
-		if ( 'approved' === $decision && ( ! \DSA\PhoneKey\PhoneKey_Bridge::account_verified( $user_id ) || self::has_admin_area_access( $user_id, (array) $user->roles ) ) ) return new WP_Error( 'kiwe_guest_eligibility', 'This account is no longer eligible for Guest approval.', [ 'status'=>409 ] );
+		$status = $application['status'] ?? '';
+		$allowed_decisions = match ( $status ) {
+			'pending' => [ 'approved', 'denied' ],
+			'approved' => [ 'approved', 'revoked' ],
+			default => [],
+		};
+		if ( ! $user || ! in_array( $decision, $allowed_decisions, true ) || ( null !== $expected && ! hash_equals( $this->project_application( $user )['expected'], $expected ) ) ) return new WP_Error( 'kiwe_guest_stale', 'The application changed. Refresh and review it.', [ 'status'=>409 ] );
 		$had_contributor = in_array( 'contributor', (array) $user->roles, true );
-		$next = array_replace( $application, [ 'status'=>$decision, 'decidedAt'=>gmdate( 'c' ), 'decidedBy'=>get_current_user_id(), 'reason'=>'denied' === $decision ? substr( sanitize_text_field( $reason ), 0, 180 ) : '' ] );
+		$selected = [];
+		if ( 'approved' === $decision ) {
+			if ( ! \DSA\PhoneKey\PhoneKey_Bridge::account_verified( $user_id ) || self::has_admin_area_access( $user_id, (array) $user->roles, 'approved' === $status && $had_contributor ) ) return new WP_Error( 'kiwe_guest_eligibility', 'This account is no longer eligible for Guest approval.', [ 'status'=>409 ] );
+			$requested = array_values( array_intersect( self::enabled_intents(), (array) ( $application['intents'] ?? [] ) ) );
+			$grants ??= array_values( array_intersect( [ 'post', 'product' ], $requested ) );
+			$selected = array_values( array_filter( $requested, static fn ( $grant ) => in_array( $grant, $grants, true ) ) );
+			if ( ! $selected || count( $selected ) !== count( $grants ) ) return new WP_Error( 'kiwe_guest_grants', 'Select the requested Guest permissions you want to grant.', [ 'status'=>400 ] );
+			$same_site = ! in_array( 'referral', $selected, true ) || (int) ( $application['referralSite'] ?? 0 ) === get_current_blog_id();
+			if ( 'approved' === $status && $selected === self::grants( $application ) && $same_site
+				&& (bool) array_intersect( [ 'post', 'product' ], $selected ) === $had_contributor ) return $this->project_application( $user );
+		}
+		$needs_contributor = (bool) array_intersect( [ 'post', 'product' ], $selected );
+		$next = array_replace( $application, [ 'status'=>$decision, 'grants'=>$selected, 'decidedAt'=>gmdate( 'c' ), 'decidedBy'=>get_current_user_id(), 'reason'=>'approved' === $decision ? '' : substr( sanitize_text_field( $reason ), 0, 180 ) ] );
+		if ( in_array( 'referral', $selected, true ) ) {
+			$next['referralSite'] = get_current_blog_id();
+			if ( ! $same_site || empty( $next['referralKey'] ) ) $next['referralKey'] = bin2hex( random_bytes( 16 ) );
+		} else {
+			unset( $next['referralKey'], $next['referralSite'] );
+		}
 		if ( ! update_user_meta( $user_id, self::META, $next, $application ) ) return new WP_Error( 'kiwe_guest_stale', 'The decision could not be confirmed. Refresh before retrying.', [ 'status'=>409 ] );
-		if ( 'approved' === $decision ) $user->add_role( 'contributor' );
-		else $user->remove_role( 'contributor' );
+		if ( $needs_contributor && ! $had_contributor ) $user->add_role( 'contributor' );
+		if ( ! $needs_contributor && $had_contributor && 'approved' === $status ) $user->remove_role( 'contributor' );
+		$expected_contributor = 'pending' === $status && 'denied' === $decision ? $had_contributor : $needs_contributor;
 		$user = get_userdata( $user_id );
-		if ( ! $user || ( 'approved' === $decision ) !== in_array( 'contributor', (array) $user->roles, true ) ) {
+		if ( ! $user || $expected_contributor !== in_array( 'contributor', (array) $user->roles, true ) ) {
 			if ( $user ) {
 				if ( $had_contributor ) $user->add_role( 'contributor' );
 				else $user->remove_role( 'contributor' );
@@ -228,7 +250,9 @@ final class Guest_Engine_Service extends Guest_Contribution_Service {
 		if ( isset( $input['expected'] ) && ! hash_equals( self::settings_fingerprint(), (string) $input['expected'] ) ) return new WP_Error( 'kiwe_guest_stale', 'Guest settings changed elsewhere. Reload before saving.', [ 'status'=>409 ] );
 		$commerce = \DSA\Apps\Store_App_Service::enabled();
 		$stored = get_option( self::SETTINGS_OPTION, [] );
-		$values = [ 'posts_enabled'=>$input['postsEnabled'], 'products_enabled'=>$commerce ? $input['productsEnabled'] : !empty( $stored['products_enabled'] ) ];
+		$referrals = $input['referralsEnabled'] ?? ! empty( $stored['referrals_enabled'] );
+		if ( ! is_bool( $referrals ) ) return new WP_Error( 'kiwe_guest_settings', 'Choose whether to accept Guest referrals.', [ 'status'=>400 ] );
+		$values = [ 'posts_enabled'=>$input['postsEnabled'], 'products_enabled'=>$commerce ? $input['productsEnabled'] : !empty( $stored['products_enabled'] ), 'referrals_enabled'=>$referrals ];
 		update_option( self::SETTINGS_OPTION, $values, false );
 		if ( $values !== get_option( self::SETTINGS_OPTION ) ) return new WP_Error( 'kiwe_guest_settings', 'Guest settings could not be confirmed.', [ 'status'=>409 ] );
 		return [ 'settings'=>self::settings(), 'settingsExpected'=>self::settings_fingerprint() ];
@@ -277,9 +301,9 @@ final class Guest_Engine_Service extends Guest_Contribution_Service {
 
 	public function submit_workspace( array $input ) {
 		$user_id = get_current_user_id();
-		if ( ! current_user_can( 'kiwe_guest_submit' ) || ! self::approved( $user_id ) ) return new WP_Error( 'kiwe_guest_forbidden', 'Approved Guest access is required.', [ 'status'=>403 ] );
+		if ( ! current_user_can( 'kiwe_guest_submit' ) || ! self::has_submission_grant( $user_id ) ) return new WP_Error( 'kiwe_guest_forbidden', 'Approved Guest access is required.', [ 'status'=>403 ] );
 		$type = $input['type'] ?? ''; $status = $input['status'] ?? '';
-		$features = self::settings(); $intents = (array) ( self::application( $user_id )['intents'] ?? [] );
+		$features = self::settings(); $intents = self::grants( self::application( $user_id ) );
 		if ( ! in_array( $type, [ 'post','product' ], true ) || ! in_array( $type, $intents, true ) || ! $features[ 'post' === $type ? 'postsEnabled' : 'productsEnabled' ] ) return new WP_Error( 'kiwe_guest_type', 'This contribution type is not active for your account.', [ 'status'=>403 ] );
 		if ( ! in_array( $status, [ 'draft','pending' ], true ) ) return new WP_Error( 'kiwe_guest_status', 'Guest contributions must be drafts or await review.', [ 'status'=>403 ] );
 		$writing = $this->writing( $input ); if ( is_wp_error( $writing ) ) return $writing;
@@ -308,7 +332,9 @@ final class Guest_Engine_Service extends Guest_Contribution_Service {
 	private function project_application( $user ): array {
 		$app = self::application( (int) $user->ID );
 		$verified = (bool) \DSA\PhoneKey\PhoneKey_Bridge::account_verified( (int) $user->ID );
-		return [ 'id'=>(int) $user->ID, 'name'=>sanitize_text_field( $user->display_name ?: $user->user_login ), 'verified'=>$verified, 'intents'=>array_values( array_intersect( [ 'post','product' ], (array) ( $app['intents'] ?? [] ) ) ), 'status'=>sanitize_key( $app['status'] ?? 'none' ), 'reason'=>sanitize_text_field( $app['reason'] ?? '' ), 'roles'=>array_values( (array) $user->roles ), 'expected'=>hash( 'sha256', wp_json_encode( [ $app, $user->roles, $verified ] ) ) ];
+		$intents = array_values( array_intersect( self::INTENTS, (array) ( $app['intents'] ?? [] ) ) );
+		$available = array_values( array_intersect( self::enabled_intents(), $intents ) );
+		return [ 'id'=>(int) $user->ID, 'name'=>sanitize_text_field( $user->display_name ?: $user->user_login ), 'verified'=>$verified, 'intents'=>$intents, 'availableGrants'=>$available, 'grants'=>self::grants( $app ), 'status'=>sanitize_key( $app['status'] ?? 'none' ), 'reason'=>sanitize_text_field( $app['reason'] ?? '' ), 'roles'=>array_values( (array) $user->roles ), 'expected'=>hash( 'sha256', wp_json_encode( [ $app, $user->roles, $verified, $available ] ) ) ];
 	}
 
 	private function project_submission( $post ): array {
@@ -333,6 +359,7 @@ final class Guest_Engine_Service extends Guest_Contribution_Service {
 		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>"><input type="hidden" name="action" value="kiwe_guest_save_settings"><?php wp_nonce_field( 'kiwe_guest_save_settings' ); ?>
 		<p><label><input type="checkbox" name="posts_enabled" value="1" <?php checked( ! empty( $features['postsEnabled'] ) ); ?>> <strong><?php esc_html_e( 'Enable Guest posts', 'dsa' ); ?></strong></label></p>
 		<?php if ( ! empty( $features['commerceAvailable'] ) ) : ?><p><label><input type="checkbox" name="products_enabled" value="1" <?php checked( ! empty( $features['productsEnabled'] ) ); ?>> <strong><?php esc_html_e( 'Enable product proposals', 'dsa' ); ?></strong></label></p><?php else : ?><p class="description"><?php esc_html_e( 'Product proposals become available here only when WooCommerce is active.', 'dsa' ); ?></p><?php endif; ?>
+		<p><label><input type="checkbox" name="referrals_enabled" value="1" <?php checked( $features['referralsEnabled'] ); ?>> <strong><?php esc_html_e( 'Enable Guest referral applications', 'dsa' ); ?></strong></label></p>
 		<?php submit_button( __( 'Save Guest settings', 'dsa' ), 'primary', 'submit', false ); ?></form><hr>
 		<p><?php esc_html_e( 'Approve verified people for the isolated Guest submission workspace. Product proposals remain unpublished until store staff review them; approval never grants order, payout or store-settings access.', 'dsa' ); ?></p>
 		<?php if ( isset( $_GET['updated'] ) ) : ?><div class="notice notice-success"><p><?php esc_html_e( 'Application updated.', 'dsa' ); ?></p></div><?php endif; ?>
@@ -341,16 +368,27 @@ final class Guest_Engine_Service extends Guest_Contribution_Service {
 		<?php foreach ( $users as $user ) : $application = self::application( (int) $user->ID ); $status = sanitize_key( (string) ( $application['status'] ?? 'pending' ) ); ?>
 		<tr><td><strong><?php echo esc_html( $user->display_name ?: $user->user_login ); ?></strong><br><small><?php echo esc_html( $user->user_email ); ?></small></td>
 		<td><?php echo esc_html( self::verified_contact_label( (int) $user->ID ) ); ?></td><td><?php echo esc_html( implode( ', ', array_map( [ $this, 'intent_label' ], (array) ( $application['intents'] ?? [] ) ) ) ); ?></td><td><?php echo esc_html( self::status_label( $status ) ); ?></td>
-		<td><?php if ( 'pending' === $status ) : ?><form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>"><input type="hidden" name="action" value="kiwe_guest_decide"><input type="hidden" name="user_id" value="<?php echo (int) $user->ID; ?>"><?php wp_nonce_field( 'kiwe_guest_decide' ); ?><input name="reason" maxlength="180" placeholder="Reason if denied"><button class="button button-primary" name="decision" value="approved"><?php esc_html_e( 'Approve', 'dsa' ); ?></button> <button class="button" name="decision" value="denied"><?php esc_html_e( 'Deny', 'dsa' ); ?></button></form><?php else : ?>—<?php endif; ?></td></tr>
+		<td><?php if ( in_array( $status, [ 'pending', 'approved' ], true ) ) : $record = $this->project_application( $user ); ?>
+			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+			<input type="hidden" name="action" value="kiwe_guest_decide"><input type="hidden" name="user_id" value="<?php echo (int) $user->ID; ?>">
+			<input type="hidden" name="expected" value="<?php echo esc_attr( $record['expected'] ); ?>"><?php wp_nonce_field( 'kiwe_guest_decide' ); ?>
+			<?php foreach ( $record['availableGrants'] as $grant ) : ?>
+				<label><input type="checkbox" name="grants[]" value="<?php echo esc_attr( $grant ); ?>" <?php checked( 'approved' === $status && in_array( $grant, $record['grants'], true ) ); ?>> <?php echo esc_html( $this->intent_label( $grant ) ); ?></label>
+			<?php endforeach; ?>
+			<label><?php esc_html_e( 'Decision note', 'dsa' ); ?> <input name="reason" maxlength="180"></label>
+			<button class="button button-primary" name="decision" value="approved"><?php echo 'approved' === $status ? esc_html__( 'Update permissions', 'dsa' ) : esc_html__( 'Approve', 'dsa' ); ?></button>
+			<button class="button" name="decision" value="<?php echo 'approved' === $status ? 'revoked' : 'denied'; ?>"><?php echo 'approved' === $status ? esc_html__( 'Revoke access', 'dsa' ) : esc_html__( 'Deny', 'dsa' ); ?></button>
+			</form>
+		<?php endif; ?></td></tr>
 		<?php endforeach; ?></tbody></table></div>
 		<?php
 	}
 
 	private function render_workspace(): void {
-		$application = self::application( get_current_user_id() );
+		$grants = self::grants( self::application( get_current_user_id() ) );
 		$features = self::settings();
-		$post_enabled = ! empty( $features['postsEnabled'] ) && in_array( 'post', (array) ( $application['intents'] ?? [] ), true );
-		$product_enabled = ! empty( $features['productsEnabled'] ) && function_exists( 'WC' ) && in_array( 'product', (array) ( $application['intents'] ?? [] ), true );
+		$post_enabled = ! empty( $features['postsEnabled'] ) && in_array( 'post', $grants, true );
+		$product_enabled = ! empty( $features['productsEnabled'] ) && function_exists( 'WC' ) && in_array( 'product', $grants, true );
 		$post_types = post_type_exists( 'product' ) ? [ 'post', 'product' ] : 'post';
 		$posts = get_posts( [ 'author' => get_current_user_id(), 'post_type' => $post_types, 'post_status' => [ 'draft', 'pending', 'publish', 'future', 'private' ], 'numberposts' => 50, 'orderby' => 'date', 'order' => 'DESC' ] );
 		?>
@@ -369,6 +407,10 @@ final class Guest_Engine_Service extends Guest_Contribution_Service {
 	}
 
 	private function intent_label( string $intent ): string {
-		return 'product' === sanitize_key( $intent ) ? __( 'Sell products', 'dsa' ) : __( 'Guest posts', 'dsa' );
+		return match ( $intent ) {
+			'product' => __( 'Product proposals', 'dsa' ),
+			'referral' => __( 'Referrals', 'dsa' ),
+			default => __( 'Guest posts', 'dsa' ),
+		};
 	}
 }

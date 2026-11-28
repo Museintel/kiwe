@@ -103,7 +103,7 @@ final class Site_Owner_Service {
 		if ( self::$transferring || ! self::enabled() || ! preg_match( '/(?:^|_)capabilities$/', (string) $key ) ) return $check;
 		if ( (int) $id === self::owner_id() ) return false;
 		if ( is_array( $value ) && ! empty( $value[ self::ROLE ] ) ) return false;
-		if ( is_array( $value ) && ! empty( $value['contributor'] ) && ! Guest_Contribution_Service::approved( (int) $id ) ) return false;
+		if ( is_array( $value ) && ! empty( $value['contributor'] ) && ! Guest_Contribution_Service::has_submission_grant( (int) $id ) ) return false;
 		if ( ! self::is_owner() && get_current_user_id() ) {
 			if ( ! is_array( $value ) || array_diff( array_keys( array_filter( $value ) ), self::allowed_roles() ) ) return false;
 		}
@@ -120,14 +120,14 @@ final class Site_Owner_Service {
 		if ( ! self::enabled() ) return;
 		$role = isset( $_POST['role'] ) ? sanitize_key( wp_unslash( $_POST['role'] ) ) : '';
 		if ( $role && ! in_array( $role, self::allowed_roles(), true ) && ! ( self::is_owner( (int) ( $user->ID ?? 0 ) ) && self::ROLE === $role ) ) $errors->add( 'kiwe_role', __( 'That role cannot be assigned. Use an approved role or the ownership transfer form.', 'dsa' ) );
-		if ( 'contributor' === $role && ! Guest_Contribution_Service::approved( (int) ( $user->ID ?? 0 ) ) ) $errors->add( 'kiwe_guest_application', __( 'Guest access is assigned only by approving a verified Guest application.', 'dsa' ) );
+		if ( 'contributor' === $role && ! Guest_Contribution_Service::has_submission_grant( (int) ( $user->ID ?? 0 ) ) ) $errors->add( 'kiwe_guest_application', __( 'Guest access is assigned only by approving a verified Guest application.', 'dsa' ) );
 	}
 
 	public function validate_rest_assignment( $user, $request ) {
 		if ( ! self::enabled() || is_wp_error( $user ) ) return $user;
 		foreach ( (array) ( $request['roles'] ?? [] ) as $role ) {
 			if ( ! in_array( $role, self::allowed_roles(), true ) ) return new \WP_Error( 'kiwe_role', 'That role cannot be assigned through this endpoint.', [ 'status'=>403 ] );
-			if ( 'contributor' === $role && ! Guest_Contribution_Service::approved( (int) ( $user->ID ?? 0 ) ) ) return new \WP_Error( 'kiwe_guest_application', 'Guest access requires an approved verified application.', [ 'status'=>403 ] );
+			if ( 'contributor' === $role && ! Guest_Contribution_Service::has_submission_grant( (int) ( $user->ID ?? 0 ) ) ) return new \WP_Error( 'kiwe_guest_application', 'Guest access requires an approved verified application.', [ 'status'=>403 ] );
 		}
 		return $user;
 	}

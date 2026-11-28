@@ -95,9 +95,15 @@ function linksHero( data ) {
 	return '<div class="dsa-links-hero' + ( data.hasScore ? '' : ' dsa-links-hero--no-score' ) + '">' + ( data.logo ? '<img class="dsa-links-logo" src="' + escapeHtml( data.logo ) + '" data-dsa-theme-logo data-light-src="' + escapeHtml( data.hub.logo || '' ) + '" data-dark-src="' + escapeHtml( data.payload.logoDark || data.hub.logo || '' ) + '" alt="' + escapeHtml( data.name ) + '">' : '<div class="dsa-links-logo dsa-links-logo--text">' + escapeHtml( data.name.charAt( 0 ) || 'K' ) + '</div>' ) + ( data.hasScore ? '<div class="dsa-links-score" aria-label="' + escapeHtml( data.scoreLabel || 'Site score' ) + ' ' + escapeHtml( data.score ) + ' out of 100"><span>' + escapeHtml( data.score ) + '</span><small>' + escapeHtml( data.scoreLabel || 'site score' ) + '</small></div>' : '' ) + '</div>';
 }
 
+function referralAction( payload ) {
+	return payload.canRefer && payload.hub?.shareAvailable
+		? '<p><button type="button" class="dsa-panel__button" data-dsa-referral-share>Share referral link</button></p>'
+		: '';
+}
+
 function renderLegacyLinks( payload ) {
 	const data = linksViewData( payload );
-	return '<section class="dsa-panel dsa-links-panel" role="dialog" aria-modal="false" aria-label="' + escapeHtml( data.copy.label ) + '"><div class="dsa-links-panel__title"><p class="dsa-hero-kicker">' + escapeHtml( data.copy.eyebrow ) + '</p><h2>' + escapeHtml( data.copy.title || data.name ) + '</h2>' + ( data.copy.intro ? '<p class="dsa-panel__meta">' + escapeHtml( data.copy.intro ) + '</p>' : '' ) + '</div>' + linksHero( data ) + ( data.hub.canEdit ? adminBar( data.editor ) : '' ) + ( data.socials.length ? '<div class="dsa-social-grid">' + data.socials.map( function ( item ) { return social( item, data.hub.canEdit, data.payload.iconSprite, data.hub.enquiryAvailable === true, data.hub.shareAvailable === true, data.hub.shareDocument ); } ).join( '' ) + '</div>' : '' ) + ( data.actions.length ? '<div class="dsa-links-commerce-actions">' + data.actions.join( '' ) + '</div>' : '' ) + ( data.items.length ? posts( data.items, data.hub.postsSection || {} ) : '' ) + ( data.hub.review && data.hub.review.text ? review( data.hub.review ) : '' ) + ( data.checks.length ? '<div class="dsa-health-row" data-dsa-context-slot data-dsa-context-name="links" data-dsa-context-width="dock">' + data.checks.map( health ).join( '' ) + '</div>' : '' ) + '</section>';
+	return '<section class="dsa-panel dsa-links-panel" role="dialog" aria-modal="false" aria-label="' + escapeHtml( data.copy.label ) + '"><div class="dsa-links-panel__title"><p class="dsa-hero-kicker">' + escapeHtml( data.copy.eyebrow ) + '</p><h2>' + escapeHtml( data.copy.title || data.name ) + '</h2>' + ( data.copy.intro ? '<p class="dsa-panel__meta">' + escapeHtml( data.copy.intro ) + '</p>' : '' ) + '</div>' + linksHero( data ) + referralAction( payload ) + ( data.hub.canEdit ? adminBar( data.editor ) : '' ) + ( data.socials.length ? '<div class="dsa-social-grid">' + data.socials.map( function ( item ) { return social( item, data.hub.canEdit, data.payload.iconSprite, data.hub.enquiryAvailable === true, data.hub.shareAvailable === true, data.hub.shareDocument ); } ).join( '' ) + '</div>' : '' ) + ( data.actions.length ? '<div class="dsa-links-commerce-actions">' + data.actions.join( '' ) + '</div>' : '' ) + ( data.items.length ? posts( data.items, data.hub.postsSection || {} ) : '' ) + ( data.hub.review && data.hub.review.text ? review( data.hub.review ) : '' ) + ( data.checks.length ? '<div class="dsa-health-row" data-dsa-context-slot data-dsa-context-name="links" data-dsa-context-width="dock">' + data.checks.map( health ).join( '' ) + '</div>' : '' ) + '</section>';
 }
 
 function renderPrototypeLinks( payload ) {
@@ -106,6 +112,7 @@ function renderPrototypeLinks( payload ) {
 		'<section class="dsa-panel dsa-links-panel kiwe-links-v2027" role="dialog" aria-modal="false" aria-label="' + escapeHtml( data.copy.label ) + '" data-dsa-links-adapter="prototype-2027">',
 		'<div class="kiwe-links-v2027__title"><p class="dsa-hero-kicker">' + escapeHtml( data.copy.eyebrow ) + '</p><h2>' + escapeHtml( data.copy.title || data.name ) + '</h2><p class="dsa-panel__meta">' + escapeHtml( data.copy.intro ) + '</p></div>',
 		'<div class="kiwe-links-v2027__identity">' + linksHero( data ) + ( data.hub.canEdit ? adminBar( data.editor ) : '' ) + '</div>',
+		referralAction( payload ),
 		data.socials.length ? '<div class="dsa-social-grid kiwe-links-v2027__socials">' + data.socials.map( function ( item ) { return social( item, data.hub.canEdit, data.payload.iconSprite, data.hub.enquiryAvailable === true, data.hub.shareAvailable === true, data.hub.shareDocument ); } ).join( '' ) + '</div>' : '',
 		data.actions.length ? '<div class="dsa-links-commerce-actions kiwe-links-v2027__actions">' + data.actions.join( '' ) + '</div>' : '',
 		data.items.length ? posts( data.items, data.hub.postsSection || {} ) : '',
