@@ -1,8 +1,8 @@
 {
   "schema": 1,
-  "version": "8.0.0-rc.517",
+  "version": "8.0.0-rc.518",
   "algorithm": "sha256",
-  "file_count": 1065,
+  "file_count": 1066,
   "files": {
     "assets/css/admin.css": {
       "bytes": 19334,
@@ -526,7 +526,7 @@
     },
     "dsa.php": {
       "bytes": 4536,
-      "sha256": "5dfa99e033946ac59aaec02343e15493d8433d6e9410a2167e79cc0e79c018e0"
+      "sha256": "bfdfd3a63b8c97b258652f672686fca28dcd711f53f4ccddac4a82412e7c9181"
     },
     "framework-system/HANDOFF-LITE.md": {
       "bytes": 4119,
@@ -1089,16 +1089,16 @@
       "sha256": "2103d6aadabd5d934dab58e0ed3018b9454675d771e0990bb77467386a459a22"
     },
     "includes/Access/WordPress_Role_Access_Service.php": {
-      "bytes": 63981,
-      "sha256": "e572e9b1e0d2bf55e703dfe2c26c69e700b37f9e0802f5660cc076d91c888a80"
+      "bytes": 64231,
+      "sha256": "af83563f8826309fa0975e2377405af9aea55d15845491a6e805ecb46546bb66"
     },
     "includes/Access/Workspace_Activity_Service.php": {
       "bytes": 18552,
       "sha256": "4b1fb0512aae43570c466fb795ebb549aefb1baf3875c6cc52993b4e16c4d4e8"
     },
     "includes/Access/Workspace_Admin_Service.php": {
-      "bytes": 39062,
-      "sha256": "f7af2932fa2494912c5d6db80985cecc88c5505e3a36e0825dd0a6e66b2fd851"
+      "bytes": 39327,
+      "sha256": "f59a76de5d712519d4df2fd63cdae60d7ef9d4225e31b19aac3f9ad22128853e"
     },
     "includes/Access/Workspace_Chrome_Service.php": {
       "bytes": 5398,
@@ -1133,8 +1133,8 @@
       "sha256": "65140e5c7043f7c73b72fc4f0707e5ce00db1523d815581ac4350268fd9f4c7a"
     },
     "includes/Admin/Admin.php": {
-      "bytes": 657380,
-      "sha256": "0b593cda55a39035069f76a1ad1d81c088624e6788630f2757f6901aa7b32b43"
+      "bytes": 659440,
+      "sha256": "b63bb70284295a6860da1b2793cf4e1b4c38a3e629575a5aae2455ab3722b4c0"
     },
     "includes/Admin/Legacy_Settings.php": {
       "bytes": 12551,
@@ -1705,8 +1705,12 @@
       "sha256": "fe28302e0a5caf2497275ee0789a4b393cb562dc02c886dde96f788642837ad9"
     },
     "includes/Communications/Email_Service.php": {
-      "bytes": 4542,
-      "sha256": "907fa8d83a3dcf1dd1213ce9a975cdd4cb804e1256ca73c3675b2572462423df"
+      "bytes": 5524,
+      "sha256": "e05ec61adfac360356cbbc81ac6077c6136e358d5b14aa2f8994096e0b78991a"
+    },
+    "includes/Communications/Managed_Email_Transport.php": {
+      "bytes": 4745,
+      "sha256": "fe1d1863c4ac3e0ff58c7584011b303772b0812c273ab90c8be7d7e1a3444617"
     },
     "includes/Design/Seam_Token_Service.php": {
       "bytes": 70382,
@@ -2169,12 +2173,12 @@
       "sha256": "5b2c46449bc59897424287c0cd24ebd437377cd0d4d1c06fca67bda3458527ef"
     },
     "includes/PhoneKey/phonekey-core.php": {
-      "bytes": 214037,
-      "sha256": "36512ba1515d2616c234024629ab9058fadf84817e5a4159b06b5378b0a820d5"
+      "bytes": 213958,
+      "sha256": "c255b7b77791e71c75e392038c73c080e06c106fd3ac303e459bf230d0669ef2"
     },
     "includes/PhoneKey/website-setup.php": {
-      "bytes": 6057,
-      "sha256": "15ad2a94a5e8c6b0aced13ea100c3a30fc6329d29bbd83dc5f8b7e7582bc0714"
+      "bytes": 6222,
+      "sha256": "fd24a4c54e5f69bd0a55f5643a2071c9200e1cb0a03c0b637875079bbbb3bb18"
     },
     "includes/Plugin.php": {
       "bytes": 26036,

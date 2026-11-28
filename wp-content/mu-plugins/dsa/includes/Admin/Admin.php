@@ -127,6 +127,7 @@ final class Admin {
 		add_action( 'admin_post_dsa_linked_sync_co_purchase', [ $this, 'handle_linked_sync_co_purchase' ] );
 		add_action( 'admin_post_dsa_store_analytics_purge', [ $this, 'handle_store_analytics_purge' ] );
 		add_action( 'admin_post_dsa_email_test', [ $this, 'handle_email_test' ] );
+		add_action( 'admin_post_kiwe_save_email', [ $this, 'handle_email_settings' ] );
 		add_action( 'admin_post_dsa_abandoned_cart_reminder', [ $this, 'handle_abandoned_cart_reminder' ] );
 		add_action( 'admin_post_dsa_send_notification_campaign', [ $this, 'handle_notification_campaign' ] );
 		add_action( 'admin_post_dsa_export_bricks_tokens', [ $this, 'export_bricks_tokens' ] );
@@ -231,7 +232,7 @@ final class Admin {
 			[ 'kiwe-search', 'render_search_page', 'manage_options' ],
 			[ 'kiwe-menu', 'render_menu_page', 'manage_options' ],
 			[ 'kiwe-secure', 'render_secure_page', 'manage_options' ],
-			[ 'kiwe-email', 'render_email_page', 'manage_options' ],
+			[ 'kiwe-email', 'render_email_page', 'read' ],
 			[ 'kiwe-analytics', 'render_store_analytics_page', 'manage_options' ],
 			[ 'kiwe-woocommerce', 'render_woocommerce_page', 'manage_options' ],
 			[ 'kiwe-abandoned-cart', 'render_abandoned_cart_page', 'manage_options' ],
@@ -286,7 +287,6 @@ final class Admin {
 		$this->render_hub_page( 'Commerce & Messages', 'Store behavior and every outbound customer channel share one operational surface.', [
 			[ 'WooCommerce', 'Products, linked products and native commerce enhancements.', 'kiwe-woocommerce' ],
 			[ 'Abandoned carts', 'Recovery policy and delivery status.', 'kiwe-abandoned-cart' ],
-			[ 'Email', 'SMTP fallback and delivery testing.', 'kiwe-email' ],
 			[ 'Analytics', 'Store and campaign evidence.', 'kiwe-analytics' ],
 		] );
 	}
@@ -460,7 +460,7 @@ final class Admin {
 	}
 
 	public function handle_email_test(): void {
-		if ( ! current_user_can( 'manage_options' ) ) {
+		if ( 'POST' !== ( $_SERVER['REQUEST_METHOD'] ?? '' ) || ! Email_Service::can_manage() ) {
 			wp_die( esc_html__( 'Permission denied.', 'dsa' ) );
 		}
 
@@ -477,6 +477,25 @@ final class Admin {
 			delete_option( 'dsa_email_last_failure' );
 		}
 		wp_safe_redirect( add_query_arg( [ 'page' => 'kiwe-email', 'tab' => 'diagnostics', 'email-test' => $sent ? 'sent' : 'failed', 'message' => $message ], admin_url( 'admin.php' ) ) );
+		exit;
+	}
+
+	public function handle_email_settings(): void {
+		if ( 'POST' !== ( $_SERVER['REQUEST_METHOD'] ?? '' ) || ! Email_Service::can_manage() ) {
+			wp_die( esc_html__( 'Permission denied.', 'dsa' ), '', [ 'response' => 403 ] );
+		}
+		check_admin_referer( 'kiwe_save_email' );
+		if ( ! is_array( $_POST['email'] ?? null ) ) {
+			wp_die( esc_html__( 'Email settings are missing.', 'dsa' ), '', [ 'response' => 400 ] );
+		}
+		$current = $this->settings->all()['email'];
+		$next = $this->sanitize_email_settings( $_POST['email'], $current );
+		if ( $next !== $current ) {
+			if ( is_array( get_option( DSA_OPTION_SETTINGS, null ) ) ) $this->settings->update_selected( [ 'email' => $next ] );
+			else $this->settings->update( [ 'email' => $next ] );
+			delete_option( 'dsa_email_last_test' );
+		}
+		wp_safe_redirect( add_query_arg( [ 'page' => 'kiwe-email', 'settings-updated' => 1 ], admin_url( 'admin.php' ) ), 303 );
 		exit;
 	}
 
@@ -7881,15 +7900,18 @@ final class Admin {
 	}
 
 	public function render_email_page(): void {
+		if ( ! Email_Service::can_manage() ) wp_die( esc_html__( 'Permission denied.', 'dsa' ), '', [ 'response' => 403 ] );
 		$config = wp_parse_args( $this->settings->all()['email'] ?? [], $this->settings->defaults()['email'] );
 		$smtp = wp_parse_args( $config['smtp'] ?? [], $this->settings->defaults()['email']['smtp'] );
 		$tab = sanitize_key( wp_unslash( $_GET['tab'] ?? 'settings' ) );
 		$tab = in_array( $tab, [ 'settings', 'diagnostics' ], true ) ? $tab : 'settings';
 		$diagnostics = $this->email ? $this->email->diagnostics() : [];
+		$managed_status = 'settings' === $tab ? \DSA\Communications\Managed_Email_Transport::status() : [];
+		$managed_sender = $managed_status['from_email'] ?? '';
 		?>
 		<div class="wrap dsa-admin dsa-store-manager">
 			<h1><?php esc_html_e( 'Kiwe Email', 'dsa' ); ?></h1>
-			<p><?php esc_html_e( 'WordPress provides wp_mail. Kiwe configures and tests the delivery path your host or SMTP provider uses for Key.kiwe and cart recovery messages.', 'dsa' ); ?></p>
+			<p><?php esc_html_e( 'Configure and test the sender for account emails, notifications, campaigns and cart recovery messages.', 'dsa' ); ?></p>
 			<?php if ( isset( $_GET['settings-updated'] ) ) : ?><div class="notice notice-success is-dismissible"><p><?php esc_html_e( 'Email settings saved.', 'dsa' ); ?></p></div><?php endif; ?>
 			<?php if ( isset( $_GET['email-test'] ) ) : ?>
 				<div class="notice <?php echo 'sent' === $_GET['email-test'] ? 'notice-success' : 'notice-error'; ?> is-dismissible"><p><?php echo esc_html( sanitize_text_field( wp_unslash( $_GET['message'] ?? ( 'sent' === $_GET['email-test'] ? __( 'Test email handed to the mail transport.', 'dsa' ) : __( 'Test email failed.', 'dsa' ) ) ) ) ); ?></p></div>
@@ -7899,11 +7921,11 @@ final class Admin {
 			<?php if ( 'settings' === $tab ) : ?>
 				<section class="dsa-admin__panel">
 					<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
-						<input type="hidden" name="action" value="dsa_save_settings"><input type="hidden" name="_dsa_redirect" value="kiwe-email">
-						<?php wp_nonce_field( 'dsa_save_settings' ); ?>
+						<input type="hidden" name="action" value="kiwe_save_email">
+						<?php wp_nonce_field( 'kiwe_save_email' ); ?>
 						<table class="form-table" role="presentation"><tbody>
 							<tr><th scope="row"><?php esc_html_e( 'Email Delivery', 'dsa' ); ?></th><td><label><input type="checkbox" name="email[enabled]" value="1" <?php checked( ! empty( $config['enabled'] ) ); ?>> <?php esc_html_e( 'Enable Kiwe email delivery', 'dsa' ); ?></label></td></tr>
-							<tr><th scope="row"><label for="dsa-email-transport"><?php esc_html_e( 'Transport', 'dsa' ); ?></label></th><td><select id="dsa-email-transport" name="email[transport]"><option value="wordpress" <?php selected( $config['transport'], 'wordpress' ); ?>><?php esc_html_e( 'WordPress / host mail', 'dsa' ); ?></option><option value="smtp" <?php selected( $config['transport'], 'smtp' ); ?>><?php esc_html_e( 'SMTP', 'dsa' ); ?></option></select><p class="description"><?php esc_html_e( 'Use WordPress/host mail when Hostinger or another mail plugin already handles delivery.', 'dsa' ); ?></p></td></tr>
+							<tr><th scope="row"><label for="dsa-email-transport"><?php esc_html_e( 'Transport', 'dsa' ); ?></label></th><td><select id="dsa-email-transport" name="email[transport]"><?php if ( $managed_sender || 'managed' === $config['transport'] ) : ?><option value="managed" <?php selected( $config['transport'], 'managed' ); ?>><?php echo esc_html( sprintf( __( 'Kiwe managed sender (%s)', 'dsa' ), $managed_sender ?: $config['from_email'] ) ); ?></option><?php endif; ?><option value="wordpress" <?php selected( $config['transport'], 'wordpress' ); ?>><?php esc_html_e( 'WordPress / host mail', 'dsa' ); ?></option><option value="smtp" <?php selected( $config['transport'], 'smtp' ); ?>><?php esc_html_e( 'My SMTP account', 'dsa' ); ?></option></select><p class="description"><?php esc_html_e( 'Choose My SMTP account to send from your own address. Test delivery after changing the transport.', 'dsa' ); ?></p></td></tr>
 							<tr><th scope="row"><?php esc_html_e( 'Sender', 'dsa' ); ?></th><td><input class="regular-text" type="text" name="email[from_name]" value="<?php echo esc_attr( $config['from_name'] ); ?>" placeholder="<?php echo esc_attr( get_bloginfo( 'name' ) ); ?>"> <input class="regular-text" type="email" name="email[from_email]" value="<?php echo esc_attr( $config['from_email'] ); ?>" placeholder="name@example.com"></td></tr>
 							<tr><th scope="row"><label for="dsa-email-provider"><?php esc_html_e( 'Provider preset', 'dsa' ); ?></label></th><td><select id="dsa-email-provider"><option value="custom"><?php esc_html_e( 'Custom / keep current settings', 'dsa' ); ?></option><option value="google"><?php esc_html_e( 'Google Workspace / Gmail', 'dsa' ); ?></option><option value="hostinger"><?php esc_html_e( 'Hostinger Email', 'dsa' ); ?></option><option value="titan"><?php esc_html_e( 'Titan Email', 'dsa' ); ?></option></select><p class="description"><?php esc_html_e( 'Select a preset to fill the server, port and encryption. Google requires a dedicated app password (or an administrator-configured SMTP relay); never enter the normal Google Account password.', 'dsa' ); ?></p></td></tr>
 							<tr><th scope="row"><?php esc_html_e( 'SMTP Server', 'dsa' ); ?></th><td><input id="dsa-email-smtp-host" class="regular-text" type="text" name="email[smtp][host]" value="<?php echo esc_attr( $smtp['host'] ); ?>" placeholder="smtp.example.com"> <input id="dsa-email-smtp-port" class="small-text" type="number" min="1" max="65535" name="email[smtp][port]" value="<?php echo esc_attr( (string) $smtp['port'] ); ?>"> <select id="dsa-email-smtp-encryption" name="email[smtp][encryption]"><option value="tls" <?php selected( $smtp['encryption'], 'tls' ); ?>>TLS</option><option value="ssl" <?php selected( $smtp['encryption'], 'ssl' ); ?>>SSL</option><option value="none" <?php selected( $smtp['encryption'], 'none' ); ?>><?php esc_html_e( 'None', 'dsa' ); ?></option></select></td></tr>
@@ -9751,12 +9773,24 @@ final class Admin {
 
 		$transport = sanitize_key( (string) ( $input['transport'] ?? ( $current['transport'] ?? 'wordpress' ) ) );
 		$encryption = sanitize_key( (string) ( $smtp_input['encryption'] ?? ( $smtp_current['encryption'] ?? 'tls' ) ) );
+		$from = sanitize_email( (string) ( $input['from_email'] ?? '' ) );
+		$managed_campaigns = false;
+		if ( 'managed' === $transport ) {
+			$provider = \DSA\Communications\Managed_Email_Transport::status();
+			if ( ! $provider && 'managed' !== ( $current['transport'] ?? '' ) ) {
+				wp_die( esc_html__( 'The Kiwe managed sender is unavailable for this website.', 'dsa' ), '', [ 'response'=>409 ] );
+			}
+			$from = $provider['from_email'] ?? $current['from_email'] ?? '';
+			$managed_campaigns = $provider['managed_campaigns'] ?? ! empty( $current['managed_campaigns'] );
+		}
 
 		return [
 			'enabled'    => ! empty( $input['enabled'] ),
-			'transport'  => in_array( $transport, [ 'wordpress', 'smtp' ], true ) ? $transport : 'wordpress',
+			'transport'  => in_array( $transport, [ 'wordpress', 'smtp', 'managed' ], true ) ? $transport : 'wordpress',
+			'sender_choice' => true,
+			'managed_campaigns' => $managed_campaigns,
 			'from_name'  => sanitize_text_field( (string) ( $input['from_name'] ?? '' ) ),
-			'from_email' => sanitize_email( (string) ( $input['from_email'] ?? '' ) ),
+			'from_email' => $from,
 			'smtp'       => [
 				'host'       => sanitize_text_field( (string) ( $smtp_input['host'] ?? '' ) ),
 				'port'       => max( 1, min( 65535, absint( $smtp_input['port'] ?? ( $smtp_current['port'] ?? 587 ) ) ) ),

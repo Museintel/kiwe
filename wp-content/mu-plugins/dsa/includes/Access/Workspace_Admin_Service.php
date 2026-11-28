@@ -350,6 +350,9 @@ final class Workspace_Admin_Service {
 			$app = \DSA\Apps\Required_App_Service::card( $id );
 			$apps[] = [ 'label'=>ucfirst( $id ), 'description'=>$app['description'], 'url'=>$app['url'], 'icon'=>$icon, 'app'=>$app ];
 		}
+		if ( \DSA\Communications\Email_Service::can_manage() ) {
+			$apps[] = [ 'label'=>__( 'Email', 'dsa' ), 'description'=>__( 'Choose your sender and test email delivery', 'dsa' ), 'url'=>admin_url( 'admin.php?page=kiwe-email' ), 'icon'=>'dashicons-email-alt' ];
+		}
 		$tasks = array_values( array_filter( $tasks,static fn( $task ) => ! in_array( $task['label'],[ __( 'AI','dsa' ),__( 'Profile','dsa' ) ],true ) && ( __( 'Guests','dsa' ) !== $task['label'] || \DSA\Apps\Guest_App_Service::enabled() ) ) );
 		// Design Context is entered through the home progress bar or identity edit action.
 		$tasks = array_values( array_filter( $tasks, static fn( $task ) => false === strpos( (string) ( $task['url'] ?? '' ), 'page=kiwe-identity' ) ) );

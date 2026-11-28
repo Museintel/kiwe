@@ -48,7 +48,11 @@ function pk_website_setup_connect( $code ) {
 	$origin   = untrailingslashit( home_url() );
 	$settings = pk_settings();
 	if ( 0 !== strpos( $origin, 'https://' ) || ! pk_website_setup_is_default( $settings ) ) return 'existing_provider';
-	if ( '' === $code ) return pk_website_setup_verify( $settings, $origin ) ? 'verified' : 'check_failed';
+	if ( '' === $code ) {
+		if ( ! pk_website_setup_verify( $settings, $origin ) ) return 'check_failed';
+		\DSA\Communications\Managed_Email_Transport::enroll_default();
+		return 'verified';
+	}
 	if ( pk_website_setup_is_configured( $settings ) ) return 'existing_provider';
 	if ( ! preg_match( '/\A[A-Za-z0-9_-]{43}\z/', $code ) ) return 'code_unavailable';
 
@@ -72,7 +76,9 @@ function pk_website_setup_connect( $code ) {
 	$stored['whatsapp_key_id'] = $result['keyId'];
 	$stored['whatsapp_secret'] = $secret;
 	if ( ! update_option( 'pk_settings_v3', $stored ) ) return 'save_failed';
-	return pk_website_setup_verify( pk_settings(), $origin ) ? 'verified' : 'check_failed';
+	if ( ! pk_website_setup_verify( pk_settings(), $origin ) ) return 'check_failed';
+	\DSA\Communications\Managed_Email_Transport::enroll_default();
+	return 'verified';
 }
 
 add_action( 'admin_post_pk_website_setup', static function () {

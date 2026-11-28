@@ -535,6 +535,8 @@ final class WordPress_Role_Access_Service {
 		if ( class_exists( Taxonomy_App_Service::class ) && Taxonomy_App_Service::enabled() && 'admin.php' === $script && Taxonomy_App_Service::TAGS_PAGE === $page && ( new Taxonomy_App_Service() )->tag_definitions() ) return;
 		if ( 'admin.php' === $script && \DSA\Apps\Library_Service::PAGE === $page && \DSA\Apps\Native_State::can_review() ) return;
 		if ( 'admin.php' === $script && 'kiwe-notifications' === $page && current_user_can( 'kiwe_use_notifications' ) ) return;
+		if ( \DSA\Communications\Email_Service::can_manage() && ( ( 'admin.php' === $script && 'kiwe-email' === $page )
+			|| ( 'admin-post.php' === $script && in_array( $_POST['action'] ?? '', [ 'kiwe_save_email', 'dsa_email_test' ], true ) ) ) ) return;
 		if ( class_exists( Taxonomy_App_Service::class ) && Taxonomy_App_Service::enabled() && 'admin.php' === $script && Taxonomy_App_Service::SERVICE_PAGE === $page && ( new Taxonomy_App_Service() )->service_definitions() ) return;
 		if ( 'admin.php' === $script && self::SEO_OBJECT_PAGE === $page && ( current_user_can( 'publish_posts' ) || current_user_can( 'edit_pages' ) || current_user_can( 'edit_products' ) || current_user_can( 'upload_files' ) ) ) return;
 		if ( \DSA\Discussion\Feedback_Access::enabled() && 'admin.php' === $script && 'kiwe-feedback' === $page && current_user_can( 'moderate_comments' ) ) return;

@@ -1,3 +1,9 @@
+## 8.0.0-rc.518 (2026-11-28)
+
+- Add **Apps → Email** for site administrators, with sender settings and delivery diagnostics.
+- Prepare new Key-enrolled sites to use a verified managed sender until the client chooses their own transport.
+- Preserve one-click campaign unsubscribe headers through managed SMTP.
+
 ## 8.0.0-rc.517 (2026-11-28)
 
 - Give verified Guest applicants independently reviewed article, product proposal and referral permissions.

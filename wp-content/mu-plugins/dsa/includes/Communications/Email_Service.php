@@ -29,7 +29,23 @@ final class Email_Service {
 		add_action( 'phpmailer_init', [ $this, 'configure_phpmailer' ], PHP_INT_MAX );
 		add_filter( 'wp_mail_from', [ $this, 'filter_from_email' ] );
 		add_filter( 'wp_mail_from_name', [ $this, 'filter_from_name' ] );
+		add_filter( 'pre_wp_mail', [ $this, 'send_managed' ], PHP_INT_MAX, 2 );
 		add_action( 'wp_mail_failed', [ $this, 'record_failure' ] );
+	}
+
+	public static function can_manage(): bool {
+		return current_user_can( 'manage_options' ) || ( current_user_can( 'kiwe_manage_notification_policy' ) && current_user_can( 'kiwe_manage_team' ) );
+	}
+
+	public function send_managed( $answer, array $mail ) {
+		if ( null !== $answer ) return $answer;
+		$config = $this->config();
+		if ( empty( $config['enabled'] ) || 'managed' !== $config['transport'] ) return null;
+		$message = Managed_Email_Transport::message( $mail, ! empty( $config['managed_campaigns'] ) );
+		if ( null === $message ) return null;
+		if ( Managed_Email_Transport::send( $message ) ) return true;
+		$this->record_failure( new \WP_Error( 'kiwe_managed_email_unavailable', __( 'The Kiwe managed sender could not accept this email.', 'dsa' ) ) );
+		return false;
 	}
 
 	public function send( string $to, string $subject, string $message, array $headers = [] ) {
@@ -79,12 +95,16 @@ final class Email_Service {
 	}
 
 	public function filter_from_email( string $email ): string {
-		$configured = sanitize_email( (string) ( $this->config()['from_email'] ?? '' ) );
+		$config = $this->config();
+		if ( 'managed' === ( $config['transport'] ?? '' ) ) return $email;
+		$configured = sanitize_email( (string) ( $config['from_email'] ?? '' ) );
 		return is_email( $configured ) ? $configured : $email;
 	}
 
 	public function filter_from_name( string $name ): string {
-		$configured = sanitize_text_field( (string) ( $this->config()['from_name'] ?? '' ) );
+		$config = $this->config();
+		if ( 'managed' === ( $config['transport'] ?? '' ) ) return $name;
+		$configured = sanitize_text_field( (string) ( $config['from_name'] ?? '' ) );
 		return '' !== $configured ? $configured : $name;
 	}
 
@@ -109,7 +129,7 @@ final class Email_Service {
 
 		return [
 			'enabled'      => ! empty( $config['enabled'] ),
-			'transport'    => 'smtp' === ( $config['transport'] ?? 'wordpress' ) ? 'smtp' : 'wordpress',
+			'transport'    => $config['transport'],
 			'from_email'   => sanitize_email( (string) ( $config['from_email'] ?? '' ) ),
 			'smtp_ready'   => $smtp_ready,
 			'fallback_ready' => ! empty( $config['enabled'] ) && $transport_ready && ! empty( $last_test['success'] ),

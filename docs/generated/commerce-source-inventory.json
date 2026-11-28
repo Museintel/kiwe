@@ -407,7 +407,7 @@
     },
     {
       "source": "wp-content/mu-plugins/dsa/includes/Access/WordPress_Role_Access_Service.php",
-      "sha256": "e572e9b1e0d2bf55e703dfe2c26c69e700b37f9e0802f5660cc076d91c888a80",
+      "sha256": "af83563f8826309fa0975e2377405af9aea55d15845491a6e805ecb46546bb66",
       "symbols": [
         {
           "kind": "method",
@@ -617,23 +617,23 @@
         {
           "kind": "method",
           "name": "guard_ajax",
-          "line": 587
+          "line": 589
         },
         {
           "kind": "method",
           "name": "guard_rest",
-          "line": 607
+          "line": 609
         },
         {
           "kind": "method",
           "name": "deny",
-          "line": 705
+          "line": 707
         }
       ]
     },
     {
       "source": "wp-content/mu-plugins/dsa/includes/Admin/Admin.php",
-      "sha256": "0b593cda55a39035069f76a1ad1d81c088624e6788630f2757f6901aa7b32b43",
+      "sha256": "b63bb70284295a6860da1b2793cf4e1b4c38a3e629575a5aae2455ab3722b4c0",
       "symbols": [
         {
           "kind": "method",
@@ -787,328 +787,333 @@
         },
         {
           "kind": "hook",
-          "name": "admin_post_dsa_abandoned_cart_reminder",
+          "name": "admin_post_kiwe_save_email",
           "line": 130
         },
         {
           "kind": "hook",
-          "name": "admin_post_dsa_send_notification_campaign",
+          "name": "admin_post_dsa_abandoned_cart_reminder",
           "line": 131
         },
         {
           "kind": "hook",
-          "name": "admin_post_dsa_export_bricks_tokens",
+          "name": "admin_post_dsa_send_notification_campaign",
           "line": 132
         },
         {
           "kind": "hook",
-          "name": "admin_post_dsa_apply_bricks_tokens",
+          "name": "admin_post_dsa_export_bricks_tokens",
           "line": 133
         },
         {
           "kind": "hook",
-          "name": "wp_ajax_kiwe_compiler_import",
+          "name": "admin_post_dsa_apply_bricks_tokens",
           "line": 134
         },
         {
           "kind": "hook",
-          "name": "admin_post_dsa_apply_bricks_dark_palette",
+          "name": "wp_ajax_kiwe_compiler_import",
           "line": 135
         },
         {
           "kind": "hook",
-          "name": "admin_post_dsa_apply_bricks_native_dark_colors",
+          "name": "admin_post_dsa_apply_bricks_dark_palette",
           "line": 136
         },
         {
           "kind": "hook",
-          "name": "admin_post_dsa_toggle_accessibility_preview",
+          "name": "admin_post_dsa_apply_bricks_native_dark_colors",
           "line": 137
         },
         {
           "kind": "hook",
-          "name": "admin_post_dsa_clear_framework",
+          "name": "admin_post_dsa_toggle_accessibility_preview",
           "line": 138
         },
         {
           "kind": "hook",
-          "name": "admin_post_dsa_create_ai_access_key",
+          "name": "admin_post_dsa_clear_framework",
           "line": 139
         },
         {
           "kind": "hook",
-          "name": "admin_post_dsa_revoke_ai_access_key",
+          "name": "admin_post_dsa_create_ai_access_key",
           "line": 140
         },
         {
           "kind": "hook",
-          "name": "admin_post_dsa_export_site_graph",
+          "name": "admin_post_dsa_revoke_ai_access_key",
           "line": 141
         },
         {
           "kind": "hook",
-          "name": "admin_post_dsa_save_site_graph_settings",
+          "name": "admin_post_dsa_export_site_graph",
           "line": 142
         },
         {
           "kind": "hook",
-          "name": "admin_post_dsa_export_site_graph_calibration",
+          "name": "admin_post_dsa_save_site_graph_settings",
           "line": 143
         },
         {
           "kind": "hook",
-          "name": "admin_post_dsa_create_site_graph_calibration_pair",
+          "name": "admin_post_dsa_export_site_graph_calibration",
           "line": 144
         },
         {
           "kind": "hook",
-          "name": "admin_post_dsa_create_sitegraph_client_package",
+          "name": "admin_post_dsa_create_site_graph_calibration_pair",
           "line": 145
         },
         {
           "kind": "hook",
-          "name": "admin_post_dsa_revoke_sitegraph_task_capsule",
+          "name": "admin_post_dsa_create_sitegraph_client_package",
           "line": 146
         },
         {
           "kind": "hook",
-          "name": "admin_post_dsa_sitegraph_staging_seed_preflight",
+          "name": "admin_post_dsa_revoke_sitegraph_task_capsule",
           "line": 147
         },
         {
           "kind": "hook",
-          "name": "admin_post_dsa_sitegraph_staging_seed_pull",
+          "name": "admin_post_dsa_sitegraph_staging_seed_preflight",
           "line": 148
         },
         {
           "kind": "hook",
-          "name": "admin_post_dsa_sitegraph_staging_seed_import",
+          "name": "admin_post_dsa_sitegraph_staging_seed_pull",
           "line": 149
         },
         {
           "kind": "hook",
-          "name": "admin_post_dsa_sitegraph_staging_seed_rollback",
+          "name": "admin_post_dsa_sitegraph_staging_seed_import",
           "line": 150
         },
         {
           "kind": "hook",
-          "name": "admin_post_dsa_sitegraph_staging_seed_accept",
+          "name": "admin_post_dsa_sitegraph_staging_seed_rollback",
           "line": 151
         },
         {
           "kind": "hook",
-          "name": "admin_post_dsa_validate_binding_plan",
+          "name": "admin_post_dsa_sitegraph_staging_seed_accept",
           "line": 152
         },
         {
           "kind": "hook",
-          "name": "admin_post_dsa_download_apply_plan",
+          "name": "admin_post_dsa_validate_binding_plan",
           "line": 153
         },
         {
           "kind": "hook",
-          "name": "admin_post_dsa_stage_apply_plan",
+          "name": "admin_post_dsa_download_apply_plan",
           "line": 154
         },
         {
           "kind": "hook",
-          "name": "admin_post_dsa_prove_apply_stage",
+          "name": "admin_post_dsa_stage_apply_plan",
           "line": 155
         },
         {
           "kind": "hook",
-          "name": "admin_post_dsa_authorize_apply_stage",
+          "name": "admin_post_dsa_prove_apply_stage",
           "line": 156
         },
         {
           "kind": "hook",
-          "name": "admin_post_dsa_gate_apply_stage",
+          "name": "admin_post_dsa_authorize_apply_stage",
           "line": 157
         },
         {
           "kind": "hook",
-          "name": "admin_post_dsa_preview_apply_execution",
+          "name": "admin_post_dsa_gate_apply_stage",
           "line": 158
         },
         {
           "kind": "hook",
-          "name": "admin_post_dsa_confirm_apply_execution",
+          "name": "admin_post_dsa_preview_apply_execution",
           "line": 159
         },
         {
           "kind": "hook",
-          "name": "admin_post_dsa_revalidate_apply_sitegraph",
+          "name": "admin_post_dsa_confirm_apply_execution",
           "line": 160
         },
         {
           "kind": "hook",
-          "name": "admin_post_dsa_build_rollback_readiness",
+          "name": "admin_post_dsa_revalidate_apply_sitegraph",
           "line": 161
         },
         {
           "kind": "hook",
-          "name": "admin_post_dsa_resolve_apply_target",
+          "name": "admin_post_dsa_build_rollback_readiness",
           "line": 162
         },
         {
           "kind": "hook",
-          "name": "admin_post_dsa_capture_apply_rollback",
+          "name": "admin_post_dsa_resolve_apply_target",
           "line": 163
         },
         {
           "kind": "hook",
-          "name": "admin_post_dsa_inspect_rendered_target",
+          "name": "admin_post_dsa_capture_apply_rollback",
           "line": 164
         },
         {
           "kind": "hook",
-          "name": "admin_post_dsa_build_minimal_adapter_shell",
+          "name": "admin_post_dsa_inspect_rendered_target",
           "line": 165
         },
         {
           "kind": "hook",
-          "name": "admin_post_dsa_approve_final_save",
+          "name": "admin_post_dsa_build_minimal_adapter_shell",
           "line": 166
         },
         {
           "kind": "hook",
-          "name": "admin_post_dsa_build_controlled_executor",
+          "name": "admin_post_dsa_approve_final_save",
           "line": 167
         },
         {
           "kind": "hook",
-          "name": "admin_post_dsa_prepare_bricks_controlled_adapter",
+          "name": "admin_post_dsa_build_controlled_executor",
           "line": 168
         },
         {
           "kind": "hook",
-          "name": "admin_post_dsa_build_post_apply_verification",
+          "name": "admin_post_dsa_prepare_bricks_controlled_adapter",
           "line": 169
         },
         {
           "kind": "hook",
-          "name": "admin_post_dsa_clear_search_cache",
+          "name": "admin_post_dsa_build_post_apply_verification",
           "line": 170
         },
         {
           "kind": "hook",
-          "name": "admin_post_dsa_save_menu_settings",
+          "name": "admin_post_dsa_clear_search_cache",
           "line": 171
         },
         {
           "kind": "hook",
-          "name": "admin_post_dsa_save_dock_settings",
+          "name": "admin_post_dsa_save_menu_settings",
           "line": 172
         },
         {
           "kind": "hook",
-          "name": "admin_post_dsa_developer_clear_runtime",
+          "name": "admin_post_dsa_save_dock_settings",
           "line": 173
         },
         {
           "kind": "hook",
-          "name": "admin_post_dsa_developer_begin_clean_conversion_test",
+          "name": "admin_post_dsa_developer_clear_runtime",
           "line": 174
         },
         {
           "kind": "hook",
-          "name": "admin_post_dsa_developer_restore_clean_conversion_test",
+          "name": "admin_post_dsa_developer_begin_clean_conversion_test",
           "line": 175
         },
         {
           "kind": "hook",
-          "name": "admin_post_dsa_developer_cleanup_bricks_batches",
+          "name": "admin_post_dsa_developer_restore_clean_conversion_test",
           "line": 176
         },
         {
           "kind": "hook",
-          "name": "admin_post_dsa_developer_reset_settings",
+          "name": "admin_post_dsa_developer_cleanup_bricks_batches",
           "line": 177
         },
         {
           "kind": "hook",
-          "name": "admin_post_dsa_developer_safe_persistence_cleanup",
+          "name": "admin_post_dsa_developer_reset_settings",
           "line": 178
         },
         {
           "kind": "hook",
-          "name": "admin_post_dsa_developer_drop_legacy_tables",
+          "name": "admin_post_dsa_developer_safe_persistence_cleanup",
           "line": 179
         },
         {
           "kind": "hook",
-          "name": "admin_post_dsa_developer_remove_orphan_files",
+          "name": "admin_post_dsa_developer_drop_legacy_tables",
           "line": 180
         },
         {
           "kind": "hook",
-          "name": "admin_post_dsa_save_update_settings",
+          "name": "admin_post_dsa_developer_remove_orphan_files",
           "line": 181
         },
         {
           "kind": "hook",
-          "name": "admin_post_dsa_check_updates",
+          "name": "admin_post_dsa_save_update_settings",
           "line": 182
         },
         {
           "kind": "hook",
-          "name": "admin_post_dsa_install_update",
+          "name": "admin_post_dsa_check_updates",
           "line": 183
         },
         {
           "kind": "hook",
-          "name": "admin_post_dsa_database_purge_cache",
+          "name": "admin_post_dsa_install_update",
           "line": 184
         },
         {
           "kind": "hook",
-          "name": "admin_post_dsa_database_capture_test_snapshot",
+          "name": "admin_post_dsa_database_purge_cache",
           "line": 185
         },
         {
           "kind": "hook",
-          "name": "admin_post_dsa_database_restore_test_snapshot",
+          "name": "admin_post_dsa_database_capture_test_snapshot",
           "line": 186
         },
         {
           "kind": "hook",
-          "name": "admin_post_dsa_database_discard_test_snapshot",
+          "name": "admin_post_dsa_database_restore_test_snapshot",
           "line": 187
         },
         {
           "kind": "hook",
-          "name": "wp_ajax_dsa_search_menu_targets",
+          "name": "admin_post_dsa_database_discard_test_snapshot",
           "line": 188
+        },
+        {
+          "kind": "hook",
+          "name": "wp_ajax_dsa_search_menu_targets",
+          "line": 189
         },
         {
           "kind": "method",
           "name": "menu",
-          "line": 191
+          "line": 192
         },
         {
           "kind": "method",
           "name": "render_overview_page",
-          "line": 246
+          "line": 247
         },
         {
           "kind": "method",
           "name": "render_context_page",
-          "line": 261
+          "line": 262
         },
         {
           "kind": "method",
           "name": "render_build_page",
-          "line": 268
+          "line": 269
         },
         {
           "kind": "method",
           "name": "render_appshell_page",
-          "line": 275
+          "line": 276
         },
         {
           "kind": "method",
           "name": "render_commerce_page",
-          "line": 285
+          "line": 286
         },
         {
           "kind": "method",
@@ -1182,1333 +1187,1333 @@
         },
         {
           "kind": "method",
-          "name": "handle_abandoned_cart_reminder",
+          "name": "handle_email_settings",
           "line": 483
         },
         {
           "kind": "method",
+          "name": "handle_abandoned_cart_reminder",
+          "line": 502
+        },
+        {
+          "kind": "method",
           "name": "render_page",
-          "line": 501
+          "line": 520
         },
         {
           "kind": "method",
           "name": "save_settings",
-          "line": 1280
+          "line": 1299
         },
         {
           "kind": "metadata",
           "name": "_dsa_redirect",
-          "line": 1328
+          "line": 1347
         },
         {
           "kind": "method",
           "name": "handle_save_update_settings",
-          "line": 1343
+          "line": 1362
         },
         {
           "kind": "method",
           "name": "handle_check_updates",
-          "line": 1353
+          "line": 1372
         },
         {
           "kind": "method",
           "name": "handle_install_update",
-          "line": 1376
+          "line": 1395
         },
         {
           "kind": "method",
           "name": "handle_developer_clear_runtime",
-          "line": 1399
+          "line": 1418
         },
         {
           "kind": "method",
           "name": "handle_developer_begin_clean_conversion_test",
-          "line": 1420
+          "line": 1439
         },
         {
           "kind": "method",
           "name": "handle_developer_restore_clean_conversion_test",
-          "line": 1452
+          "line": 1471
         },
         {
           "kind": "method",
           "name": "handle_developer_cleanup_bricks_batches",
-          "line": 1478
+          "line": 1497
         },
         {
           "kind": "method",
           "name": "handle_developer_reset_settings",
-          "line": 1511
+          "line": 1530
         },
         {
           "kind": "method",
           "name": "handle_developer_safe_persistence_cleanup",
-          "line": 1531
+          "line": 1550
         },
         {
           "kind": "method",
           "name": "handle_developer_drop_legacy_tables",
-          "line": 1556
+          "line": 1575
         },
         {
           "kind": "method",
           "name": "handle_developer_remove_orphan_files",
-          "line": 1584
+          "line": 1603
         },
         {
           "kind": "method",
           "name": "handle_database_purge_cache",
-          "line": 1612
+          "line": 1631
         },
         {
           "kind": "method",
           "name": "handle_database_capture_test_snapshot",
-          "line": 1648
-        },
-        {
-          "kind": "method",
-          "name": "handle_database_restore_test_snapshot",
           "line": 1667
         },
         {
           "kind": "method",
+          "name": "handle_database_restore_test_snapshot",
+          "line": 1686
+        },
+        {
+          "kind": "method",
           "name": "handle_database_discard_test_snapshot",
-          "line": 1692
+          "line": 1711
         },
         {
           "kind": "method",
           "name": "export_profile",
-          "line": 1707
+          "line": 1726
         },
         {
           "kind": "method",
           "name": "export_theme",
-          "line": 1737
+          "line": 1756
         },
         {
           "kind": "method",
           "name": "import_theme",
-          "line": 1763
+          "line": 1782
         },
         {
           "kind": "method",
           "name": "activate_theme",
-          "line": 1805
-        },
-        {
-          "kind": "method",
-          "name": "delete_theme",
           "line": 1824
         },
         {
           "kind": "method",
-          "name": "export_bricks_tokens",
+          "name": "delete_theme",
           "line": 1843
         },
         {
           "kind": "method",
+          "name": "export_bricks_tokens",
+          "line": 1862
+        },
+        {
+          "kind": "method",
           "name": "export_framework_profile",
-          "line": 1875
+          "line": 1894
         },
         {
           "kind": "method",
           "name": "import_framework_profile",
-          "line": 1907
+          "line": 1926
         },
         {
           "kind": "method",
           "name": "import_design_context_enhancement",
-          "line": 1954
+          "line": 1973
         },
         {
           "kind": "method",
           "name": "import_accessibility_palette",
-          "line": 1985
+          "line": 2004
         },
         {
           "kind": "method",
           "name": "create_ai_access_key",
-          "line": 2043
+          "line": 2062
         },
         {
           "kind": "method",
           "name": "revoke_ai_access_key",
-          "line": 2087
+          "line": 2106
         },
         {
           "kind": "method",
           "name": "export_site_graph",
-          "line": 2109
+          "line": 2128
         },
         {
           "kind": "method",
           "name": "save_site_graph_settings",
-          "line": 2149
+          "line": 2168
         },
         {
           "kind": "method",
           "name": "sitegraph_staging_seed_preflight",
-          "line": 2164
+          "line": 2183
         },
         {
           "kind": "method",
           "name": "sitegraph_staging_seed_pull",
-          "line": 2189
+          "line": 2208
         },
         {
           "kind": "method",
           "name": "sitegraph_staging_seed_import",
-          "line": 2213
+          "line": 2232
         },
         {
           "kind": "method",
           "name": "sitegraph_staging_seed_rollback",
-          "line": 2226
+          "line": 2245
         },
         {
           "kind": "method",
           "name": "sitegraph_staging_seed_accept",
-          "line": 2238
-        },
-        {
-          "kind": "method",
-          "name": "redirect_staging_seed_error",
-          "line": 2250
-        },
-        {
-          "kind": "method",
-          "name": "export_site_graph_calibration",
           "line": 2257
         },
         {
           "kind": "method",
+          "name": "redirect_staging_seed_error",
+          "line": 2269
+        },
+        {
+          "kind": "method",
+          "name": "export_site_graph_calibration",
+          "line": 2276
+        },
+        {
+          "kind": "method",
           "name": "create_site_graph_calibration_pair",
-          "line": 2279
+          "line": 2298
         },
         {
           "kind": "method",
           "name": "create_sitegraph_client_package",
-          "line": 2297
+          "line": 2316
         },
         {
           "kind": "method",
           "name": "revoke_sitegraph_task_capsule",
-          "line": 2385
+          "line": 2404
         },
         {
           "kind": "method",
           "name": "validate_binding_plan",
-          "line": 2397
+          "line": 2416
         },
         {
           "kind": "method",
           "name": "download_apply_plan",
-          "line": 2462
+          "line": 2481
         },
         {
           "kind": "method",
           "name": "stage_apply_plan",
-          "line": 2521
+          "line": 2540
         },
         {
           "kind": "method",
           "name": "prove_apply_stage",
-          "line": 2592
+          "line": 2611
         },
         {
           "kind": "method",
           "name": "authorize_apply_stage",
-          "line": 2638
+          "line": 2657
         },
         {
           "kind": "method",
           "name": "gate_apply_stage",
-          "line": 2698
+          "line": 2717
         },
         {
           "kind": "method",
           "name": "preview_apply_execution",
-          "line": 2758
+          "line": 2777
         },
         {
           "kind": "method",
           "name": "confirm_apply_execution",
-          "line": 2818
+          "line": 2837
         },
         {
           "kind": "method",
           "name": "revalidate_apply_sitegraph",
-          "line": 2888
+          "line": 2907
         },
         {
           "kind": "method",
           "name": "build_rollback_readiness",
-          "line": 2951
+          "line": 2970
         },
         {
           "kind": "method",
           "name": "resolve_apply_target",
-          "line": 3012
+          "line": 3031
         },
         {
           "kind": "method",
           "name": "capture_apply_rollback",
-          "line": 3083
+          "line": 3102
         },
         {
           "kind": "method",
           "name": "inspect_rendered_target",
-          "line": 3144
+          "line": 3163
         },
         {
           "kind": "method",
           "name": "build_minimal_adapter_shell",
-          "line": 3205
+          "line": 3224
         },
         {
           "kind": "method",
           "name": "approve_final_save",
-          "line": 3266
+          "line": 3285
         },
         {
           "kind": "method",
           "name": "build_controlled_executor",
-          "line": 3328
+          "line": 3347
         },
         {
           "kind": "method",
           "name": "prepare_bricks_controlled_adapter",
-          "line": 3389
+          "line": 3408
         },
         {
           "kind": "method",
           "name": "build_post_apply_verification",
-          "line": 3450
+          "line": 3469
         },
         {
           "kind": "method",
           "name": "apply_bricks_tokens",
-          "line": 3511
+          "line": 3530
         },
         {
           "kind": "method",
           "name": "apply_bricks_dark_palette",
-          "line": 3532
+          "line": 3551
         },
         {
           "kind": "method",
           "name": "apply_bricks_native_dark_colors",
-          "line": 3567
+          "line": 3586
         },
         {
           "kind": "method",
           "name": "toggle_accessibility_preview",
-          "line": 3634
+          "line": 3653
         },
         {
           "kind": "method",
           "name": "clear_framework",
-          "line": 3652
+          "line": 3671
         },
         {
           "kind": "method",
           "name": "is_kiwe_managed_bricks_variable",
-          "line": 3835
+          "line": 3854
         },
         {
           "kind": "method",
           "name": "is_kiwe_managed_bricks_variable_category",
-          "line": 3911
+          "line": 3930
         },
         {
           "kind": "method",
           "name": "is_kiwe_managed_bricks_palette",
-          "line": 3923
+          "line": 3942
         },
         {
           "kind": "method",
           "name": "is_kiwe_managed_bricks_theme_style",
-          "line": 3932
+          "line": 3951
         },
         {
           "kind": "method",
           "name": "is_kiwe_managed_bricks_class",
-          "line": 3947
+          "line": 3966
         },
         {
           "kind": "method",
           "name": "is_kiwe_managed_bricks_class_category",
-          "line": 3960
+          "line": 3979
         },
         {
           "kind": "method",
           "name": "normalize_bricks_variable_name",
-          "line": 3973
+          "line": 3992
         },
         {
           "kind": "method",
           "name": "legacy_kiwe_bricks_variable_category_keys",
-          "line": 3980
+          "line": 3999
         },
         {
           "kind": "method",
           "name": "import_profile",
-          "line": 4004
+          "line": 4023
         },
         {
           "kind": "method",
           "name": "search_menu_targets",
-          "line": 4056
+          "line": 4075
         },
         {
           "kind": "method",
           "name": "render_auth_page",
-          "line": 4072
+          "line": 4091
         },
         {
           "kind": "method",
           "name": "enable_phonekey",
-          "line": 4098
+          "line": 4117
         },
         {
           "kind": "method",
           "name": "render_app_page",
-          "line": 4109
+          "line": 4128
         },
         {
           "kind": "metadata",
           "name": "_dsa_redirect",
-          "line": 4147
+          "line": 4166
         },
         {
           "kind": "method",
           "name": "render_app_permission_settings",
-          "line": 4243
+          "line": 4262
         },
         {
           "kind": "metadata",
           "name": "_dsa_redirect",
-          "line": 4250
+          "line": 4269
         },
         {
           "kind": "method",
           "name": "render_games_page",
-          "line": 4286
+          "line": 4305
         },
         {
           "kind": "metadata",
           "name": "_dsa_redirect",
-          "line": 4296
+          "line": 4315
         },
         {
           "kind": "method",
           "name": "render_links_page",
-          "line": 4336
+          "line": 4355
         },
         {
           "kind": "metadata",
           "name": "_dsa_redirect",
-          "line": 4346
+          "line": 4365
         },
         {
           "kind": "method",
           "name": "render_haptic_page",
-          "line": 4363
+          "line": 4382
         },
         {
           "kind": "metadata",
           "name": "_dsa_redirect",
-          "line": 4375
+          "line": 4394
         },
         {
           "kind": "method",
           "name": "universal_tokens",
-          "line": 4409
+          "line": 4428
         },
         {
           "kind": "method",
           "name": "bricks_theme_style_options",
-          "line": 4414
+          "line": 4433
         },
         {
           "kind": "method",
           "name": "render_framework_page",
-          "line": 4424
+          "line": 4443
         },
         {
           "kind": "metadata",
           "name": "_dsa_redirect",
-          "line": 4614
+          "line": 4633
         },
         {
           "kind": "method",
           "name": "render_site_graph_page",
-          "line": 4674
+          "line": 4693
         },
         {
           "kind": "method",
           "name": "render_ai_page",
-          "line": 4679
+          "line": 4698
         },
         {
           "kind": "method",
           "name": "render_ai_companion_settings",
-          "line": 4685
+          "line": 4704
         },
         {
           "kind": "metadata",
           "name": "_dsa_redirect",
-          "line": 4731
+          "line": 4750
         },
         {
           "kind": "method",
           "name": "render_internal_ai_advisor",
-          "line": 4943
+          "line": 4962
         },
         {
           "kind": "method",
           "name": "render_binding_plan_report",
-          "line": 5110
+          "line": 5129
         },
         {
           "kind": "method",
           "name": "render_apply_plan_preview",
-          "line": 5160
+          "line": 5179
         },
         {
           "kind": "method",
           "name": "render_trusted_apply_stages",
-          "line": 5275
+          "line": 5294
         },
         {
           "kind": "method",
           "name": "render_trusted_adapter_proof_details",
-          "line": 5603
+          "line": 5622
         },
         {
           "kind": "method",
           "name": "render_guarded_apply_authorization_details",
-          "line": 5644
+          "line": 5663
         },
         {
           "kind": "method",
           "name": "render_pre_execution_gate_details",
-          "line": 5686
+          "line": 5705
         },
         {
           "kind": "method",
           "name": "render_trusted_execution_preview_details",
-          "line": 5737
+          "line": 5756
         },
         {
           "kind": "method",
           "name": "render_final_apply_confirmation_details",
-          "line": 5816
+          "line": 5835
         },
         {
           "kind": "method",
           "name": "render_fresh_sitegraph_revalidation_details",
-          "line": 5864
+          "line": 5883
         },
         {
           "kind": "method",
           "name": "render_rollback_readiness_details",
-          "line": 5929
+          "line": 5948
         },
         {
           "kind": "method",
           "name": "render_target_resolution_details",
-          "line": 5973
+          "line": 5992
         },
         {
           "kind": "method",
           "name": "render_rollback_capture_details",
-          "line": 6008
+          "line": 6027
         },
         {
           "kind": "method",
           "name": "render_rendered_target_inspection_details",
-          "line": 6058
+          "line": 6077
         },
         {
           "kind": "method",
           "name": "render_minimal_adapter_shell_details",
-          "line": 6128
+          "line": 6147
         },
         {
           "kind": "method",
           "name": "render_final_save_approval_details",
-          "line": 6200
+          "line": 6219
         },
         {
           "kind": "method",
           "name": "render_controlled_executor_details",
-          "line": 6271
+          "line": 6290
         },
         {
           "kind": "method",
           "name": "render_bricks_controlled_adapter_details",
-          "line": 6334
+          "line": 6353
         },
         {
           "kind": "method",
           "name": "render_post_apply_verification_details",
-          "line": 6412
+          "line": 6431
         },
         {
           "kind": "method",
           "name": "render_app_tabs",
-          "line": 6499
+          "line": 6518
         },
         {
           "kind": "method",
           "name": "handle_notification_campaign",
-          "line": 6517
+          "line": 6536
         },
         {
           "kind": "method",
           "name": "render_app_audience",
-          "line": 6531
+          "line": 6550
         },
         {
           "kind": "method",
           "name": "render_app_developer_reference",
-          "line": 6605
+          "line": 6624
         },
         {
           "kind": "method",
           "name": "render_attributes_page",
-          "line": 6679
+          "line": 6698
         },
         {
           "kind": "method",
           "name": "render_package_proof_fragment",
-          "line": 6689
+          "line": 6708
         },
         {
           "kind": "method",
           "name": "render_database_page",
-          "line": 6732
+          "line": 6751
         },
         {
           "kind": "method",
           "name": "render_persistence_maintenance_panel",
-          "line": 6871
+          "line": 6890
         },
         {
           "kind": "method",
           "name": "render_developer_page",
-          "line": 6905
+          "line": 6924
         },
         {
           "kind": "metadata",
           "name": "_dsa_redirect",
-          "line": 7160
+          "line": 7179
         },
         {
           "kind": "method",
           "name": "render_dock_page",
-          "line": 7205
+          "line": 7224
         },
         {
           "kind": "method",
           "name": "render_theme_page",
-          "line": 7307
+          "line": 7326
         },
         {
           "kind": "metadata",
           "name": "_dsa_redirect",
-          "line": 7396
+          "line": 7415
         },
         {
           "kind": "method",
           "name": "save_dock_settings",
-          "line": 7606
+          "line": 7625
         },
         {
           "kind": "method",
           "name": "render_search_page",
-          "line": 7618
+          "line": 7637
         },
         {
           "kind": "metadata",
           "name": "_dsa_redirect",
-          "line": 7630
+          "line": 7649
         },
         {
           "kind": "method",
           "name": "render_menu_page",
-          "line": 7657
+          "line": 7676
         },
         {
           "kind": "method",
           "name": "save_menu_settings",
-          "line": 7726
+          "line": 7745
         },
         {
           "kind": "method",
           "name": "clear_search_cache",
-          "line": 7739
+          "line": 7758
         },
         {
           "kind": "method",
           "name": "render_secure_page",
-          "line": 7753
+          "line": 7772
         },
         {
           "kind": "metadata",
           "name": "_dsa_redirect",
-          "line": 7790
+          "line": 7809
         },
         {
           "kind": "method",
           "name": "render_email_page",
-          "line": 7883
-        },
-        {
-          "kind": "metadata",
-          "name": "_dsa_redirect",
           "line": 7902
         },
         {
           "kind": "method",
           "name": "render_abandoned_cart_page",
-          "line": 7929
+          "line": 7951
         },
         {
           "kind": "metadata",
           "name": "_dsa_redirect",
-          "line": 7963
+          "line": 7985
         },
         {
           "kind": "form-field",
           "name": "abandoned_cart[manual_reminders_enabled]",
-          "line": 7965
+          "line": 7987
         },
         {
           "kind": "form-field",
           "name": "abandoned_cart[automatic_whatsapp_enabled]",
-          "line": 7965
+          "line": 7987
         },
         {
           "kind": "form-field",
           "name": "abandoned_cart[automatic_email_enabled]",
-          "line": 7965
+          "line": 7987
         },
         {
           "kind": "form-field",
           "name": "abandoned_cart[inactivity_minutes]",
-          "line": 7966
+          "line": 7988
         },
         {
           "kind": "form-field",
           "name": "abandoned_cart[heartbeat_minutes]",
-          "line": 7966
+          "line": 7988
         },
         {
           "kind": "form-field",
           "name": "abandoned_cart[cooldown_hours]",
-          "line": 7966
+          "line": 7988
         },
         {
           "kind": "form-field",
           "name": "abandoned_cart[max_reminders]",
-          "line": 7966
+          "line": 7988
         },
         {
           "kind": "form-field",
           "name": "abandoned_cart[automation_batch_limit]",
-          "line": 7966
+          "line": 7988
         },
         {
           "kind": "form-field",
           "name": "abandoned_cart[email_subject]",
-          "line": 7967
+          "line": 7989
         },
         {
           "kind": "form-field",
           "name": "abandoned_cart[email_message]",
-          "line": 7967
+          "line": 7989
         },
         {
           "kind": "form-field",
           "name": "abandoned_cart[channels][<?php echo esc_attr( $channel ); ?>][enabled]",
-          "line": 7968
+          "line": 7990
         },
         {
           "kind": "form-field",
           "name": "abandoned_cart[channels][<?php echo esc_attr( $channel ); ?>][webhook_url]",
-          "line": 7968
+          "line": 7990
         },
         {
           "kind": "form-field",
           "name": "abandoned_cart[channels][<?php echo esc_attr( $channel ); ?>][api_token]",
-          "line": 7968
+          "line": 7990
         },
         {
           "kind": "form-field",
           "name": "abandoned_cart[channels][<?php echo esc_attr( $channel ); ?>][sender]",
-          "line": 7968
+          "line": 7990
         },
         {
           "kind": "form-field",
           "name": "abandoned_cart[<?php echo esc_attr( $channel ); ?>_message]",
-          "line": 7968
+          "line": 7990
         },
         {
           "kind": "method",
           "name": "render_woocommerce_page",
-          "line": 7977
+          "line": 7999
         },
         {
           "kind": "metadata",
           "name": "_dsa_redirect",
-          "line": 8002
+          "line": 8024
         },
         {
           "kind": "form-field",
           "name": "commerce[cart_surface_enabled]",
-          "line": 8011
+          "line": 8033
         },
         {
           "kind": "form-field",
           "name": "commerce[cart_quantity_controls]",
-          "line": 8021
+          "line": 8043
         },
         {
           "kind": "form-field",
           "name": "commerce[cart_badges_enabled]",
-          "line": 8030
-        },
-        {
-          "kind": "form-field",
-          "name": "commerce[stock_badge_alert_threshold]",
-          "line": 8040
-        },
-        {
-          "kind": "form-field",
-          "name": "commerce[stock_badge_urgent_threshold]",
-          "line": 8044
-        },
-        {
-          "kind": "form-field",
-          "name": "commerce[stock_badge_alert_text]",
-          "line": 8048
-        },
-        {
-          "kind": "form-field",
-          "name": "commerce[stock_badge_urgent_text]",
           "line": 8052
         },
         {
           "kind": "form-field",
-          "name": "commerce[cross_sells_enabled]",
-          "line": 8061
+          "name": "commerce[stock_badge_alert_threshold]",
+          "line": 8062
         },
         {
           "kind": "form-field",
-          "name": "commerce[linked_products_enabled]",
+          "name": "commerce[stock_badge_urgent_threshold]",
+          "line": 8066
+        },
+        {
+          "kind": "form-field",
+          "name": "commerce[stock_badge_alert_text]",
           "line": 8070
         },
         {
           "kind": "form-field",
+          "name": "commerce[stock_badge_urgent_text]",
+          "line": 8074
+        },
+        {
+          "kind": "form-field",
+          "name": "commerce[cross_sells_enabled]",
+          "line": 8083
+        },
+        {
+          "kind": "form-field",
+          "name": "commerce[linked_products_enabled]",
+          "line": 8092
+        },
+        {
+          "kind": "form-field",
           "name": "commerce[commerce_recommendations_enabled]",
-          "line": 8071
+          "line": 8093
         },
         {
           "kind": "form-field",
           "name": "commerce[cross_sells_product_panel_enabled]",
-          "line": 8072
+          "line": 8094
         },
         {
           "kind": "form-field",
           "name": "commerce[fbt_title]",
-          "line": 8081
+          "line": 8103
         },
         {
           "kind": "form-field",
           "name": "commerce[fbt_max_products]",
-          "line": 8085
+          "line": 8107
         },
         {
           "kind": "form-field",
           "name": "commerce[fbt_show_out_of_stock]",
-          "line": 8088
+          "line": 8110
         },
         {
           "kind": "form-field",
           "name": "commerce[add_to_cart_mode]",
-          "line": 8099
+          "line": 8121
         },
         {
           "kind": "form-field",
           "name": "commerce[first_cart_confetti_enabled]",
-          "line": 8106
+          "line": 8128
         },
         {
           "kind": "form-field",
           "name": "commerce[co_purchase_daily_sync_enabled]",
-          "line": 8114
+          "line": 8136
         },
         {
           "kind": "form-field",
           "name": "commerce[co_purchase_daily_sync_depth]",
-          "line": 8119
-        },
-        {
-          "kind": "form-field",
-          "name": "commerce[co_purchase_daily_sync_mode]",
-          "line": 8123
-        },
-        {
-          "kind": "form-field",
-          "name": "commerce[bestseller_enabled]",
           "line": 8141
         },
         {
           "kind": "form-field",
+          "name": "commerce[co_purchase_daily_sync_mode]",
+          "line": 8145
+        },
+        {
+          "kind": "form-field",
+          "name": "commerce[bestseller_enabled]",
+          "line": 8163
+        },
+        {
+          "kind": "form-field",
           "name": "commerce[bestseller_limit]",
-          "line": 8146
+          "line": 8168
         },
         {
           "kind": "form-field",
           "name": "commerce[bestseller_parent_label]",
-          "line": 8150
+          "line": 8172
         },
         {
           "kind": "form-field",
           "name": "commerce[bestseller_parent_slug]",
-          "line": 8154
+          "line": 8176
         },
         {
           "kind": "form-field",
           "name": "commerce[bestseller_sync_on_order]",
-          "line": 8157
-        },
-        {
-          "kind": "form-field",
-          "name": "commerce[cod_gate][enabled]",
-          "line": 8174
-        },
-        {
-          "kind": "form-field",
-          "name": "commerce[cod_gate][strikes_to_block]",
           "line": 8179
         },
         {
           "kind": "form-field",
+          "name": "commerce[cod_gate][enabled]",
+          "line": 8196
+        },
+        {
+          "kind": "form-field",
+          "name": "commerce[cod_gate][strikes_to_block]",
+          "line": 8201
+        },
+        {
+          "kind": "form-field",
           "name": "commerce[cod_gate][trusted_skip_after_completed]",
-          "line": 8183
+          "line": 8205
         },
         {
           "kind": "form-field",
           "name": "commerce[cod_gate][regain]",
-          "line": 8187
+          "line": 8209
         },
         {
           "kind": "form-field",
           "name": "commerce[cod_gate][block_message]",
-          "line": 8194
+          "line": 8216
         },
         {
           "kind": "form-field",
           "name": "commerce[cod_gate][allow_unverified_on_failure]",
-          "line": 8197
+          "line": 8219
         },
         {
           "kind": "method",
           "name": "render_store_analytics_page",
-          "line": 8223
+          "line": 8245
         },
         {
           "kind": "method",
           "name": "render_store_manager_notice",
-          "line": 8300
+          "line": 8322
         },
         {
           "kind": "method",
           "name": "render_store_manager_tabs",
-          "line": 8320
+          "line": 8342
         },
         {
           "kind": "method",
           "name": "render_store_tab_funnel",
-          "line": 8336
+          "line": 8358
         },
         {
           "kind": "method",
           "name": "render_store_tab_search",
-          "line": 8390
+          "line": 8412
         },
         {
           "kind": "method",
           "name": "refresh_saved_report",
-          "line": 8409
+          "line": 8431
         },
         {
           "kind": "method",
           "name": "render_store_tab_saved",
-          "line": 8418
+          "line": 8440
         },
         {
           "kind": "method",
           "name": "render_app_adoption",
-          "line": 8485
+          "line": 8507
         },
         {
           "kind": "method",
           "name": "render_store_tab_assign",
-          "line": 8600
+          "line": 8622
         },
         {
           "kind": "method",
           "name": "render_store_tab_clear",
-          "line": 8628
+          "line": 8650
         },
         {
           "kind": "method",
           "name": "render_store_tab_memory",
-          "line": 8643
+          "line": 8665
         },
         {
           "kind": "method",
           "name": "render_store_tab_bulk_upsells",
-          "line": 8669
+          "line": 8691
         },
         {
           "kind": "method",
           "name": "render_store_tab_current_upsells",
-          "line": 8696
+          "line": 8718
         },
         {
           "kind": "method",
           "name": "render_store_tab_co_purchase",
-          "line": 8721
+          "line": 8743
         },
         {
           "kind": "method",
           "name": "render_store_tab_cart_events",
-          "line": 8757
+          "line": 8779
         },
         {
           "kind": "method",
           "name": "render_store_tab_bestseller",
-          "line": 8819
+          "line": 8841
         },
         {
           "kind": "method",
           "name": "render_store_source_fields",
-          "line": 8832
+          "line": 8854
         },
         {
           "kind": "method",
           "name": "render_store_category_checks",
-          "line": 8845
+          "line": 8867
         },
         {
           "kind": "method",
           "name": "render_bricks_page",
-          "line": 8862
+          "line": 8884
         },
         {
           "kind": "method",
           "name": "render_simple_admin_tabs",
-          "line": 8893
+          "line": 8915
         },
         {
           "kind": "method",
           "name": "assert_store_action",
-          "line": 8909
-        },
-        {
-          "kind": "method",
-          "name": "redirect_store_manager",
-          "line": 8918
-        },
-        {
-          "kind": "method",
-          "name": "clear_runtime_cache_records",
           "line": 8931
         },
         {
           "kind": "method",
+          "name": "redirect_store_manager",
+          "line": 8940
+        },
+        {
+          "kind": "method",
+          "name": "clear_runtime_cache_records",
+          "line": 8953
+        },
+        {
+          "kind": "method",
           "name": "auth_capability",
-          "line": 8951
+          "line": 8973
         },
         {
           "kind": "method",
           "name": "secure_tabs",
-          "line": 8955
+          "line": 8977
         },
         {
           "kind": "method",
           "name": "render_secure_tab",
-          "line": 8974
+          "line": 8996
         },
         {
           "kind": "method",
           "name": "profile_payload",
-          "line": 8983
+          "line": 9005
         },
         {
           "kind": "method",
           "name": "sanitize_profile_settings",
-          "line": 9028
+          "line": 9050
         },
         {
           "kind": "method",
           "name": "framework_profile_payload",
-          "line": 9138
+          "line": 9160
         },
         {
           "kind": "method",
           "name": "framework_profile_tokens_input",
-          "line": 9158
+          "line": 9180
         },
         {
           "kind": "method",
           "name": "redirect_profile_error",
-          "line": 9172
+          "line": 9194
         },
         {
           "kind": "method",
           "name": "redirect_framework_profile_error",
-          "line": 9177
+          "line": 9199
         },
         {
           "kind": "method",
           "name": "redirect_theme_error",
-          "line": 9182
+          "line": 9204
         },
         {
           "kind": "method",
           "name": "framework_profile_error_message",
-          "line": 9187
+          "line": 9209
         },
         {
           "kind": "method",
           "name": "theme_error_message",
-          "line": 9213
+          "line": 9235
         },
         {
           "kind": "method",
           "name": "apply_theme_record_to_settings",
-          "line": 9229
+          "line": 9251
         },
         {
           "kind": "method",
           "name": "redirect_binding_plan_error",
-          "line": 9261
+          "line": 9283
         },
         {
           "kind": "method",
           "name": "binding_plan_error_message",
-          "line": 9266
+          "line": 9288
         },
         {
           "kind": "method",
           "name": "framework_binding_report",
-          "line": 9278
+          "line": 9300
         },
         {
           "kind": "method",
           "name": "profile_error_message",
-          "line": 9294
+          "line": 9316
         },
         {
           "kind": "method",
           "name": "sanitize_style_settings",
-          "line": 9307
+          "line": 9329
         },
         {
           "kind": "method",
           "name": "sanitize_visual_effects",
-          "line": 9311
+          "line": 9333
         },
         {
           "kind": "method",
           "name": "sanitize_diagnostics_settings",
-          "line": 9351
+          "line": 9373
         },
         {
           "kind": "method",
           "name": "sanitize_dock_settings",
-          "line": 9382
+          "line": 9404
         },
         {
           "kind": "method",
           "name": "sanitize_menu_settings",
-          "line": 9386
+          "line": 9408
         },
         {
           "kind": "method",
           "name": "sanitize_menu_locations",
-          "line": 9390
+          "line": 9412
         },
         {
           "kind": "method",
           "name": "sanitize_heading_levels",
-          "line": 9394
+          "line": 9416
         },
         {
           "kind": "method",
           "name": "sanitize_haptic_settings",
-          "line": 9398
+          "line": 9420
         },
         {
           "kind": "method",
           "name": "sanitize_search_settings",
-          "line": 9425
+          "line": 9447
         },
         {
           "kind": "method",
           "name": "dock_module_labels",
-          "line": 9478
-        },
-        {
-          "kind": "method",
-          "name": "dock_custom_item_labels",
-          "line": 9492
-        },
-        {
-          "kind": "method",
-          "name": "dock_custom_items_for_admin",
-          "line": 9496
-        },
-        {
-          "kind": "method",
-          "name": "sanitize_dock_custom_items",
           "line": 9500
         },
         {
           "kind": "method",
+          "name": "dock_custom_item_labels",
+          "line": 9514
+        },
+        {
+          "kind": "method",
+          "name": "dock_custom_items_for_admin",
+          "line": 9518
+        },
+        {
+          "kind": "method",
+          "name": "sanitize_dock_custom_items",
+          "line": 9522
+        },
+        {
+          "kind": "method",
           "name": "sanitize_dsa_theme",
-          "line": 9504
+          "line": 9526
         },
         {
           "kind": "method",
           "name": "sanitize_token_settings",
-          "line": 9508
+          "line": 9530
         },
         {
           "kind": "method",
           "name": "sanitize_theme_screen_settings",
-          "line": 9524
+          "line": 9546
         },
         {
           "kind": "method",
           "name": "sanitize_games_settings",
-          "line": 9532
+          "line": 9554
         },
         {
           "kind": "method",
           "name": "sanitize_schema_geo_settings",
-          "line": 9573
+          "line": 9595
         },
         {
           "kind": "method",
           "name": "sanitize_metrics_settings",
-          "line": 9577
+          "line": 9599
         },
         {
           "kind": "method",
           "name": "sanitize_permissions_settings",
-          "line": 9581
+          "line": 9603
         },
         {
           "kind": "method",
           "name": "sanitize_protected_flow_settings",
-          "line": 9585
+          "line": 9607
         },
         {
           "kind": "method",
           "name": "sanitize_secure_settings",
-          "line": 9597
+          "line": 9619
         },
         {
           "kind": "method",
           "name": "sanitize_ai_settings",
-          "line": 9601
+          "line": 9623
         },
         {
           "kind": "method",
           "name": "save_securetrack_ai_settings",
-          "line": 9657
+          "line": 9679
         },
         {
           "kind": "method",
           "name": "sanitize_cidr_lines",
-          "line": 9717
+          "line": 9739
         },
         {
           "kind": "method",
           "name": "sanitize_email_settings",
-          "line": 9736
+          "line": 9758
         },
         {
           "kind": "method",
           "name": "sanitize_abandoned_cart_settings",
-          "line": 9771
+          "line": 9805
         },
         {
           "kind": "method",
           "name": "sanitize_commerce_settings",
-          "line": 9822
+          "line": 9856
         },
         {
           "kind": "method",
           "name": "sanitize_cod_gate_settings",
-          "line": 9866
+          "line": 9900
         },
         {
           "kind": "method",
           "name": "sanitize_bricks_settings",
-          "line": 9880
+          "line": 9914
         },
         {
           "kind": "method",
           "name": "sanitize_link_hub_settings",
-          "line": 9885
-        },
-        {
-          "kind": "method",
-          "name": "sanitize_app_settings",
-          "line": 9915
-        },
-        {
-          "kind": "method",
-          "name": "social_link_labels",
           "line": 9919
         },
         {
           "kind": "method",
+          "name": "sanitize_app_settings",
+          "line": 9949
+        },
+        {
+          "kind": "method",
+          "name": "social_link_labels",
+          "line": 9953
+        },
+        {
+          "kind": "method",
           "name": "sanitize_menu_items",
-          "line": 9930
+          "line": 9964
         },
         {
           "kind": "method",
           "name": "sanitize_transition_messages",
-          "line": 9934
+          "line": 9968
         },
         {
           "kind": "method",
           "name": "menu_items_for_admin",
-          "line": 9969
+          "line": 10003
         },
         {
           "kind": "method",
           "name": "nav_menu_options",
-          "line": 9993
+          "line": 10027
         },
         {
           "kind": "method",
           "name": "transition_messages_for_admin",
-          "line": 10008
+          "line": 10042
         },
         {
           "kind": "method",
           "name": "menu_targets",
-          "line": 10021
+          "line": 10055
         }
       ]
     },

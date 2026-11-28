@@ -3942,7 +3942,7 @@ function pk_admin_notices_inline( $s ) {
 		$class = $accepted ? 'notice-info' : 'notice-error';
 		$message = $accepted
 			? 'The latest verification email was accepted by WordPress mail. This confirms handoff only; authenticated SMTP and provider delivery still need to be healthy.'
-			: 'WordPress could not hand the latest verification email to its mail transport. Check Kiwe > Email and the site SMTP configuration before requiring email verification.';
+			: 'WordPress could not hand the latest verification email to its mail transport. Check Kiwe > Apps > Email before requiring email verification.';
 		echo '<div class="notice ' . esc_attr( $class ) . '"><p><strong>Kiwe Auth mail:</strong> ' . esc_html( $message ) . '</p></div>';
 	}
 }
@@ -3974,7 +3974,7 @@ function pk_admin_settings( $s ) {
 				<p class="description">Guest checkout is managed in Kiwe → Store → Checkout policy. When the store requires an account, one verified recovery contact is required before purchasing.</p>
 				<p><label>Progressive visit threshold<br><input type="number" min="1" max="20" name="pk[progressive_visits]" value="<?php echo esc_attr( $s['progressive_visits'] ); ?>"></label></p>
 				<p class="description"><strong>Verify later</strong> lets a new ordinary subscriber defer verification once; their next sign-in requires verification. In <strong>Email or phone</strong> mode, Key.kiwe automatically offers the missing recovery email or phone in the same Profile sheet. Privileged accounts never receive the grace or skip option.</p>
-				<p><label>Email delivery<br><select name="pk[email_delivery]"><?php pk_select_options( array( 'magic_link'=>'Magic link', 'otp'=>'OTP code' ), $s['email_delivery'] ); ?></select></label><br><span class="description">Uses <code>wp_mail()</code>. Configure authenticated transactional SMTP in Kiwe &gt; Email; an accepted handoff does not prove inbox delivery.</span></p>
+				<p><label>Email delivery<br><select name="pk[email_delivery]"><?php pk_select_options( array( 'magic_link'=>'Magic link', 'otp'=>'OTP code' ), $s['email_delivery'] ); ?></select></label><br><span class="description">Configure the sender in Kiwe &gt; Apps &gt; Email and check the inbox after a test send.</span></p>
 				<p><label>Return message<br><input class="large-text" name="pk[return_message]" value="<?php echo esc_attr( $s['return_message'] ); ?>"></label></p>
 			</div>
 			<div class="pk-card"><h2>WordPress Access</h2>
