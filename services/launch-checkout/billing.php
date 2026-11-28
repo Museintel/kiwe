@@ -6,6 +6,7 @@ require_once __DIR__ . '/billing-providers.php';
 
 final class KiweBilling
 {
+    private const PASS_RENEWALS = 9;
     private PDO $db;
 
     public function __construct(
@@ -87,7 +88,35 @@ final class KiweBilling
     {
         return $this->query("SELECT p.id, json_extract(p.quote, '$.domain.name') AS domain
             FROM launch_payments p JOIN launch_woo_orders w ON w.purchase_id = p.id
-            WHERE p.account_id = ? AND p.retired_at IS NULL ORDER BY p.confirmed_at DESC, p.id", [$accountId])->fetchAll();
+            WHERE p.account_id = ? AND p.retired_at IS NULL AND json_type(p.quote, '$.domain') = 'object'
+            ORDER BY p.confirmed_at DESC, p.id", [$accountId])->fetchAll();
+    }
+
+    public function passOrder(string $accountId): ?int
+    {
+        return $this->row('SELECT native_id FROM launch_pass_orders WHERE account_id = ?', [$accountId])['native_id'] ?? null;
+    }
+
+    public function reservePassOrder(string $accountId, int $orderId): void
+    {
+        $this->query('INSERT INTO launch_pass_orders (account_id, native_id) VALUES (?, ?)
+            ON CONFLICT(account_id) DO NOTHING', [$accountId, $orderId]);
+        if ($this->passOrder($accountId) !== $orderId) {
+            throw new KiweCheckoutError('Open your existing Freelancer Pass order or manage renewals in your Kiwe Launch account.', 409);
+        }
+    }
+
+    public function freelancerPass(string $accountId): ?array
+    {
+        $purchase = $this->row('SELECT p.* FROM launch_pass_orders a JOIN launch_woo_orders w ON w.native_id = a.native_id
+            JOIN launch_payments p ON p.id = w.purchase_id AND p.account_id = a.account_id
+            WHERE a.account_id = ? AND p.retired_at IS NULL', [$accountId]);
+        if (!$purchase) return null;
+        $quote = $this->quote($purchase);
+        $now = time();
+        $paidThrough = $this->paidThrough($purchase, $quote, $now);
+        return ['purchaseId' => $purchase['id'], 'planId' => $quote['planId'], 'active' => $paidThrough > $now,
+            'paidThrough' => $paidThrough ?: null];
     }
 
     private function mandate(string $purchase): ?array
@@ -100,19 +129,32 @@ final class KiweBilling
         return json_decode($purchase['quote'], true, flags: JSON_THROW_ON_ERROR);
     }
 
+    private function isPass(array $quote): bool
+    {
+        return ($quote['kind'] ?? '') === 'freelancer-pass';
+    }
+
     private function refunded(string $paymentId, int $observed = 0): int
     {
         $total = $this->row('SELECT COALESCE(SUM(amount), 0) AS total FROM launch_refunds WHERE payment_id = ?', [$paymentId]);
         return max($observed, (int) $total['total']);
     }
 
-    private function paidThrough(array $purchase): int
+    private function paidThrough(array $purchase, array $quote, ?int $at = null): int
     {
+        $pass = $this->isPass($quote);
+        $firstTerm = $purchase['first_term_end'];
+        if ($pass && (($at !== null && $purchase['confirmed_at'] > $at)
+            || $this->refunded($purchase['payment_id'], $purchase['payment_refunded']) >= $quote['upfrontMinor']
+            || $this->hasPaymentDispute($purchase['payment_id']))) $firstTerm = 0;
         $row = $this->row('SELECT MAX(r.period_end) AS period_end FROM launch_renewal_payments r
             JOIN launch_renewal_mandates m ON m.id = r.mandate_id
             WHERE m.purchase_id = ? AND r.amount_refunded < r.amount
-            AND COALESCE((SELECT SUM(amount) FROM launch_refunds WHERE payment_id = r.payment_id), 0) < r.amount', [$purchase['id']]);
-        return max($purchase['first_term_end'], (int) ($row['period_end'] ?? 0));
+            AND COALESCE((SELECT SUM(amount) FROM launch_refunds WHERE payment_id = r.payment_id), 0) < r.amount
+            AND (? IS NULL OR r.period_start <= ?)
+            AND (? = 0 OR NOT EXISTS (SELECT 1 FROM launch_disputes d WHERE d.payment_id = r.payment_id AND (d.deducted > 0 OR d.held > 0)))',
+            [$purchase['id'], $at, $at, (int) $pass]);
+        return max($firstTerm, (int) ($row['period_end'] ?? 0));
     }
 
     private function nextRenewalStart(int $paidUntil): int
@@ -128,7 +170,8 @@ final class KiweBilling
         $quote = $this->quote($purchase);
         $paid = $purchase['payment_id'] !== null;
         $refunded = $paid ? $this->refunded($purchase['payment_id'], $purchase['payment_refunded']) : 0;
-        $paidThrough = $paid ? $this->paidThrough($purchase) : null;
+        $pass = $this->isPass($quote);
+        $paidThrough = $paid ? $this->paidThrough($purchase, $quote) : null;
         $fullRefund = $paid && $refunded >= $quote['upfrontMinor'];
         if ($fullRefund && $paidThrough === $purchase['first_term_end']) $paidThrough = null;
         $mandate = $this->mandate($purchase['id']);
@@ -142,8 +185,10 @@ final class KiweBilling
             'id' => $purchase['id'], 'paid' => $paid, 'refunded' => $refunded, 'quote' => $quote,
             'linkUrl' => !$paid && $purchase['link_expires_at'] > time() ? $purchase['link_url'] : null,
             'firstTermEnd' => $purchase['first_term_end'], 'projectId' => $purchase['start_project_id'],
-            'paidThrough' => $paidThrough,
-            'renewalStart' => $paid && !$fullRefund ? $this->nextRenewalStart($paidThrough) : null,
+            'paidThrough' => $paidThrough ?: null,
+            'renewalStart' => $paid && (!$fullRefund || $pass) ? $this->nextRenewalStart($paidThrough ?? 0) : null,
+            'renewalInterval' => $pass ? 'yearly' : 'monthly',
+            'renewalCycles' => $pass ? self::PASS_RENEWALS : $this->cycles,
             'renewalAvailable' => $this->renewalPlanId($purchase, $quote) !== null,
             'renewalOnHold' => $paid && $this->hasPaymentDispute($purchase['payment_id']),
             'mandate' => $mandate ? [
@@ -286,26 +331,24 @@ final class KiweBilling
         if (!is_int($orderId) || $orderId < 1 || !is_string($accountId) || !preg_match('/^launch:[a-f0-9]{32}$/D', $accountId)
             || !$plan || ($native['sku'] ?? null) !== $plan['sku'] || !$providerOrder || !$paymentId
             || !is_int($paidAt) || $paidAt < 1 || $paidAt > time() + 300) {
-            throw new KiweCheckoutError('Provide the paid WooCommerce order and the exact website plan.', 400);
+            throw new KiweCheckoutError('Provide the paid WooCommerce order and the exact Launch plan.', 400);
         }
         $domain = $native['domain'] ?? null;
-        if (!is_array($domain) || !in_array($domain['mode'] ?? '', ['owned', 'register'], true)) {
-            throw new KiweCheckoutError('Provide the domain selected at checkout.', 400);
-        }
-        $selection = ['mode' => $domain['mode'], 'name' => kiwe_checkout_domain($domain['name'] ?? null)];
-        if ($selection['mode'] === 'register') {
-            $labels = explode('.', $selection['name']);
-            if (count($labels) !== 2 || $labels[1] !== $plan['domain']['includedExtension'] || ($domain['category'] ?? '') !== 'standard') {
-                throw new KiweCheckoutError('Only an eligible standard .in domain is included.', 400);
-            }
-            $selection['category'] = 'standard';
-        }
         if (!$this->row('SELECT id FROM checkout_accounts WHERE id = ? AND verified_at > 0', [$accountId])) {
             throw new KiweCheckoutError('The checkout needs a verified Kiwe Launch account.', 404);
         }
         $price = $plan['direct'];
-        $quote = json_encode(['planId' => $planId, 'currency' => $plan['currency'], 'upfrontMinor' => $price['upfrontMinor'],
-            'renewalMinor' => $price['renewalMinor'], 'referralId' => null, 'domain' => $selection], JSON_THROW_ON_ERROR);
+        $terms = ['planId' => $planId, 'currency' => $plan['currency'], 'upfrontMinor' => $price['upfrontMinor'],
+            'renewalMinor' => $price['renewalMinor'], 'referralId' => null];
+        if (!$plan['hostingIncluded']) {
+            if ($domain !== null || $this->passOrder($accountId) !== $orderId) {
+                throw new KiweCheckoutError('This Freelancer Pass must match the buyer’s reserved WooCommerce order.', 409);
+            }
+            $terms['kind'] = 'freelancer-pass';
+        } else {
+            $terms['domain'] = $this->websiteSelection($domain, $plan['domain']['includedExtension']);
+        }
+        $quote = json_encode($terms, JSON_THROW_ON_ERROR);
         $lookup = function () use ($orderId, $accountId, $providerOrder, $paymentId, $paidAt, $quote): ?string {
             $existing = $this->row('SELECT o.provider_order_id, p.* FROM launch_woo_orders o
                 JOIN launch_payments p ON p.id = o.purchase_id WHERE o.native_id = ?', [$orderId]);
@@ -345,6 +388,22 @@ final class KiweBilling
             $this->query('INSERT INTO launch_woo_orders (native_id, provider_order_id, purchase_id) VALUES (?, ?, ?)', [$orderId, $providerOrder, $id]);
             return $id;
         });
+    }
+
+    private function websiteSelection(mixed $domain, string $extension): array
+    {
+        if (!is_array($domain) || !in_array($domain['mode'] ?? '', ['owned', 'register'], true)) {
+            throw new KiweCheckoutError('Provide the domain selected at checkout.', 400);
+        }
+        $selection = ['mode' => $domain['mode'], 'name' => kiwe_checkout_domain($domain['name'] ?? null)];
+        if ($selection['mode'] === 'register') {
+            $labels = explode('.', $selection['name']);
+            if (count($labels) !== 2 || $labels[1] !== $extension || ($domain['category'] ?? '') !== 'standard') {
+                throw new KiweCheckoutError('Only an eligible standard .in domain is included.', 400);
+            }
+            $selection['category'] = 'standard';
+        }
+        return $selection;
     }
 
     public function refresh(string $accountId, ?string $purchaseId = null): ?array
@@ -398,6 +457,7 @@ final class KiweBilling
         $purchase = $this->ownedPurchase($accountId, $purchaseId);
         if (!$purchase || !$purchase['payment_id']) return null;
         $quote = $this->quote($purchase);
+        if ($this->isPass($quote)) return null;
         if ($this->refunded($purchase['payment_id'], $purchase['payment_refunded']) >= $quote['upfrontMinor']) return $purchase['start_project_id'];
         if ($purchase['start_project_id']) return $purchase['start_project_id'];
         $payment = ($this->razorpay)('GET', '/payments/' . $purchase['payment_id']);
@@ -450,7 +510,8 @@ final class KiweBilling
         if ($mode === 'register') $selection['category'] = 'standard';
         if (!$purchase || $purchase['retired_at'] || !$purchase['confirmed_at'] || !$purchase['start_project_id']
             || ($mode === 'register' && $purchase['first_term_end'] <= time())
-            || (($quote['planId'] ?? null) !== $this->checkout->plan['id'] && !isset($this->nativePlans[$quote['planId'] ?? '']))
+            || (($quote['planId'] ?? null) !== $this->checkout->plan['id']
+                && ($this->nativePlans[$quote['planId'] ?? '']['hostingIncluded'] ?? false) !== true)
             || ($quote['domain'] ?? null) !== $selection) {
             throw new KiweCheckoutError('Use the exact domain and a confirmed purchase that was delivered to Start.', 409);
         }
@@ -562,6 +623,7 @@ final class KiweBilling
 
     private function renewalPlanId(array $purchase, array $quote): ?string
     {
+        if ($this->isPass($quote)) return kiwe_billing_id($this->renewalPlans['freelancerPass'] ?? null, 'plan');
         $plan = str_starts_with($purchase['draft_id'], 'woo:')
             ? ($this->renewalPlans['websitePlans'][$quote['planId']] ?? null)
             : ($this->renewalPlans[empty($quote['referralId']) ? 'direct' : 'referred'] ?? null);
@@ -575,7 +637,7 @@ final class KiweBilling
 
     private function requireRenewablePayment(array $purchase, array $quote): void
     {
-        if ($this->refunded($purchase['payment_id'], $purchase['payment_refunded']) >= $quote['upfrontMinor']) {
+        if (!$this->isPass($quote) && $this->refunded($purchase['payment_id'], $purchase['payment_refunded']) >= $quote['upfrontMinor']) {
             throw new KiweCheckoutError('This first-year payment was refunded.', 409);
         }
         if ($this->hasPaymentDispute($purchase['payment_id'])) {
@@ -594,8 +656,10 @@ final class KiweBilling
             throw new KiweCheckoutError('Renewal approval opens after the first-year payment is confirmed.', 409);
         }
         $quote = $this->quote($purchase);
-        if ($quotedAmount !== $quote['renewalMinor'] || $quotedStart !== $this->nextRenewalStart($this->paidThrough($purchase))
-            || $quotedCycles !== $this->cycles) {
+        $pass = $this->isPass($quote);
+        $period = $pass ? 'yearly' : 'monthly';
+        $cycles = $pass ? self::PASS_RENEWALS : $this->cycles;
+        if ($quotedAmount !== $quote['renewalMinor'] || $quotedCycles !== $cycles) {
             throw new KiweCheckoutError('Review the updated renewal terms before approving them.', 409);
         }
         if (str_starts_with($purchase['draft_id'], 'woo:')) {
@@ -603,6 +667,9 @@ final class KiweBilling
             $purchase = $this->purchase($purchase['id']);
         }
         $this->requireRenewablePayment($purchase, $quote);
+        if ($quotedStart !== $this->nextRenewalStart($this->paidThrough($purchase, $quote))) {
+            throw new KiweCheckoutError('Review the updated renewal terms before approving them.', 409);
+        }
         $mandate = $this->mandate($purchase['id']);
         if ($mandate) {
             if ($mandate['status'] === 'created' && ($url = kiwe_billing_hosted_url($mandate['authorization_url']))) return $url;
@@ -611,13 +678,13 @@ final class KiweBilling
             }
         }
         $planId = $this->renewalPlanId($purchase, $quote);
-        if (!$planId) throw new KiweCheckoutError('Monthly renewals are unavailable for this plan.', 503);
+        if (!$planId) throw new KiweCheckoutError('Automatic renewals are unavailable for this plan.', 503);
         $plan = ($this->razorpay)('GET', '/plans/' . $planId);
-        if (($plan['id'] ?? '') !== $planId || ($plan['period'] ?? '') !== 'monthly' || ($plan['interval'] ?? 0) !== 1
+        if (($plan['id'] ?? '') !== $planId || ($plan['period'] ?? '') !== $period || ($plan['interval'] ?? 0) !== 1
             || ($plan['item']['amount'] ?? null) !== $quote['renewalMinor'] || ($plan['item']['currency'] ?? '') !== $quote['currency']) {
             throw new KiweCheckoutError('The Razorpay renewal plan needs to be checked.', 503);
         }
-        $reference = $this->transaction(function () use ($purchase, $planId, $quote, $quotedStart): string {
+        $reference = $this->transaction(function () use ($purchase, $planId, $quote, $quotedStart, $cycles): string {
             $previous = $this->mandate($purchase['id']);
             if ($previous && !self::terminalMandate($previous['status'])) {
                 throw new KiweCheckoutError('A renewal approval is already being created.', 409);
@@ -625,17 +692,17 @@ final class KiweBilling
             $current = $this->ownedPurchase($purchase['account_id'], $purchase['id']);
             if (!$current) throw new KiweCheckoutError('This purchase is no longer available.', 409);
             $this->requireRenewablePayment($current, $quote);
-            if ($quotedStart !== $this->nextRenewalStart($this->paidThrough($current))) {
+            if ($quotedStart !== $this->nextRenewalStart($this->paidThrough($current, $quote))) {
                 throw new KiweCheckoutError('Review the updated renewal date before approving it.', 409);
             }
             if ($previous) $this->query('UPDATE launch_renewal_mandates SET retired_at = ? WHERE id = ?', [time(), $previous['id']]);
             $id = 'mandate_' . bin2hex(random_bytes(12));
             $this->query('INSERT INTO launch_renewal_mandates (id, purchase_id, plan_id, amount, start_at, authorised_cycles, consent_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?)', [$id, $purchase['id'], $planId, $quote['renewalMinor'], $quotedStart, $this->cycles, time()]);
+                VALUES (?, ?, ?, ?, ?, ?, ?)', [$id, $purchase['id'], $planId, $quote['renewalMinor'], $quotedStart, $cycles, time()]);
             return $id;
         });
         $reply = ($this->razorpay)('POST', '/subscriptions', [
-            'plan_id' => $planId, 'quantity' => 1, 'total_count' => $this->cycles, 'customer_notify' => false,
+            'plan_id' => $planId, 'quantity' => 1, 'total_count' => $cycles, 'customer_notify' => false,
             'start_at' => $quotedStart, 'expire_by' => min(time() + 7 * 86400, $quotedStart - 900),
             'notes' => ['kiwe_mandate' => $reference],
         ]);
@@ -696,6 +763,7 @@ final class KiweBilling
 
     private function acceptRenewal(array $mandate, string $subscriptionId, array $payment, array $invoice): void
     {
+        $pass = $this->isPass($this->quote($this->purchase($mandate['purchase_id'])));
         $start = $invoice['billing_start'] ?? null;
         $end = $invoice['billing_end'] ?? null;
         $paymentId = kiwe_billing_id($payment['id'] ?? null, 'pay');
@@ -706,7 +774,8 @@ final class KiweBilling
             || ($invoice['status'] ?? null) !== 'paid' || ($invoice['currency'] ?? null) !== 'INR'
             || ($invoice['amount'] ?? null) !== $mandate['amount'] || ($invoice['amount_paid'] ?? null) !== $mandate['amount']
             || !$this->validPayment($payment, $mandate['amount'], 'INR')
-            || !is_int($start) || !is_int($end) || $start < $mandate['start_at'] || $end <= $start || $end - $start > 32 * 86400) {
+            || !is_int($start) || !is_int($end) || $start < $mandate['start_at'] || $end <= $start
+            || ($pass ? ($end - $start < 365 * 86400 || $end - $start > 366 * 86400) : $end - $start > 32 * 86400)) {
             throw new KiweCheckoutError('The paid renewal invoice does not match the approved amount or period.', 409);
         }
 
@@ -828,6 +897,7 @@ final class KiweBilling
     public function deliverPending(): array
     {
         $pending = $this->query('SELECT id, account_id, payment_id FROM launch_payments WHERE start_project_id IS NULL
+            AND COALESCE(json_extract(quote, \'$.kind\'), \'website\') <> \'freelancer-pass\'
             AND retired_at IS NULL AND reviewed_at < ? AND payment_refunded < json_extract(quote, \'$.upfrontMinor\')
             AND COALESCE((SELECT SUM(amount) FROM launch_refunds WHERE payment_id = launch_payments.payment_id), 0)
                 < json_extract(quote, \'$.upfrontMinor\') ORDER BY reviewed_at LIMIT 2', [time() - 180])->fetchAll();

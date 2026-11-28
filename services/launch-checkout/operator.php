@@ -18,6 +18,7 @@ try {
         'enrol-partner' => ['account' => $checkout->enrolPartner($value)],
         'quote' => kiwe_checkout_operator_quote($checkout, $value),
         'billing-status' => ['billing' => kiwe_checkout_operator_billing($billing, $value, $argv[3] ?? null)],
+        'freelancer-pass' => ['pass' => ($billing ?? throw new KiweCheckoutError('Launch billing is unavailable.', 503))->freelancerPass($value)],
         'import-woo-purchase' => kiwe_checkout_operator_woo_purchase($billing, $value),
         'reconcile-billing' => $billing?->deliverPending() ?? throw new KiweCheckoutError('Launch billing is unavailable.', 503),
         'register-domain', 'reconcile-domain' => kiwe_checkout_operator_domain($state, $argv[1], $value, $argv[3] ?? '', $argv[4] ?? ''),

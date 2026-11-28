@@ -20,9 +20,12 @@ function kiwe_checkout_billing(mixed $config, KiweCheckout $checkout, string $da
         throw new RuntimeException('Kiwe billing credentials or plans are invalid.');
     }
     foreach ($plans['websitePlans'] ?? [] as $catalogueId => $providerId) {
-        if (!isset($nativePlans[$catalogueId]) || !kiwe_billing_id($providerId, 'plan')) {
+        if (($nativePlans[$catalogueId]['hostingIncluded'] ?? false) !== true || !kiwe_billing_id($providerId, 'plan')) {
             throw new RuntimeException('A website renewal plan is not mapped to the Launch catalogue.');
         }
+    }
+    if (isset($plans['freelancerPass']) && !kiwe_billing_id($plans['freelancerPass'], 'plan')) {
+        throw new RuntimeException('The Freelancer Pass renewal plan is invalid.');
     }
     $razorpay = null;
     if ($test) {
@@ -71,6 +74,16 @@ function kiwe_checkout_native_plans(string $root): array
             throw new RuntimeException('The website catalogue has invalid billing terms.');
         }
         $plans[$id] = $plan;
+    }
+    if (isset($catalogue['freelancerPass'])) {
+        $pass = $catalogue['freelancerPass'];
+        $amount = $pass['priceMinor'] ?? null;
+        if (($pass['id'] ?? '') !== 'kiwe-freelancer-annual-v1' || ($pass['sku'] ?? '') !== 'KIWE-FREELANCER-ANNUAL'
+            || ($pass['currency'] ?? '') !== 'INR' || ($pass['hostingIncluded'] ?? true) !== false
+            || ($pass['intervalMonths'] ?? null) !== 12 || !is_int($amount) || $amount < 1 || $amount > 10000000) {
+            throw new RuntimeException('The Freelancer Pass has invalid billing terms.');
+        }
+        $plans[$pass['id']] = $pass + ['direct' => ['upfrontMinor' => $amount, 'renewalMinor' => $amount]];
     }
     return $plans;
 }

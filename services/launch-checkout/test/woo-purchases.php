@@ -62,6 +62,9 @@ foreach (['kiwe-portfolio-v1' => 'plan_PortfolioFixture', 'kiwe-ecommerce-v1' =>
     $providerPlans['/plans/' . $code] = ['id' => $code, 'period' => 'monthly', 'interval' => 1,
         'item' => ['amount' => $plans[$version]['direct']['renewalMinor'], 'currency' => 'INR']];
 }
+$settings['plans']['freelancerPass'] = 'plan_AnnualFixture';
+$providerPlans['/plans/plan_AnnualFixture'] = ['id' => 'plan_AnnualFixture', 'period' => 'yearly', 'interval' => 1,
+    'item' => ['amount' => $plans['kiwe-freelancer-annual-v1']['priceMinor'], 'currency' => 'INR']];
 $billing = kiwe_checkout_billing($settings, $checkout, $database, 'http://127.0.0.1:8250', true, $plans);
 $now = time();
 
@@ -94,7 +97,9 @@ foreach (array_values($plans) as $offset => $plan) {
         'domain' => ['mode' => 'owned', 'name' => 'site' . $id . '.example.invalid']];
 }
 
-[$portfolio, $commerce, $invalid, $wrongTotal] = $native;
+[$portfolio, $commerce, $invalid, $wrongTotal, $pass] = $native;
+unset($pass['domain']);
+$passCharge = $payments['/payments/' . $pass['paymentId']];
 $initial = $billing->importWooPurchase($portfolio);
 $second = $billing->importWooPurchase($commerce);
 expectWoo($initial !== $second && $billing->status($buyer)['id'] === $previous, 'Legacy and separate native purchases must coexist.');
@@ -186,4 +191,72 @@ expectWooDenied(fn () => $billing->renew($buyer, 'fixture', $amountB, $b['renewa
 expectWoo($billing->status($buyer, $second)['refunded'] === $secondPayment['amount']
     && !$billing->status($buyer, $second)['paidThrough'] && !$billing->status($buyer, $initial)['refunded'],
     'Provider readback must record a full first-year refund for only the selected site.');
+
+expectWooDenied(fn () => $billing->importWooPurchase($pass), 409);
+$billing->reservePassOrder($buyer, $pass['orderId']);
+expectWooDenied(fn () => $billing->reservePassOrder($buyer, $pass['orderId'] + 1), 409);
+expectWooDenied(fn () => $billing->importWooPurchase([...$pass, 'domain' => $portfolio['domain']]), 409);
+$passId = $billing->importWooPurchase($pass);
+expectWoo($billing->importWooPurchase($pass) === $passId && $billing->freelancerPass($buyer)['active'],
+    'A verified pass activates one account benefit and reconciles exactly once.');
+expectWoo(!$billing->freelancerPass($other) && !$billing->deliver($buyer, $passId) && !$billing->deliverPending()['delivered']
+    && count($billing->websitePurchases($buyer)) === 2, 'A pass cannot be read by another buyer or delivered as a website.');
+expectWooDenied(fn () => $billing->handoff($buyer, $passId), 409);
+
+$passState = $billing->status($buyer, $passId);
+$passStart = $passState['firstTermEnd'];
+$passAmount = $passState['quote']['renewalMinor'];
+expectWoo($passAmount === 149900 && $passState['renewalInterval'] === 'yearly' && $passState['renewalCycles'] === 9,
+    'The pass uses annual billing at the exact catalogue price.');
+expectWooDenied(fn () => $billing->renew($buyer, 'fixture', $passAmount, $passStart, 120, $passId), 409);
+$providerPlans['/plans/plan_AnnualFixture']['period'] = 'monthly';
+expectWooDenied(fn () => $billing->renew($buyer, 'fixture', $passAmount, $passStart, 9, $passId), 503);
+$providerPlans['/plans/plan_AnnualFixture']['period'] = 'yearly';
+$billing->renew($buyer, 'fixture', $passAmount, $passStart, 9, $passId);
+$annual = $subscriptions['/subscriptions/sub_Website3'];
+expectWoo($annual['plan_id'] === 'plan_AnnualFixture' && $annual['start_at'] === $passStart && $annual['total_count'] === 9,
+    'Annual renewals begin after the prepaid year and stay on the same pass order.');
+
+$annualPayment = [...$renewal, 'id' => 'pay_AnnualFixture', 'invoice_id' => 'inv_AnnualFixture',
+    'order_id' => 'order_AnnualFixture', 'amount' => $passAmount];
+$yearEnd = kiwe_billing_month_end($passStart, 12);
+$invoicePath = '/invoices/' . $annualPayment['invoice_id'];
+$invoices[$invoicePath] = ['id' => $annualPayment['invoice_id'], 'payment_id' => $annualPayment['id'],
+    'order_id' => $annualPayment['order_id'], 'subscription_id' => $annual['id'], 'currency' => 'INR', 'status' => 'paid',
+    'amount' => $passAmount, 'amount_paid' => $passAmount, 'billing_start' => $passStart,
+    'billing_end' => kiwe_billing_month_end($passStart, 1)];
+$annualEvent = ['subscription' => ['entity' => [...$annual, 'status' => 'active']], 'payment' => ['entity' => $annualPayment]];
+expectWooDenied(fn () => $send('subscription.charged', 'pass-year-one', $annualEvent), 409);
+$invoices[$invoicePath]['billing_end'] = $yearEnd;
+$send('subscription.charged', 'pass-year-one', $annualEvent);
+$send('subscription.charged', 'pass-year-one', $annualEvent);
+expectWoo(count($billing->status($buyer, $passId)['renewals']) === 1
+    && $billing->status($buyer, $passId)['paidThrough'] === $yearEnd
+    && $billing->freelancerPass($buyer)['paidThrough'] === $passStart, 'Only a paid annual invoice extends future coverage once.');
+$billing->cancelRenewal($buyer, $passId);
+expectWoo($billing->freelancerPass($buyer)['active'] && $billing->status($buyer, $passId)['mandate']['status'] === 'cancelled',
+    'Ending automatic renewal preserves paid access.');
+
+$dispute = ['id' => 'disp_PassFixture', 'payment_id' => $passCharge['id'], 'currency' => 'INR',
+    'amount' => $passAmount, 'amount_deducted' => 0];
+$send('payment.dispute.created', 'pass-dispute', ['dispute' => ['entity' => $dispute]]);
+expectWoo(!$billing->freelancerPass($buyer)['active'], 'A disputed current payment stops pass eligibility.');
+$send('payment.dispute.won', 'pass-dispute-resolved', ['dispute' => ['entity' => $dispute]]);
+expectWoo($billing->freelancerPass($buyer)['active'], 'Resolving the dispute restores paid coverage.');
+$passRefund = ['id' => 'rfnd_PassFixture', 'payment_id' => $passCharge['id'], 'amount' => $passAmount,
+    'currency' => 'INR', 'status' => 'processed'];
+$send('refund.processed', 'pass-charge-refund', ['refund' => ['entity' => $passRefund]]);
+expectWoo(!$billing->freelancerPass($buyer)['active'] && $billing->status($buyer, $initial)['projectId'] === $projectA,
+    'A refund disables current pass coverage without changing website purchases or granting a future year early.');
+
+$expired = [...$pass, 'accountId' => $other, 'orderId' => 505, 'providerOrderId' => 'order_ExpiredFixture',
+    'paymentId' => 'pay_ExpiredFixture', 'paidAt' => kiwe_billing_month_end($now, -13)];
+$orders['/orders/' . $expired['providerOrderId']] = [...$orders['/orders/' . $pass['providerOrderId']],
+    'id' => $expired['providerOrderId'], 'receipt' => '505', 'notes' => ['woocommerce_order_id' => '505']];
+$payments['/payments/' . $expired['paymentId']] = [...$passCharge, 'id' => $expired['paymentId'], 'order_id' => $expired['providerOrderId'],
+    'created_at' => $expired['paidAt']];
+$billing->reservePassOrder($other, $expired['orderId']);
+$billing->importWooPurchase($expired);
+expectWoo(!$billing->freelancerPass($other)['active'] && $billing->freelancerPass($other)['paidThrough'] < $now,
+    'An expired prepaid year no longer gives pass eligibility.');
 echo json_encode(['projects' => [$projectA, $projectB], 'buyer' => $buyer], JSON_THROW_ON_ERROR), PHP_EOL;

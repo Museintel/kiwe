@@ -3,6 +3,8 @@ $date = static fn (int $time): string => (new DateTimeImmutable('@' . $time))
     ->setTimezone(new DateTimeZone('Asia/Kolkata'))->format('j M Y, g:i a') . ' IST';
 $mandate = $billingState['mandate'];
 $fullRefund = $billingState['refunded'] >= $price['upfrontMinor'];
+$annual = $billingState['renewalInterval'] === 'yearly';
+$renewalHeading = $annual ? 'Annual renewals' : 'Monthly renewals';
 $statuses = [
     'creating' => 'Checking the approval link',
     'created' => 'Awaiting authorisation',
@@ -34,17 +36,17 @@ $statuses = [
     <h3><?= $fullRefund ? 'First-year payment refunded' : 'First-year payment confirmed' ?></h3>
     <?php if (!$fullRefund): ?><p>Your first term ends on <?= $date($billingState['firstTermEnd']) ?>.</p><?php endif; ?>
     <?php if ($billingState['paidThrough'] > $billingState['firstTermEnd']): ?>
-      <p>Renewal payments cover this site through <?= $date($billingState['paidThrough']) ?>.</p>
+      <p>Renewal payments cover <?= $annual ? 'your pass' : 'this site' ?> through <?= $date($billingState['paidThrough']) ?>.</p>
     <?php endif; ?>
     <?php if ($billingState['refunded']): ?><p>Refund recorded <?= $money($billingState['refunded']) ?>.</p><?php endif; ?>
-    <?php if (!$fullRefund || $billingState['projectId']): ?>
+    <?php if (!$annual && (!$fullRefund || $billingState['projectId'])): ?>
       <form method="post" action="<?= $e($route) ?>" class="billing-actions">
         <?= kiwe_checkout_post_fields('open-start', $purchaseId) ?>
         <button class="button button-lime">Open Kiwe Start</button>
       </form>
     <?php endif; ?>
     <?php if ($mandate): ?>
-      <h3>Monthly renewals</h3>
+      <h3><?= $renewalHeading ?></h3>
       <p><?= $e($statuses[$mandate['status']] ?? $mandate['status']) ?></p>
       <?php if ($mandate['url'] && !$fullRefund && !$billingState['renewalOnHold']): ?>
         <p><a class="button button-lime" href="<?= $e($mandate['url']) ?>">Finish renewal approval</a></p>
@@ -56,22 +58,22 @@ $statuses = [
         </form>
       <?php endif; ?>
     <?php endif; ?>
-    <?php if (!$fullRefund && $billingState['renewalOnHold']): ?>
+    <?php if ($billingState['renewalOnHold']): ?>
       <p>Renewal approval is on hold while Launch reviews this payment.</p>
-    <?php elseif (!$fullRefund && (!$mandate || KiweBilling::terminalMandate($mandate['status'])) && $billingState['renewalAvailable']): ?>
-      <?php if (!$mandate): ?><h3>Monthly renewals</h3><?php endif; ?>
+    <?php elseif ($billingState['renewalStart'] && (!$mandate || KiweBilling::terminalMandate($mandate['status'])) && $billingState['renewalAvailable']): ?>
+      <?php if (!$mandate): ?><h3><?= $renewalHeading ?></h3><?php endif; ?>
       <form method="post" action="<?= $e($route) ?>" class="billing-actions">
         <?= kiwe_checkout_post_fields('renewal-consent', $purchaseId) ?>
         <input type="hidden" name="renewal_amount" value="<?= $e($price['renewalMinor']) ?>">
         <input type="hidden" name="renewal_start" value="<?= $e($billingState['renewalStart']) ?>">
-        <input type="hidden" name="renewal_cycles" value="<?= $e($billing->cycles) ?>">
+        <input type="hidden" name="renewal_cycles" value="<?= $e($billingState['renewalCycles']) ?>">
         <label><input type="checkbox" name="renewal_consent" value="yes" required>
-          Approve <?= $money($price['renewalMinor']) ?> each month from <?= $date($billingState['renewalStart']) ?> for up to <?= $billing->cycles ?> payments. You can cancel automatic renewal.</label>
+          Approve <?= $money($price['renewalMinor']) ?> each <?= $annual ? 'year' : 'month' ?> from <?= $date($billingState['renewalStart']) ?> for up to <?= $billingState['renewalCycles'] ?> payments. You can cancel automatic renewal.</label>
         <p>Razorpay may use a refundable verification charge when you approve.</p>
         <button class="button button-lime">Approve renewal with Razorpay</button>
       </form>
     <?php elseif (!$fullRefund && !$mandate): ?>
-      <p>Monthly renewal approval is currently unavailable for this plan.</p>
+      <p>Automatic renewal approval is currently unavailable for this plan.</p>
     <?php endif; ?>
     <?php if ($billingState['renewals']): ?>
       <h3>Recent renewal payments</h3>

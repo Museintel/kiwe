@@ -26,6 +26,11 @@ CREATE TABLE IF NOT EXISTS launch_woo_orders (
     purchase_id TEXT NOT NULL UNIQUE REFERENCES launch_payments(id)
 ) STRICT;
 
+CREATE TABLE IF NOT EXISTS launch_pass_orders (
+    account_id TEXT PRIMARY KEY REFERENCES checkout_accounts(id),
+    native_id INTEGER NOT NULL UNIQUE CHECK(native_id > 0)
+) STRICT;
+
 CREATE TABLE IF NOT EXISTS launch_domain_orders (
     purchase_id TEXT PRIMARY KEY REFERENCES launch_payments(id),
     domain TEXT NOT NULL UNIQUE,

@@ -44,7 +44,7 @@ try {
   assert.equal(projects.length, 1);
   assert.equal(projects[0].planId, 'kiwe-portfolio-v1');
   assert.equal(start.projects.listProjects(proof.other).length, 0);
-  console.log('Native WooCommerce validation, order binding, payment hook and replay delivered the correct buyer’s Portfolio project.');
+  console.log('Native WooCommerce delivered one Portfolio project and one separate account pass, and denied a duplicate pass order.');
 } finally {
   await start.close();
   await rm(root, { recursive: true, force: true });

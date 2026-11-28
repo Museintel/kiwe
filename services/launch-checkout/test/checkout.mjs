@@ -248,6 +248,7 @@ try {
   const accountCookie = (await accountRoute.context().cookies()).find(cookie => cookie.name === 'kiwe_launch_account');
   assert.deepEqual([accountCookie.path, accountCookie.httpOnly, accountCookie.sameSite], ['/', true, 'Lax']);
   assert.equal(await accountRoute.locator('form:has(input[value="pay-first-year"])').count(), 0);
+  await verifyPassAccount(accountRoute, DatabaseSync);
   await accountRoute.getByRole('button', { name: 'Sign out' }).click();
   await accountRoute.getByText('You’re signed out.', { exact: true }).waitFor();
   process.stdout.write('Verified checkout, Razorpay billing and retries, renewal consent, refunds and same-account Kiwe Start handoff passed.\n');
@@ -264,6 +265,52 @@ try {
   if (path.dirname(root) === path.resolve(tmpdir()) && path.basename(root).startsWith('kiwe-checkout-test-')) {
     await rm(root, { recursive: true, force: true, maxRetries: 3 });
   }
+}
+
+async function verifyPassAccount(page, DatabaseSync) {
+  const accountPath = origin + '/launch-account/';
+  const db = new DatabaseSync(path.join(data, 'checkout.sqlite'));
+  const orderId = 703;
+  const accountId = db.prepare('SELECT id FROM checkout_accounts WHERE email = ?').get('buyer@example.invalid').id;
+  db.prepare('INSERT INTO launch_pass_orders (account_id, native_id) VALUES (?, ?)').run(accountId, orderId);
+  db.close();
+  const fixturePath = path.join(data, 'gateway.json');
+  const gateway = JSON.parse(await readFile(fixturePath, 'utf8'));
+  const plan = launchCatalogue.freelancerPass;
+  const amount = plan.priceMinor;
+  const providerOrderId = 'order_CheckoutAnnual';
+  const paymentId = 'pay_CheckoutAnnual';
+  const paidAt = Math.floor(Date.now() / 1000);
+  gateway.orders[providerOrderId] = { id: providerOrderId, receipt: String(orderId), status: 'paid', currency: 'INR',
+    notes: { woocommerce_order_id: String(orderId) }, amount, amount_paid: amount, amount_due: 0 };
+  gateway.payments[paymentId] = { id: paymentId, order_id: providerOrderId, status: 'captured',
+    amount, currency: 'INR', created_at: paidAt, amount_refunded: 0 };
+  gateway.plan_amounts.plan_AnnualFixture = amount;
+  await writeFile(fixturePath, JSON.stringify(gateway));
+  const { purchaseId } = await operation('kiwe_launch_import_woo_purchase',
+    { orderId, accountId, planId: plan.id, sku: plan.sku, providerOrderId, paymentId, paidAt });
+  const { pass } = await operation('kiwe_launch_freelancer_pass', { accountId });
+  assert.equal(pass.purchaseId, purchaseId);
+  assert.equal(pass.active, true);
+  assert.equal((await operation('kiwe_launch_reconcile_billing', {})).delivered, 0);
+  assert.equal(start.projects.listProjects(accountId).length, 0);
+
+  await page.goto(accountPath);
+  await page.getByRole('link', { name: 'Freelancer Pass' }).click();
+  assert.equal(new URL(page.url()).searchParams.get('purchase'), purchaseId);
+  await page.getByRole('heading', { name: 'Annual renewals' }).waitFor();
+  assert.equal(await page.getByRole('button', { name: 'Open Kiwe Start' }).count(), 0);
+  const consent = page.locator('form:has(input[name="action"][value="renewal-consent"])');
+  assert.match(await consent.textContent(), /₹1,499 each year/);
+  const form = await consent.locator('input[type="hidden"]').evaluateAll(inputs => Object.fromEntries(inputs.map(input => [input.name, input.value])));
+  const approval = await page.request.post(accountPath, { form: { ...form, renewal_consent: 'yes' }, maxRedirects: 0 });
+  assert.equal(approval.status(), 303);
+  assert.match(approval.headers().location, /^https:\/\/rzp\.io\/rzp\/sub_/);
+  await page.reload();
+  await page.getByRole('button', { name: 'Cancel automatic renewal' }).click();
+  await page.getByText('Automatic renewal is cancelled.', { exact: false }).waitFor();
+  assert.equal((await operation('kiwe_launch_freelancer_pass', { accountId })).pass.active, true);
+  process.stdout.write('Freelancer Pass browser and MCP proof passed for annual approval, cancellation and separate account coverage.\n');
 }
 
 async function verifyWebsitePurchases(buyer, other, accountId, legacyPurchase) {

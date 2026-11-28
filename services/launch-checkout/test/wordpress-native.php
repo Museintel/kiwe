@@ -34,6 +34,43 @@ function nativeBuyerSession(array $state, array $account): void
     session_write_close();
 }
 
+function nativeFixtureOrder(WC_Product $product, string $email): WC_Order
+{
+    $order = wc_create_order(['created_via' => 'checkout']);
+    $order->add_product($product, 1);
+    $order->set_billing_email($email);
+    $order->set_payment_method('razorpay');
+    $order->set_currency('INR');
+    $order->calculate_totals();
+    return $order;
+}
+
+function nativeFixtureCapture(string $root, WC_Order $order, int $amount): string
+{
+    $id = $order->get_id();
+    $providerOrder = 'order_WooNative' . $id;
+    $providerPayment = 'pay_WooNative' . $id;
+    $order->update_meta_data('razorpay_order_id' . $id, $providerOrder);
+    $order->save_meta_data();
+    $file = $root . '/data/gateway.json';
+    $provider = is_file($file) ? json_decode(file_get_contents($file), true, flags: JSON_THROW_ON_ERROR) : ['links' => [], 'subscriptions' => []];
+    $provider['orders'][$providerOrder] = ['id' => $providerOrder, 'receipt' => (string) $id,
+        'notes' => ['woocommerce_order_id' => (string) $id], 'currency' => 'INR', 'status' => 'paid',
+        'amount' => $amount, 'amount_paid' => $amount, 'amount_due' => 0];
+    $provider['payments'][$providerPayment] = ['id' => $providerPayment, 'order_id' => $providerOrder,
+        'status' => 'captured', 'currency' => 'INR', 'created_at' => time() - 1, 'amount' => $amount, 'amount_refunded' => 0];
+    file_put_contents($file, json_encode($provider, JSON_THROW_ON_ERROR));
+    $order->payment_complete($providerPayment);
+    nativeProof(as_has_scheduled_action('kiwe_launch_reconcile_website_order', [$id, 0], 'kiwe-launch'),
+        'Payment must enqueue a protected receipt check.');
+    do_action('kiwe_launch_reconcile_website_order', $id, 0);
+    $purchase = wc_get_order($id)->get_meta('_kiwe_launch_website_purchase');
+    do_action('kiwe_launch_reconcile_website_order', $id, 0);
+    nativeProof($purchase && wc_get_order($id)->get_meta('_kiwe_launch_website_purchase') === $purchase,
+        'Repeat the exact paid check without another purchase.');
+    return $purchase;
+}
+
 add_filter('pre_option_woocommerce_currency', static fn () => 'INR');
 add_filter('pre_option_woocommerce_price_num_decimals', static fn () => 2);
 add_filter('pre_option_woocommerce_calc_taxes', static fn () => 'no');
@@ -50,7 +87,8 @@ foreach ([$account, $otherAccount] as $person) $insert->execute([$person['id'], 
 $plan = $state['nativeWoo']['plans']['kiwe-portfolio-v1'];
 $amount = $plan['direct']['upfrontMinor'];
 $product = new WC_Product_Simple();
-$order = null;
+$passProduct = new WC_Product_Simple();
+$orders = [];
 $cleanup = false;
 try {
     nativeProof(!wc_get_product_id_by_sku($plan['sku']), 'The fixture SKU must be free.');
@@ -77,12 +115,7 @@ try {
     nativeProof(!$valid->has_errors(), 'Allow the verified buyer. ' . $valid->get_error_message());
     nativeProof(!is_user_logged_in(), 'Launch sign-in must not create a WordPress identity.');
 
-    $order = wc_create_order(['created_via' => 'checkout']);
-    $order->add_product($product, 1);
-    $order->set_billing_email($account['email']);
-    $order->set_payment_method('razorpay');
-    $order->set_currency('INR');
-    $order->calculate_totals();
+    $orders[] = $order = nativeFixtureOrder($product, $account['email']);
     $id = $order->get_id();
     do_action('woocommerce_checkout_order_processed', $id, $data, $order);
     $order = wc_get_order($id);
@@ -104,29 +137,44 @@ try {
     }
     nativeProof($blocked, 'Block native API payment outside the reviewed classic flow.');
 
-    $providerOrder = 'order_WooNativeFixture';
-    $providerPayment = 'pay_WooNativeFixture';
-    $order->update_meta_data('razorpay_order_id' . $id, $providerOrder);
-    $order->save_meta_data();
-    $provider = ['links' => [], 'subscriptions' => [],
-        'orders' => [$providerOrder => ['id' => $providerOrder, 'receipt' => (string) $id,
-            'notes' => ['woocommerce_order_id' => (string) $id], 'currency' => 'INR', 'status' => 'paid',
-            'amount' => $amount, 'amount_paid' => $amount, 'amount_due' => 0]],
-        'payments' => [$providerPayment => ['id' => $providerPayment, 'order_id' => $providerOrder,
-            'status' => 'captured', 'currency' => 'INR', 'created_at' => time() - 1, 'amount' => $amount, 'amount_refunded' => 0]],
-    ];
-    file_put_contents($root . '/data/gateway.json', json_encode($provider, JSON_THROW_ON_ERROR));
-    $order->payment_complete($providerPayment);
-    nativeProof(as_has_scheduled_action('kiwe_launch_reconcile_website_order', [$id, 0], 'kiwe-launch'), 'Payment must enqueue a protected receipt check.');
-    do_action('kiwe_launch_reconcile_website_order', $id, 0);
-    $purchase = wc_get_order($id)->get_meta('_kiwe_launch_website_purchase');
-    do_action('kiwe_launch_reconcile_website_order', $id, 0);
-    nativeProof($purchase && wc_get_order($id)->get_meta('_kiwe_launch_website_purchase') === $purchase, 'Repeat exact paid check without another purchase.');
+    $purchase = nativeFixtureCapture($root, $order, $amount);
     $status = $state['billing']->status($buyer, $purchase);
     nativeProof($status['projectId'] && $status['quote']['domain']['name'] === 'buyer.example.invalid'
         && $state['billing']->status($other, $purchase) === null, 'Delivery must use the order’s saved buyer and domain.');
+
+    $passPlan = $state['nativeWoo']['plans']['kiwe-freelancer-annual-v1'];
+    $passProduct->set_props(['name' => 'Synthetic Freelancer Pass', 'virtual' => true,
+        'regular_price' => (string) ($passPlan['priceMinor'] / 100), 'status' => 'publish']);
+    $passProduct->save();
+    $passProductId = $passProduct->get_id();
+    add_filter('woocommerce_product_get_sku', static fn ($sku, WC_Product $item) => $item->get_id() === $passProductId ? $passPlan['sku'] : $sku, 10, 2);
+    nativeBuyerSession($state, $account);
+    WC()->cart->empty_cart();
+    WC()->cart->add_to_cart($passProductId);
+    WC()->cart->calculate_totals();
+    $_POST = [];
+    $validPass = new WP_Error();
+    do_action('woocommerce_after_checkout_validation', $data, $validPass);
+    nativeProof(!$validPass->has_errors(), 'A verified pass buyer needs no domain. ' . $validPass->get_error_message());
+    $orders[] = $passOrder = nativeFixtureOrder($passProduct, $account['email']);
+    do_action('woocommerce_checkout_order_processed', $passOrder->get_id(), $data, $passOrder);
+    nativeProof(!apply_filters('woocommerce_cancel_unpaid_order', true, $passOrder)
+        && apply_filters('woocommerce_cancel_unpaid_order', true, $order), 'Only the reserved virtual pass is kept payable after a stock-hold timeout.');
+    $orders[] = $duplicate = nativeFixtureOrder($passProduct, $account['email']);
+    $blocked = false;
+    try {
+        do_action('woocommerce_checkout_order_processed', $duplicate->get_id(), $data, $duplicate);
+    } catch (KiweCheckoutError $error) {
+        $blocked = $error->status === 409;
+    }
+    nativeProof($blocked && !$duplicate->get_meta('_kiwe_launch_website_intent'), 'Only one checkout order can pay for this account pass.');
+    $passId = nativeFixtureCapture($root, $passOrder, $passPlan['priceMinor']);
+    $pass = $state['billing']->freelancerPass($buyer);
+    nativeProof($pass['active'] && $pass['purchaseId'] === $passId && !$state['billing']->status($buyer, $passId)['projectId'],
+        'The annual pass activates for the buyer with no Start project.');
 } finally {
-    if ($order instanceof WC_Order) {
+    $cleanup = true;
+    foreach ($orders as $order) {
         $id = $order->get_id();
         $actions = ActionScheduler::store();
         foreach (range(0, 5) as $attempt) {
@@ -134,9 +182,12 @@ try {
             foreach ($actions->query_actions($query) as $scheduled) $actions->delete_action($scheduled);
         }
         wc_get_order($id)->delete(true);
+        $cleanup = $cleanup && !wc_get_order($id);
     }
-    $productId = $product->get_id();
-    if ($productId) $product->delete(true);
-    $cleanup = (!$order || !wc_get_order($id)) && (!$productId || !wc_get_product($productId));
+    foreach ([$product, $passProduct] as $item) {
+        $productId = $item->get_id();
+        if ($productId) $item->delete(true);
+        $cleanup = $cleanup && (!$productId || !wc_get_product($productId));
+    }
 }
 echo json_encode(['passed' => true, 'cleanup' => $cleanup, 'buyer' => $buyer, 'other' => $other], JSON_THROW_ON_ERROR), PHP_EOL;

@@ -113,6 +113,12 @@ $mode = $formInput['mode'] ?? 'register';
             <?php if (!$native): ?><a class="text-link" href="<?= $e($route) ?>?tab=partner"><?= $account['partner'] ? 'Partner area' : 'Become a partner' ?></a><?php endif; ?>
           </div>
           <p>Verified email <strong><?= $e($account['email']) ?></strong></p>
+          <?php if ($pass): ?>
+            <p><a href="<?= $e($route) ?>?purchase=<?= $e($pass['purchaseId']) ?>"<?= $passSelected ? ' aria-current="page"' : '' ?>>Freelancer Pass</a>
+              · <?= $pass['active'] ? 'Active' : 'Inactive' ?></p>
+          <?php elseif ($passPending): ?>
+            <p>Freelancer Pass payment is awaiting confirmation.</p>
+          <?php endif; ?>
           <?php if ($websitePurchases): ?>
             <h3>Your website purchases</h3>
             <ul>
@@ -123,7 +129,12 @@ $mode = $formInput['mode'] ?? 'register';
             <?php if ($purchaseId): ?><p><a href="<?= $e($route) ?>?tab=client"><?= $native ? 'Back to your account' : 'Back to checkout' ?></a></p><?php endif; ?>
           <?php endif; ?>
           <?php if ($referral && !$purchaseId && !$native): ?><p class="checkout-note">Your partner price is applied.</p><?php endif; ?>
-          <?php if ($billingState): ?>
+          <?php if ($passSelected): ?>
+            <?php if ($pass['active']): ?>
+              <p>Freelancer Pass access through <?= $e((new DateTimeImmutable('@' . $pass['paidThrough']))->setTimezone(new DateTimeZone('Asia/Kolkata'))->format('j M Y')) ?>.</p>
+            <?php endif; ?>
+            <p><a href="<?= $e($route) ?>">Back to your account</a></p>
+          <?php elseif ($billingState): ?>
             <p class="checkout-note">Domain on this payment <strong><?= $e($billingState['quote']['domain']['name']) ?></strong></p>
           <?php elseif ($native): ?>
             <p><a class="button" href="/checkout/">Return to checkout</a></p>
@@ -202,7 +213,11 @@ $mode = $formInput['mode'] ?? 'register';
         <?php endif; ?>
       </section>
       <aside class="checkout-summary">
-        <?php if ($native && !$billingState && !$partnerTab): ?>
+        <?php if ($passSelected): ?>
+          <h2>Freelancer Pass</h2>
+          <p><?= $money($price['renewalMinor']) ?> per year.</p>
+          <?php require $root . '/billing-view.php'; ?>
+        <?php elseif ($native && !$billingState && !$partnerTab): ?>
           <h2>Website purchases</h2>
           <p>After payment is verified, select the website in your account to open Kiwe Start or manage its renewal.</p>
         <?php elseif ($partnerTab): ?>

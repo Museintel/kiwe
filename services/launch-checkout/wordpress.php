@@ -14,6 +14,7 @@ final class Kiwe_Launch_Woo_Checkout
     private const JOB = 'kiwe_launch_reconcile_website_order';
     private const GROUP = 'kiwe-launch';
     private const ACCOUNT = '/launch-account/';
+    private const PASS = 'KIWE-FREELANCER-ANNUAL';
 
     private ?array $state = null;
     private ?array $intent = null;
@@ -26,6 +27,7 @@ final class Kiwe_Launch_Woo_Checkout
         add_action('woocommerce_before_pay_action', [$this, 'requireBuyer']);
         add_action('woocommerce_receipt_razorpay', [$this, 'requireReceiptBuyer'], 1);
         add_action('woocommerce_store_api_checkout_order_processed', [$this, 'requireClassicCheckout']);
+        add_filter('woocommerce_cancel_unpaid_order', [$this, 'cancelUnpaid'], 10, 2);
         add_action('woocommerce_payment_complete', [$this, 'schedule']);
         add_action(self::JOB, [$this, 'reconcileJob'], 10, 2);
         add_action('woocommerce_thankyou', [$this, 'accountLink']);
@@ -67,7 +69,7 @@ final class Kiwe_Launch_Woo_Checkout
 
     private function launchSku(string $sku): bool
     {
-        return $sku === 'KIWE-FREELANCER-ANNUAL' || preg_match('/^KIWE-[A-Z]+-FIRST-12-MONTHS$/D', $sku) === 1;
+        return $sku === self::PASS || preg_match('/^KIWE-[A-Z]+-FIRST-12-MONTHS$/D', $sku) === 1;
     }
 
     private function cartSku(): ?string
@@ -91,9 +93,15 @@ final class Kiwe_Launch_Woo_Checkout
 
     public function fields(WC_Checkout $checkout): void
     {
-        if (!$this->cartSku()) return;
+        $sku = $this->cartSku();
+        if (!$sku) return;
+        $accountLink = esc_url(self::ACCOUNT);
+        if ($sku === self::PASS) {
+            echo '<p>Use the email you verified in <a href="' . $accountLink . '">your Kiwe Launch account</a>. You can approve annual renewal after payment.</p>';
+            return;
+        }
         echo '<fieldset class="kiwe-launch-site-details"><legend>Your website domain</legend>';
-        echo '<p>Use the email you verified in <a href="' . esc_url(self::ACCOUNT) . '">your Kiwe Launch account</a>.</p>';
+        echo '<p>Use the email you verified in <a href="' . $accountLink . '">your Kiwe Launch account</a>.</p>';
         woocommerce_form_field('kiwe_launch_domain', [
             'type' => 'text', 'label' => 'Domain name', 'required' => true, 'placeholder' => 'example.in',
             'custom_attributes' => ['maxlength' => 253, 'autocapitalize' => 'none', 'spellcheck' => 'false'],
@@ -107,6 +115,7 @@ final class Kiwe_Launch_Woo_Checkout
 
     public function validate(array $data, WP_Error $errors): void
     {
+        $this->intent = null;
         $sku = $this->cartSku();
         if (!$sku || $errors->has_errors()) return;
         try {
@@ -114,7 +123,7 @@ final class Kiwe_Launch_Woo_Checkout
         } catch (KiweCheckoutError $error) {
             $errors->add('kiwe_launch_checkout', $error->getMessage());
         } catch (Throwable) {
-            $errors->add('kiwe_launch_checkout', 'Website checkout is temporarily unavailable. Try again shortly.');
+            $errors->add('kiwe_launch_checkout', 'Kiwe Launch checkout is temporarily unavailable. Try again shortly.');
         }
     }
 
@@ -133,9 +142,24 @@ final class Kiwe_Launch_Woo_Checkout
         if (!$plan || ($data['payment_method'] ?? '') !== 'razorpay' || WC()->cart->get_cart_contents_count() !== 1
             || get_woocommerce_currency() !== 'INR' || wc_get_price_decimals() !== 2
             || wc_add_number_precision((float) WC()->cart->get_total('edit')) !== (float) $plan['direct']['upfrontMinor']) {
-            throw new KiweCheckoutError('Buy one website at its published first-year price with Razorpay.');
+            throw new KiweCheckoutError('Use Razorpay to buy one Kiwe Launch plan at its published first-year price.');
         }
 
+        $intent = ['accountId' => $account['id'], 'planId' => $plan['id'], 'sku' => $sku,
+            'amountMinor' => $plan['direct']['upfrontMinor'], 'email' => $account['email']];
+        if ($sku === self::PASS) {
+            $resumeId = $state['billing']->passOrder($account['id']);
+            if ($resumeId !== null) {
+                $resume = wc_get_order($resumeId);
+                if (!$resume || $resume->get_customer_id() !== get_current_user_id()
+                    || !$resume->has_status(['pending', 'failed']) || !$this->matchesOrder($resume, $intent)) {
+                    throw new KiweCheckoutError('Review your Freelancer Pass in your Kiwe Launch account.');
+                }
+                WC()->session->set('order_awaiting_payment', $resumeId);
+            }
+            $this->intent = $intent;
+            return;
+        }
         $domain = kiwe_checkout_domain(wp_unslash($_POST['kiwe_launch_domain'] ?? ''));
         $mode = $_POST['kiwe_launch_domain_mode'] ?? null;
         if (!in_array($mode, ['owned', 'register'], true)) throw new KiweCheckoutError('Choose how to connect your domain.');
@@ -149,28 +173,26 @@ final class Kiwe_Launch_Woo_Checkout
             }
             $selection['category'] = 'standard';
         }
-        $this->intent = [
-            'accountId' => $account['id'], 'planId' => $plan['id'], 'sku' => $sku, 'domain' => $selection,
-            'amountMinor' => $plan['direct']['upfrontMinor'], 'email' => $account['email'],
-        ];
+        $this->intent = $intent + ['domain' => $selection];
     }
 
     public function bind(int $id, array $data, WC_Order $order): void
     {
         if (!$this->launchOrder($order)) return;
         if (!$this->intent || !$this->matchesOrder($order, $this->intent)) {
-            throw new Exception('Recheck your website selection and verified Kiwe Launch account before paying.');
+            throw new Exception('Recheck your plan and verified Kiwe Launch account before paying.');
         }
         $payload = json_encode(['orderId' => $id, ...$this->intent], JSON_THROW_ON_ERROR);
         $saved = $order->get_meta(self::INTENT, true, 'edit');
-        if ($saved) {
-            if (($this->readIntent($order) ?? []) !== json_decode($payload, true, flags: JSON_THROW_ON_ERROR)) {
-                WC()->session->set('order_awaiting_payment', 0);
-                throw new Exception('Your website details changed. Submit checkout again to create a new order.');
-            }
-            return;
+        if ($saved && ($this->readIntent($order) ?? []) !== json_decode($payload, true, flags: JSON_THROW_ON_ERROR)) {
+            WC()->session->set('order_awaiting_payment', 0);
+            throw new Exception('Your checkout details changed. Submit checkout again to create a new order.');
         }
-        if ($this->providerOrderId($order)) throw new Exception('Start a new checkout for this website.');
+        if (!$saved && $this->providerOrderId($order)) throw new Exception('Start a new checkout for this plan.');
+        if ($this->intent['sku'] === self::PASS) {
+            $this->service()['billing']->reservePassOrder($this->intent['accountId'], $id);
+        }
+        if ($saved) return;
         $order->update_meta_data(self::INTENT, [
             'payload' => $payload,
             'signature' => hash_hmac('sha256', $payload, $this->service()['nativeWoo']['key']),
@@ -193,6 +215,7 @@ final class Kiwe_Launch_Woo_Checkout
         $item = $items[0] ?? null;
         $product = $item?->get_product();
         return count($items) === 1 && $item->get_quantity() === 1 && $product && $product->is_virtual()
+            && ($intent['sku'] !== self::PASS || !$product->managing_stock())
             && $product->get_sku() === $intent['sku'] && $order->get_currency() === 'INR'
             && $order->get_payment_method() === 'razorpay'
             && round((float) $order->get_total() * 100) === (float) $intent['amountMinor']
@@ -210,6 +233,7 @@ final class Kiwe_Launch_Woo_Checkout
         $buyer = $this->buyer();
         $intent = $this->readIntent($order);
         if (!$buyer || !$intent || $buyer['id'] !== $intent['accountId'] || !$this->matchesOrder($order, $intent)
+            || ($intent['sku'] === self::PASS && $this->service()['billing']->passOrder($buyer['id']) !== $order->get_id())
             || (isset($_POST['payment_method']) && $_POST['payment_method'] !== 'razorpay')) {
             throw new Exception('Open this order from the verified Kiwe Launch buyer account.');
         }
@@ -229,9 +253,22 @@ final class Kiwe_Launch_Woo_Checkout
     {
         if ($this->launchOrder($order)) {
             throw new Automattic\WooCommerce\StoreApi\Exceptions\RouteException(
-                'kiwe_launch_classic_checkout', 'Open the Kiwe Launch website checkout to pay for this plan.', 409
+                'kiwe_launch_classic_checkout', 'Open the Kiwe Launch checkout to pay for this plan.', 409
             );
         }
+    }
+
+    public function cancelUnpaid(bool $cancel, WC_Order $order): bool
+    {
+        if (!$cancel || !$order->get_meta(self::INTENT, true, 'edit')) return $cancel;
+        try {
+            $intent = $this->readIntent($order);
+            if (($intent['sku'] ?? '') === self::PASS && $this->matchesOrder($order, $intent)
+                && $this->service()['billing']->passOrder($intent['accountId']) === $order->get_id()) return false;
+        } catch (Throwable) {
+            // Preserve WooCommerce's normal cancellation policy if the billing service is unavailable.
+        }
+        return $cancel;
     }
 
     public function schedule(int $id): void
@@ -261,7 +298,7 @@ final class Kiwe_Launch_Woo_Checkout
         $order = wc_get_order($id);
         $intent = $order ? $this->readIntent($order) : null;
         if (!$intent || !$order->is_paid() || !$order->get_date_paid() || !$this->matchesOrder($order, $intent)) {
-            throw new RuntimeException('Missing verified paid website order.');
+            throw new RuntimeException('Missing a verified paid Kiwe Launch order.');
         }
         unset($intent['email'], $intent['amountMinor']);
         $purchase = $state['billing']->importWooPurchase($intent + [
@@ -269,7 +306,7 @@ final class Kiwe_Launch_Woo_Checkout
             'paymentId' => $order->get_transaction_id(),
             'paidAt' => $order->get_date_paid()->getTimestamp(),
         ]);
-        $state['billing']->deliver($intent['accountId'], $purchase);
+        if ($intent['sku'] !== self::PASS) $state['billing']->deliver($intent['accountId'], $purchase);
         $order->update_meta_data(self::PURCHASE, $purchase);
         $order->save_meta_data();
         return $purchase;

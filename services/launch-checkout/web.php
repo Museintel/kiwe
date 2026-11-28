@@ -132,7 +132,7 @@ function kiwe_checkout_action(
                 $billing->deliver($account['id'], $purchaseId);
                 return 'Billing status updated.';
             case 'renewal-consent':
-                if (($_POST['renewal_consent'] ?? '') !== 'yes') throw new KiweCheckoutError('Confirm the monthly renewal terms.');
+                if (($_POST['renewal_consent'] ?? '') !== 'yes') throw new KiweCheckoutError('Confirm the renewal terms.');
                 $amount = filter_var($_POST['renewal_amount'] ?? '', FILTER_VALIDATE_INT);
                 $starts = filter_var($_POST['renewal_start'] ?? '', FILTER_VALIDATE_INT);
                 $cycles = filter_var($_POST['renewal_cycles'] ?? '', FILTER_VALIDATE_INT);
@@ -268,6 +268,9 @@ function kiwe_checkout_serve(array $state, string $root, bool $native = false): 
     $referral = $account && !$partnerTab ? $checkout->referralFor($account['id']) : null;
     $draft = $account && !$partnerTab ? $checkout->draft($account['id']) : null;
     $billingState = $selectedBilling ?? ($account && !$partnerTab ? $billing?->status($account['id']) : null);
+    $pass = $account && !$partnerTab ? $billing?->freelancerPass($account['id']) : null;
+    $passPending = $account && !$partnerTab && !$pass && $billing?->passOrder($account['id']) !== null;
+    $passSelected = ($billingState['quote']['kind'] ?? '') === 'freelancer-pass';
     $websitePurchases = $account && !$partnerTab ? ($billing?->websitePurchases($account['id']) ?? []) : [];
     $partnerReferrals = $partnerTab && ($account['partner'] ?? false) ? $checkout->partnerReferrals($account) : [];
     $clientPage = filter_var($_GET['clients_page'] ?? 1, FILTER_VALIDATE_INT, [

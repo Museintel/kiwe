@@ -84,6 +84,11 @@ if (checkoutRoot) {
     inputSchema: { accountId: launchAccountId, purchaseId: launchPurchaseId.optional() },
     annotations: { readOnlyHint: true },
   }, ({ accountId, purchaseId }) => operation('billing-status', accountId, ...(purchaseId ? [purchaseId] : [])));
+  server.registerTool('kiwe_launch_freelancer_pass', {
+    description: 'Read verified Freelancer Pass coverage for the supplied Launch account.',
+    inputSchema: { accountId: launchAccountId },
+    annotations: { readOnlyHint: true },
+  }, ({ accountId }) => operation('freelancer-pass', accountId));
   server.registerTool('kiwe_launch_import_woo_purchase', {
     description: 'Record an already paid direct Kiwe Launch WooCommerce order from trusted native operator evidence. Razorpay independently confirms it. This does not charge the customer.',
     inputSchema: {
@@ -93,7 +98,7 @@ if (checkoutRoot) {
       domain: z.discriminatedUnion('mode', [
         z.strictObject({ mode: z.literal('owned'), name: z.string().min(1).max(253) }),
         z.strictObject({ mode: z.literal('register'), name: z.string().min(1).max(253), category: z.literal('standard') }),
-      ]),
+      ]).optional(),
     },
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
   }, (order) => operation('import-woo-purchase', JSON.stringify(order)));

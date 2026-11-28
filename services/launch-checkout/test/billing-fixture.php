@@ -41,7 +41,8 @@ function kiwe_test_gateway(string $root, string $method, string $route, array $b
             $plan = json_decode(file_get_contents($root . '/client-plan.json'), true, flags: JSON_THROW_ON_ERROR);
             $amount = $plan[$path[1] === 'plan_ReferralFixture' ? 'referred' : 'direct']['renewalMinor'];
         }
-        return ['id' => $path[1], 'period' => 'monthly', 'interval' => 1, 'item' => ['amount' => $amount, 'currency' => 'INR']];
+        $period = $path[1] === 'plan_AnnualFixture' ? 'yearly' : 'monthly';
+        return ['id' => $path[1], 'period' => $period, 'interval' => 1, 'item' => ['amount' => $amount, 'currency' => 'INR']];
     }
     if ($route === '/subscriptions' && $method === 'POST') {
         $id = 'sub_Fixture' . (count($state['subscriptions']) + 1);
