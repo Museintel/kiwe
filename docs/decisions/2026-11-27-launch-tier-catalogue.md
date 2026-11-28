@@ -19,7 +19,7 @@ The ₹1,499 annual pass applies future eligible pricing automatically. A paid p
 
 The WooCommerce store should own the order and provider payment for the new Bricks checkout. A paid website order must correlate to its proven buyer and exact Start entitlement. The existing single-purchase Launch payment flow needs a transition to purchase-level ownership before the new site offers are payable. Keep existing consent, refund, dispute and commission records available through that transition. An order must never create a second charge or duplicate projects and commission on retry.
 
-The shared Guest approval workspace authorizes wholesale, referral and product or post proposal grants individually. A frontend-only grant does not give Dashboard access. Bind private discounts to a verified account and an active entitlement. Show savings in a public Bricks card and suppress the private coupon code in buyer projections. Approved referrals are site-specific and should reuse Link DSA entry and consent. Report attributed sales and sign-ups in the authorised Guest view in Kiwe and MCP. POS, multi-location stock and attendance remain roadmap work.
+Existing WooCommerce coupons set wholesale prices by discounting the store price. A private coupon stays bound to a verified account or active entitlement, and buyer projections show the savings without publishing the code. The shared Guest App authorizes referrals, product proposals and article submissions separately. Referral-only approval keeps the account on the storefront. Approved referrals reuse Links DSA and visitor consent. Analytics → Guest and MCP report attributed sales and sign-ups to authorized staff. POS, multi-location stock and attendance remain roadmap work.
 
 ## Implementation status
 
@@ -37,5 +37,5 @@ The shared Guest approval workspace authorizes wholesale, referral and product o
 
 ## Remaining launch batches
 
-1. Complete role-scoped Guest permissions, wholesale pricing and attribution.
-2. Qualify outgoing mail, the authored Bricks checkout, Razorpay payments and renewals for websites and the annual Pass, and Start and hosting on the representative site. Activate public purchases for the verified offers. Publish paid Operations after the wholesale workflow passes. POS and attendance remain separate roadmap work.
+1. Qualify the shared Guest permissions and referral reporting candidate on the hosted rehearsal. Include a private, existing WooCommerce coupon in the role checks. [Shared Guest candidate](https://github.com/Museintel/kiwe/tree/8cb437b6e15893e6f208212dd44096a474c05e3b)
+2. In the same hosted qualification batch, verify outgoing mail, the authored Bricks checkout, Razorpay payments and renewals for websites and the annual Pass, and Start and hosting on the representative site. Activate public purchases for the verified offers. POS and attendance remain roadmap work.
