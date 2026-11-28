@@ -1,4 +1,4 @@
-## Unreleased Guest permissions and attribution
+## 8.0.0-rc.517 (2026-11-28)
 
 - Give verified Guest applicants independently reviewed article, product proposal and referral permissions.
 - Share consent-based Guest referral links through DSA and report attributed registrations, paid WooCommerce orders and contributed product sales in Analytics and MCP.
