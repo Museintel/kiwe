@@ -286,14 +286,35 @@ async function verifyPassAccount(page, DatabaseSync) {
   gateway.payments[paymentId] = { id: paymentId, order_id: providerOrderId, status: 'captured',
     amount, currency: 'INR', created_at: paidAt, amount_refunded: 0 };
   gateway.plan_amounts.plan_AnnualFixture = amount;
+  const websitePlan = launchCatalogue.websitePlans.find(item => item.id === 'kiwe-portfolio-v1');
+  const siteOrder = { orderId: 704, accountId, planId: websitePlan.id, sku: websitePlan.sku,
+    providerOrderId: 'order_RateBrowserFixture', paymentId: 'pay_RateBrowserFixture', paidAt: paidAt - 180 * 86400,
+    domain: { mode: 'owned', name: 'renewal.example.invalid' } };
+  const firstYear = websitePlan.direct.upfrontMinor;
+  gateway.orders[siteOrder.providerOrderId] = { id: siteOrder.providerOrderId, receipt: String(siteOrder.orderId), status: 'paid', currency: 'INR',
+    notes: { woocommerce_order_id: String(siteOrder.orderId) }, amount: firstYear, amount_paid: firstYear, amount_due: 0 };
+  gateway.payments[siteOrder.paymentId] = { id: siteOrder.paymentId, order_id: siteOrder.providerOrderId, status: 'captured',
+    amount: firstYear, currency: 'INR', created_at: siteOrder.paidAt, amount_refunded: 0 };
+  gateway.plan_amounts.plan_PortfolioPassFixture = websitePlan.referred.renewalMinor;
   await writeFile(fixturePath, JSON.stringify(gateway));
+  const { purchaseId: sitePurchase } = await operation('kiwe_launch_import_woo_purchase', siteOrder);
+  assert.equal((await operation('kiwe_launch_reconcile_billing', {})).delivered, 1);
+  const sitePage = accountPath + '?purchase=' + sitePurchase;
+  await page.goto(sitePage);
+  const siteConsent = () => page.locator('form:has(input[name="action"][value="renewal-consent"])');
+  const submitConsent = async (form) => {
+    const fields = await form.locator('input[type="hidden"]').evaluateAll(inputs => Object.fromEntries(inputs.map(input => [input.name, input.value])));
+    return page.request.post(accountPath, { form: { ...fields, renewal_consent: 'yes' }, maxRedirects: 0 });
+  };
+  assert.match(await siteConsent().textContent(), /₹479 each month/);
+  assert.match((await submitConsent(siteConsent())).headers().location, /^https:\/\/rzp\.io\/rzp\/sub_/);
   const { purchaseId } = await operation('kiwe_launch_import_woo_purchase',
     { orderId, accountId, planId: plan.id, sku: plan.sku, providerOrderId, paymentId, paidAt });
   const { pass } = await operation('kiwe_launch_freelancer_pass', { accountId });
   assert.equal(pass.purchaseId, purchaseId);
   assert.equal(pass.active, true);
   assert.equal((await operation('kiwe_launch_reconcile_billing', {})).delivered, 0);
-  assert.equal(start.projects.listProjects(accountId).length, 0);
+  assert.equal(start.projects.listProjects(accountId).length, 1);
 
   await page.goto(accountPath);
   await page.getByRole('link', { name: 'Freelancer Pass' }).click();
@@ -302,15 +323,27 @@ async function verifyPassAccount(page, DatabaseSync) {
   assert.equal(await page.getByRole('button', { name: 'Open Kiwe Start' }).count(), 0);
   const consent = page.locator('form:has(input[name="action"][value="renewal-consent"])');
   assert.match(await consent.textContent(), /₹1,499 each year/);
-  const form = await consent.locator('input[type="hidden"]').evaluateAll(inputs => Object.fromEntries(inputs.map(input => [input.name, input.value])));
-  const approval = await page.request.post(accountPath, { form: { ...form, renewal_consent: 'yes' }, maxRedirects: 0 });
+  const approval = await submitConsent(consent);
   assert.equal(approval.status(), 303);
   assert.match(approval.headers().location, /^https:\/\/rzp\.io\/rzp\/sub_/);
   await page.reload();
   await page.getByRole('button', { name: 'Cancel automatic renewal' }).click();
   await page.getByText('Automatic renewal is cancelled.', { exact: false }).waitFor();
   assert.equal((await operation('kiwe_launch_freelancer_pass', { accountId })).pass.active, true);
-  process.stdout.write('Freelancer Pass browser and MCP proof passed for annual approval, cancellation and separate account coverage.\n');
+  await page.goto(sitePage);
+  await page.getByText('Reconciling the previous Razorpay approval and its payments.').waitFor();
+  assert.equal(await page.getByRole('link', { name: 'Finish renewal approval' }).count(), 0);
+  assert.equal(await siteConsent().count(), 0);
+  assert.deepEqual(await operation('kiwe_launch_reconcile_renewal_rates', {}), { stopped: 1, pending: 0, awaitingRecovery: 0 });
+  await page.reload();
+  assert.match(await siteConsent().textContent(), /₹429 each month/);
+  const cycles = Number(await siteConsent().locator('input[name="renewal_cycles"]').inputValue());
+  assert.ok(cycles > 0 && cycles < 12);
+  assert.match((await submitConsent(siteConsent())).headers().location, /^https:\/\/rzp\.io\/rzp\/sub_/);
+  const current = (await operation('kiwe_launch_billing_status', { accountId, purchaseId: sitePurchase })).billing;
+  assert.equal(current.mandate.amount, 42900);
+  assert.equal(current.mandate.cycles, cycles);
+  process.stdout.write('Freelancer Pass browser and MCP proof passed for annual approval and capped website renewal after a rate change.\n');
 }
 
 async function verifyWebsitePurchases(buyer, other, accountId, legacyPurchase) {

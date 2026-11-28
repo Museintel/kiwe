@@ -46,7 +46,7 @@ function kiwe_test_gateway(string $root, string $method, string $route, array $b
     }
     if ($route === '/subscriptions' && $method === 'POST') {
         $id = 'sub_Fixture' . (count($state['subscriptions']) + 1);
-        $state['subscriptions'][$id] = $body + ['id' => $id, 'status' => 'created', 'short_url' => 'https://rzp.io/rzp/' . $id];
+        $state['subscriptions'][$id] = $body + ['id' => $id, 'status' => 'created', 'paid_count' => 0, 'short_url' => 'https://rzp.io/rzp/' . $id];
         file_put_contents($file, json_encode($state, JSON_THROW_ON_ERROR));
         return $state['subscriptions'][$id];
     }

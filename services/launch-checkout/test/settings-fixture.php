@@ -42,6 +42,7 @@ if ($start = getenv('KIWE_BILLING_TEST_START_ORIGIN')) {
             'kiwe-ecommerce-v1' => 'plan_EcommerceFixture',
         ];
         $settings['billing']['plans']['freelancerPass'] = 'plan_AnnualFixture';
+        $settings['billing']['plans']['passWebsitePlans'] = ['kiwe-portfolio-v1' => 'plan_PortfolioPassFixture'];
     }
 }
 return $settings;

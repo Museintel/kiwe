@@ -21,6 +21,7 @@ try {
         'freelancer-pass' => ['pass' => ($billing ?? throw new KiweCheckoutError('Launch billing is unavailable.', 503))->freelancerPass($value)],
         'import-woo-purchase' => kiwe_checkout_operator_woo_purchase($billing, $value),
         'reconcile-billing' => $billing?->deliverPending() ?? throw new KiweCheckoutError('Launch billing is unavailable.', 503),
+        'reconcile-renewal-rates' => $billing?->reconcileRenewalRates() ?? throw new KiweCheckoutError('Launch billing is unavailable.', 503),
         'register-domain', 'reconcile-domain' => kiwe_checkout_operator_domain($state, $argv[1], $value, $argv[3] ?? '', $argv[4] ?? ''),
         'review-domain-move' => ($billing ?? throw new KiweCheckoutError('Launch billing is unavailable.', 503))
             ->reviewDomainMove($value, kiwe_checkout_domain($argv[3] ?? ''), $argv[4] ?? '', $argv[5] ?? ''),

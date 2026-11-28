@@ -106,6 +106,10 @@ if (checkoutRoot) {
     description: 'Check pending Razorpay payments and deliver confirmed first-year purchases to Kiwe Start once.',
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
   }, () => operation('reconcile-billing'));
+  server.registerTool('kiwe_launch_reconcile_renewal_rates', {
+    description: 'Confirm or stop website mandates already queued for a Pass-related rate change. Readback includes pending and recoverable approvals.',
+    annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: true },
+  }, () => operation('reconcile-renewal-rates'));
   server.registerTool('kiwe_launch_reconcile_domain', {
     description: 'Check an existing paid Kiwe registration request with Hostinger and deliver the verified domain to Start. This operation cannot buy a domain.',
     inputSchema: { purchaseId: z.string().regex(/^kiwe_[a-f0-9]{32}$/), domain: z.string().min(1).max(253) },

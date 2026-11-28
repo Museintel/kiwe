@@ -239,7 +239,8 @@ try {
     $discountId = nativeFixtureCapture($root, $discountOrder, $eligible);
     $discount = $state['billing']->status($buyer, $discountId);
     nativeProof($discount['projectId'] && $discount['quote']['pricingSource'] === 'pass' && $discount['quote']['referralId'] === null
-        && !$discount['renewalAvailable'] && $discount['quote']['upfrontMinor'] === $eligible,
+        && !$discount['renewalPassPrice'] && $discount['renewalAmount'] === $plan['direct']['renewalMinor']
+        && $discount['quote']['upfrontMinor'] === $eligible,
         'An already approved capture reaches the correct Start project at its frozen price.');
 } finally {
     $cleanup = true;

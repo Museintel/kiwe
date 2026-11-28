@@ -1,5 +1,7 @@
 ## Unreleased Kiwe Launch catalogue
 
+- Bound discounted website renewals to paid Pass coverage and reconcile affected Razorpay approvals before accepting a new rate.
+
 - Apply private first-year website pricing for active Freelancer Pass buyers and preserve the approved quote through WooCommerce, Razorpay and Start.
 
 - Record the Freelancer Pass as one verified account purchase with annual renewal consent, paid-period eligibility, refunds and private MCP status.

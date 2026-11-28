@@ -28,8 +28,10 @@ $orders = $payments = $providerPlans = $subscriptions = $invoices = [];
 $reads = 0;
 $canSchedule = false;
 $loseApproval = false;
+$loseCancellation = false;
+$cancelled = 0;
 $gateway = static function (string $method, string $path, array $body = []) use (
-    &$orders, &$payments, &$reads, &$providerPlans, &$subscriptions, &$invoices, &$canSchedule, &$loseApproval
+    &$orders, &$payments, &$reads, &$providerPlans, &$subscriptions, &$invoices, &$canSchedule, &$loseApproval, &$loseCancellation, &$cancelled
 ): array {
     if ($method === 'GET') {
         $reads++;
@@ -39,14 +41,16 @@ $gateway = static function (string $method, string $path, array $body = []) use 
     if (!$canSchedule) throw new LogicException('The paid order importer must never charge.');
     if ($method === 'POST' && $path === '/subscriptions') {
         $id = 'sub_Website' . (count($subscriptions) + 1);
-        $subscription = $body + ['id' => $id, 'status' => 'created', 'short_url' => 'https://rzp.io/rzp/' . $id];
+        $subscription = $body + ['id' => $id, 'status' => 'created', 'paid_count' => 0, 'short_url' => 'https://rzp.io/rzp/' . $id];
         $subscriptions[$path . '/' . $id] = $subscription;
         if ($loseApproval) throw new KiweCheckoutError('Simulated connection loss after creating approval.', 503);
         return $subscription;
     }
     if ($method === 'POST' && str_ends_with($path, '/cancel')) {
         $route = substr($path, 0, -strlen('/cancel'));
+        $cancelled++;
         $subscriptions[$route]['status'] = 'cancelled';
+        if ($loseCancellation) throw new KiweCheckoutError('Simulated connection loss after cancellation.', 503);
         return $subscriptions[$route];
     }
     throw new LogicException('Unexpected provider write.');
@@ -63,6 +67,9 @@ foreach (['kiwe-portfolio-v1' => 'plan_PortfolioFixture', 'kiwe-ecommerce-v1' =>
         'item' => ['amount' => $plans[$version]['direct']['renewalMinor'], 'currency' => 'INR']];
 }
 $settings['plans']['freelancerPass'] = 'plan_AnnualFixture';
+$settings['plans']['passWebsitePlans'] = ['kiwe-ecommerce-v1' => 'plan_EcommercePassFixture'];
+$providerPlans['/plans/plan_EcommercePassFixture'] = ['id' => 'plan_EcommercePassFixture', 'period' => 'monthly', 'interval' => 1,
+    'item' => ['amount' => $plans['kiwe-ecommerce-v1']['referred']['renewalMinor'], 'currency' => 'INR']];
 $providerPlans['/plans/plan_AnnualFixture'] = ['id' => 'plan_AnnualFixture', 'period' => 'yearly', 'interval' => 1,
     'item' => ['amount' => $plans['kiwe-freelancer-annual-v1']['priceMinor'], 'currency' => 'INR']];
 $billing = kiwe_checkout_billing($settings, $checkout, $database, 'http://127.0.0.1:8250', true, $plans);
@@ -259,4 +266,85 @@ $billing->reservePassOrder($other, $expired['orderId']);
 $billing->importWooPurchase($expired);
 expectWoo(!$billing->freelancerPass($other)['active'] && $billing->freelancerPass($other)['paidThrough'] < $now,
     'An expired prepaid year no longer gives pass eligibility.');
+$billing->reconcileRenewalRates();
+$unrelatedState = $billing->status($buyer, $second)['mandate']['status'];
+
+$rateBuyer = 'launch:' . str_repeat('c', 32);
+$accounts->execute([$rateBuyer, 'renewal-buyer@example.invalid', 'fixture', time()]);
+$nativeRateOrder = static function (array $base, int $id, int $paidAt) use (&$orders, &$payments, $rateBuyer): array {
+    $native = [...$base, 'orderId' => $id, 'paidAt' => $paidAt, 'accountId' => $rateBuyer,
+        'providerOrderId' => 'order_RateFixture' . $id, 'paymentId' => 'pay_RateFixture' . $id];
+    $orders['/orders/' . $native['providerOrderId']] = [...$orders['/orders/' . $base['providerOrderId']],
+        'id' => $native['providerOrderId'], 'receipt' => (string) $id, 'notes' => ['woocommerce_order_id' => (string) $id]];
+    $payments['/payments/' . $native['paymentId']] = [...$payments['/payments/' . $base['paymentId']],
+        'id' => $native['paymentId'], 'order_id' => $native['providerOrderId'], 'created_at' => $paidAt, 'status' => 'captured', 'amount_refunded' => 0];
+    return $native;
+};
+$rateOrder = $nativeRateOrder($commerce, 506, kiwe_billing_month_end($now, -6));
+$rateSite = $billing->importWooPurchase($rateOrder);
+$direct = $billing->status($rateBuyer, $rateSite);
+$rateStart = $direct['renewalStart'];
+$directAmount = $direct['renewalAmount'];
+$billing->renew($rateBuyer, 'fixture', $directAmount, $rateStart, $direct['renewalCycles'], $rateSite);
+$oldMandate = $billing->status($rateBuyer, $rateSite)['mandate'];
+expectWoo($oldMandate['amount'] === $directAmount && $oldMandate['url'], 'The buyer can approve the direct monthly price.');
+
+$ratePass = $nativeRateOrder($pass, 507, $now);
+$billing->reservePassOrder($rateBuyer, 507);
+$billing->importWooPurchase($ratePass);
+$eligible = $billing->status($rateBuyer, $rateSite);
+$passThrough = $billing->freelancerPass($rateBuyer)['paidThrough'];
+$cycles = $eligible['renewalCycles'];
+expectWoo($eligible['renewalPassPrice'] && $eligible['renewalAmount'] === 69900 && $eligible['renewalStart'] === $rateStart
+    && kiwe_billing_month_end($rateStart, $cycles - 1) < $passThrough && kiwe_billing_month_end($rateStart, $cycles) >= $passThrough,
+    'The eligible quote covers exactly the scheduled starts within the paid Pass year.');
+expectWoo($eligible['mandate']['stoppingForPrice'] && !$eligible['mandate']['url'],
+    'Acquiring a Pass must close an existing higher-rate approval before reauthorising.');
+expectWooDenied(fn () => $billing->renew($rateBuyer, 'fixture', 69900, $rateStart, $cycles, $rateSite), 409);
+
+$countBefore = $cancelled;
+$loseCancellation = true;
+expectWoo($billing->reconcileRenewalRates() === ['stopped' => 0, 'pending' => 1, 'awaitingRecovery' => 0],
+    'A lost cancellation response must leave the old approval pending.');
+$db->exec('UPDATE launch_website_renewal_stops SET retry_after = 0');
+$loseCancellation = false;
+expectWoo($billing->reconcileRenewalRates() === ['stopped' => 1, 'pending' => 0, 'awaitingRecovery' => 0] && $cancelled === $countBefore + 1,
+    'Read the provider before a retry and avoid repeating a confirmed cancellation.');
+expectWooDenied(fn () => $billing->renew($rateBuyer, 'fixture', 69900, $rateStart, $cycles + 1, $rateSite), 409);
+$billing->renew($rateBuyer, 'fixture', 69900, $rateStart, $cycles, $rateSite);
+$discountedMandate = end($subscriptions);
+expectWoo($discountedMandate['plan_id'] === 'plan_EcommercePassFixture' && $discountedMandate['total_count'] === $cycles,
+    'The new consent and provider approval use the bounded Pass rate.');
+
+$siteCharge = [...$renewal, 'id' => 'pay_NewRateFixture', 'invoice_id' => 'inv_NewRateFixture', 'order_id' => 'order_NewRateFixture', 'amount' => 69900];
+$siteEnd = kiwe_billing_month_end($rateStart, 1);
+$invoices['/invoices/' . $siteCharge['invoice_id']] = ['id' => $siteCharge['invoice_id'], 'payment_id' => $siteCharge['id'],
+    'order_id' => $siteCharge['order_id'], 'subscription_id' => $discountedMandate['id'], 'currency' => 'INR', 'status' => 'paid',
+    'amount' => 69900, 'amount_paid' => 69900, 'billing_start' => $rateStart, 'billing_end' => $siteEnd];
+$send('subscription.charged', 'website-discount-cycle', [
+    'subscription' => ['entity' => [...$discountedMandate, 'status' => 'active']], 'payment' => ['entity' => $siteCharge],
+]);
+$sitePassRefund = [...$passRefund, 'id' => 'rfnd_RateFixture', 'payment_id' => $ratePass['paymentId']];
+$send('refund.processed', 'website-rate-pass-refunded', ['refund' => ['entity' => $sitePassRefund]]);
+$fallback = $billing->status($rateBuyer, $rateSite);
+expectWoo(!$fallback['renewalPassPrice'] && $fallback['renewalAmount'] === $directAmount && $fallback['mandate']['stoppingForPrice']
+    && $fallback['paidThrough'] === $siteEnd && $fallback['renewalStart'] === $siteEnd,
+    'A refund changes future renewals without reclaiming a paid site period.');
+expectWooDenied(fn () => $billing->renew($rateBuyer, 'fixture', $directAmount, $siteEnd, $fallback['renewalCycles'], $rateSite), 409);
+$subscriptions['/subscriptions/' . $discountedMandate['id']]['paid_count'] = 2;
+expectWoo($billing->reconcileRenewalRates() === ['stopped' => 0, 'pending' => 1, 'awaitingRecovery' => 0],
+    'A cancelled approval with a missing paid cycle must block replacement to prevent overlapping charges.');
+expectWooDenied(fn () => $billing->renew($rateBuyer, 'fixture', $directAmount, $siteEnd, $fallback['renewalCycles'], $rateSite), 409);
+$lateSiteCharge = [...$siteCharge, 'id' => 'pay_RateLateFixture', 'invoice_id' => 'inv_RateLateFixture', 'order_id' => 'order_RateLateFixture'];
+$siteEndAfterLatePayment = kiwe_billing_month_end($rateStart, 2);
+$invoices['/invoices/' . $lateSiteCharge['invoice_id']] = [...$invoices['/invoices/' . $siteCharge['invoice_id']],
+    'id' => $lateSiteCharge['invoice_id'], 'payment_id' => $lateSiteCharge['id'], 'order_id' => $lateSiteCharge['order_id'],
+    'billing_start' => $siteEnd, 'billing_end' => $siteEndAfterLatePayment];
+$send('subscription.charged', 'website-discount-late-cycle', [
+    'subscription' => ['entity' => $subscriptions['/subscriptions/' . $discountedMandate['id']]], 'payment' => ['entity' => $lateSiteCharge],
+]);
+$finalRate = $billing->status($rateBuyer, $rateSite);
+expectWoo(!$finalRate['mandate']['stoppingForPrice'] && $finalRate['renewalStart'] === $siteEndAfterLatePayment
+    && $billing->status($buyer, $second)['mandate']['status'] === $unrelatedState,
+    'A late paid cycle extends the site term and releases only its reconciled approval.');
 echo json_encode(['projects' => [$projectA, $projectB], 'buyer' => $buyer], JSON_THROW_ON_ERROR), PHP_EOL;

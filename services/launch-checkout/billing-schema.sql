@@ -18,6 +18,8 @@ CREATE TABLE IF NOT EXISTS launch_payments (
 ) STRICT;
 CREATE UNIQUE INDEX IF NOT EXISTS launch_one_open_legacy_payment ON launch_payments(account_id)
     WHERE retired_at IS NULL AND draft_id NOT GLOB 'woo:*';
+CREATE INDEX IF NOT EXISTS launch_native_buyer ON launch_payments(account_id, id)
+    WHERE retired_at IS NULL AND draft_id GLOB 'woo:*';
 DROP INDEX IF EXISTS launch_one_open_payment;
 
 CREATE TABLE IF NOT EXISTS launch_woo_orders (
@@ -63,6 +65,13 @@ CREATE TABLE IF NOT EXISTS launch_renewal_mandates (
     retired_at INTEGER
 ) STRICT;
 CREATE UNIQUE INDEX IF NOT EXISTS launch_current_mandate ON launch_renewal_mandates(purchase_id) WHERE retired_at IS NULL;
+
+CREATE TABLE IF NOT EXISTS launch_website_renewal_stops (
+    mandate_id TEXT PRIMARY KEY REFERENCES launch_renewal_mandates(id),
+    retry_after INTEGER NOT NULL DEFAULT 0,
+    terminal_paid_cycles INTEGER CHECK(terminal_paid_cycles >= 0)
+) STRICT;
+CREATE INDEX IF NOT EXISTS launch_website_renewal_stops_due ON launch_website_renewal_stops(retry_after);
 
 CREATE TABLE IF NOT EXISTS launch_renewal_payments (
     payment_id TEXT PRIMARY KEY,

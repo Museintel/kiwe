@@ -16,12 +16,15 @@ function kiwe_checkout_billing(mixed $config, KiweCheckout $checkout, string $da
     $secret = $config['webhookSecret'] ?? '';
     if (!$merchant || !is_string($secret) || strlen($secret) < 32 || !is_int($cycles) || $cycles < 1 || $cycles > 1200
         || !is_array($plans) || !kiwe_billing_id($plans['direct'] ?? null, 'plan')
-        || !kiwe_billing_id($plans['referred'] ?? null, 'plan') || !is_array($plans['websitePlans'] ?? [])) {
+        || !kiwe_billing_id($plans['referred'] ?? null, 'plan') || !is_array($plans['websitePlans'] ?? [])
+        || !is_array($plans['passWebsitePlans'] ?? [])) {
         throw new RuntimeException('Kiwe billing credentials or plans are invalid.');
     }
-    foreach ($plans['websitePlans'] ?? [] as $catalogueId => $providerId) {
-        if (($nativePlans[$catalogueId]['hostingIncluded'] ?? false) !== true || !kiwe_billing_id($providerId, 'plan')) {
-            throw new RuntimeException('A website renewal plan is not mapped to the Launch catalogue.');
+    foreach (['websitePlans', 'passWebsitePlans'] as $mapping) {
+        foreach ($plans[$mapping] ?? [] as $catalogueId => $providerId) {
+            if (($nativePlans[$catalogueId]['hostingIncluded'] ?? false) !== true || !kiwe_billing_id($providerId, 'plan')) {
+                throw new RuntimeException('A website renewal plan is not mapped to the Launch catalogue.');
+            }
         }
     }
     if (isset($plans['freelancerPass']) && !kiwe_billing_id($plans['freelancerPass'], 'plan')) {

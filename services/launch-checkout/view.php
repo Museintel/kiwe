@@ -236,6 +236,8 @@ $partnerPrice = $billingState ? $billingState['quote']['referralId'] : $referral
           <h2><?= $money($price['upfrontMinor']) ?></h2>
           <?php if ($passPrice): ?>
             <p>For your first 12 months with the Freelancer Pass. Taxes included.</p>
+          <?php elseif ($billingState && $billingState['renewalPassPrice']): ?>
+            <p>For your first 12 months. Taxes included.</p>
           <?php else: ?>
             <p>For your first 12 months, then <strong><?= $money($price['renewalMinor']) ?>/month</strong>. Taxes included.</p>
           <?php endif; ?>

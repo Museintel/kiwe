@@ -47,7 +47,10 @@ $statuses = [
     <?php endif; ?>
     <?php if ($mandate): ?>
       <h3><?= $renewalHeading ?></h3>
-      <p><?= $e($statuses[$mandate['status']] ?? $mandate['status']) ?></p>
+      <p><?= $e($mandate['stoppingForPrice'] ? 'Reconciling the previous Razorpay approval and its payments.' : ($statuses[$mandate['status']] ?? $mandate['status'])) ?></p>
+      <?php if (!KiweBilling::terminalMandate($mandate['status']) && !$mandate['stoppingForPrice']): ?>
+        <p>Scheduled rate <?= $money($mandate['amount']) ?> per <?= $annual ? 'year' : 'month' ?>.</p>
+      <?php endif; ?>
       <?php if ($mandate['url'] && !$fullRefund && !$billingState['renewalOnHold']): ?>
         <p><a class="button button-lime" href="<?= $e($mandate['url']) ?>">Finish renewal approval</a></p>
       <?php endif; ?>
@@ -60,15 +63,19 @@ $statuses = [
     <?php endif; ?>
     <?php if ($billingState['renewalOnHold']): ?>
       <p>Renewal approval is on hold while Launch reviews this payment.</p>
-    <?php elseif ($billingState['renewalStart'] && (!$mandate || KiweBilling::terminalMandate($mandate['status'])) && $billingState['renewalAvailable']): ?>
+    <?php elseif ($billingState['renewalStart'] && (!$mandate || (!$mandate['stoppingForPrice'] && KiweBilling::terminalMandate($mandate['status'])))
+      && $billingState['renewalAvailable']): ?>
       <?php if (!$mandate): ?><h3><?= $renewalHeading ?></h3><?php endif; ?>
+      <?php if ($billingState['renewalPassPrice']): ?>
+        <p>Paid Freelancer Pass coverage sets the rate and the number of payments you can approve.</p>
+      <?php endif; ?>
       <form method="post" action="<?= $e($route) ?>" class="billing-actions">
         <?= kiwe_checkout_post_fields('renewal-consent', $purchaseId) ?>
-        <input type="hidden" name="renewal_amount" value="<?= $e($price['renewalMinor']) ?>">
+        <input type="hidden" name="renewal_amount" value="<?= $e($billingState['renewalAmount']) ?>">
         <input type="hidden" name="renewal_start" value="<?= $e($billingState['renewalStart']) ?>">
         <input type="hidden" name="renewal_cycles" value="<?= $e($billingState['renewalCycles']) ?>">
         <label><input type="checkbox" name="renewal_consent" value="yes" required>
-          Approve <?= $money($price['renewalMinor']) ?> each <?= $annual ? 'year' : 'month' ?> from <?= $date($billingState['renewalStart']) ?> for up to <?= $billingState['renewalCycles'] ?> payments. You can cancel automatic renewal.</label>
+          Approve <?= $money($billingState['renewalAmount']) ?> each <?= $annual ? 'year' : 'month' ?> from <?= $date($billingState['renewalStart']) ?> for up to <?= $billingState['renewalCycles'] ?> payments. You can cancel automatic renewal.</label>
         <p>Razorpay may use a refundable verification charge when you approve.</p>
         <button class="button button-lime">Approve renewal with Razorpay</button>
       </form>
