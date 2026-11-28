@@ -407,7 +407,7 @@
     },
     {
       "source": "wp-content/mu-plugins/dsa/includes/Access/WordPress_Role_Access_Service.php",
-      "sha256": "601ae3ec64bf0bc23f0d263a94ef531807e1269fdeca4af5035ead97e472d30a",
+      "sha256": "e572e9b1e0d2bf55e703dfe2c26c69e700b37f9e0802f5660cc076d91c888a80",
       "symbols": [
         {
           "kind": "method",
