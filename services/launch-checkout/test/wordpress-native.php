@@ -271,8 +271,10 @@ try {
 
     $referralPurchase = nativeFixtureCapture($root, $referredOrder, $eligible);
     $receipt = $billing->status($other, $referralPurchase);
+    $expectedSource = $receipt['renewalStart'] < $billing->freelancerPass($buyer)['paidThrough'] ? 'referral' : 'direct';
     nativeProof(!$billing->websiteReferral($other) && $receipt['projectId'] && $receipt['quote']['referralId'] === $verifiedReferral['id']
-        && !isset($receipt['quote']['pricingSource']) && $receipt['quote']['partnerCommissionMinor'] === 2500 && !$receipt['renewalAvailable'],
+        && !isset($receipt['quote']['pricingSource']) && $receipt['quote']['partnerCommissionMinor'] === 2500
+        && $receipt['renewalAvailable'] && $receipt['renewalPriceSource'] === $expectedSource,
         'The paid referral reaches Start once with the approved Portfolio commission rate.');
     $ledger = $billing->partners();
     $partnerDashboard = $ledger->dashboard($buyer, 1);

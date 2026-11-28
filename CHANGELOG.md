@@ -1,5 +1,7 @@
 ## Unreleased Kiwe Launch catalogue
 
+- Apply verified partner Pass pricing to referred monthly renewals, with fresh approval whenever the pricing source changes and commission fixed per paid renewal.
+
 - Connect approved partner referrals to the verified buyer and domain, native WooCommerce order, Start receipt and tier commission ledger.
 
 - Bound discounted website renewals to paid Pass coverage and reconcile affected Razorpay approvals before accepting a new rate.

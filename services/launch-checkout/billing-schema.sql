@@ -76,6 +76,13 @@ CREATE TABLE IF NOT EXISTS launch_renewal_mandates (
 ) STRICT;
 CREATE UNIQUE INDEX IF NOT EXISTS launch_current_mandate ON launch_renewal_mandates(purchase_id) WHERE retired_at IS NULL;
 
+CREATE TABLE IF NOT EXISTS launch_website_renewal_pricing (
+    mandate_id TEXT PRIMARY KEY REFERENCES launch_renewal_mandates(id),
+    source TEXT NOT NULL CHECK(source IN ('direct', 'pass', 'referral')),
+    partner_commission_minor INTEGER NOT NULL CHECK(partner_commission_minor >= 0),
+    CHECK((source = 'referral') = (partner_commission_minor > 0))
+) STRICT;
+
 CREATE TABLE IF NOT EXISTS launch_website_renewal_stops (
     mandate_id TEXT PRIMARY KEY REFERENCES launch_renewal_mandates(id),
     retry_after INTEGER NOT NULL DEFAULT 0,

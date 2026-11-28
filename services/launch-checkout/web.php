@@ -140,7 +140,8 @@ function kiwe_checkout_action(
                 $amount = filter_var($_POST['renewal_amount'] ?? '', FILTER_VALIDATE_INT);
                 $starts = filter_var($_POST['renewal_start'] ?? '', FILTER_VALIDATE_INT);
                 $cycles = filter_var($_POST['renewal_cycles'] ?? '', FILTER_VALIDATE_INT);
-                return ['redirect' => $billing->renew($account['id'], $address, $amount ?: 0, $starts ?: 0, $cycles ?: 0, $purchaseId)];
+                $source = is_string($_POST['renewal_price_source'] ?? null) ? $_POST['renewal_price_source'] : null;
+                return ['redirect' => $billing->renew($account['id'], $address, $amount ?: 0, $starts ?: 0, $cycles ?: 0, $purchaseId, $source)];
             case 'cancel-renewal':
                 $billing->cancelRenewal($account['id'], $purchaseId);
                 return 'Automatic renewal is cancelled. Your paid term is recorded below.';

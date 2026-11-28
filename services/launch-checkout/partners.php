@@ -83,11 +83,16 @@ final class KiwePartners
                     amount, confirmed_at AS begins, first_term_end AS ends, 1 AS annual
                 FROM orders
                 UNION ALL
-                SELECT o.referral_id, o.ready_at, o.commission, p.payment_id, p.amount_refunded AS observed,
+                SELECT o.referral_id, o.ready_at,
+                    CASE WHEN purchase.draft_id GLOB 'woo:*' THEN prices.partner_commission_minor ELSE o.commission END,
+                    p.payment_id, p.amount_refunded AS observed,
                     p.amount, p.period_start, p.period_end, 0
                 FROM orders o JOIN launch_renewal_mandates m ON m.purchase_id = o.purchase_id
+                JOIN launch_payments purchase ON purchase.id = o.purchase_id
+                LEFT JOIN launch_website_renewal_pricing prices ON prices.mandate_id = m.id
                 JOIN launch_renewal_payments p ON p.mandate_id = m.id AND p.period_start >= o.first_term_end
                 WHERE p.period_end <= ?
+                AND (purchase.draft_id NOT GLOB 'woo:*' OR prices.source = 'referral')
             )
             SELECT periods.*,
                 MAX(observed, COALESCE((SELECT SUM(r.amount) FROM launch_refunds r WHERE r.payment_id = periods.payment_id), 0)) AS refunded,

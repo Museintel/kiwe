@@ -379,10 +379,12 @@ async function verifyPassAccount(page, DatabaseSync) {
   assert.deepEqual(await operation('kiwe_launch_reconcile_renewal_rates', {}), { stopped: 1, pending: 0, awaitingRecovery: 0 });
   await page.reload();
   assert.match(await siteConsent().textContent(), /₹429 each month/);
+  assert.equal(await siteConsent().locator('input[name="renewal_price_source"]').inputValue(), 'pass');
   const cycles = Number(await siteConsent().locator('input[name="renewal_cycles"]').inputValue());
   assert.ok(cycles > 0 && cycles < 12);
   assert.match((await submitConsent(siteConsent())).headers().location, /^https:\/\/rzp\.io\/rzp\/sub_/);
   const current = (await operation('kiwe_launch_billing_status', { accountId, purchaseId: sitePurchase })).billing;
+  assert.equal(current.renewalPriceSource, 'pass');
   assert.equal(current.mandate.amount, 42900);
   assert.equal(current.mandate.cycles, cycles);
   process.stdout.write('Freelancer Pass browser and MCP proof passed for annual approval and capped website renewal after a rate change.\n');

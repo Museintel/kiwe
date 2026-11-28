@@ -68,12 +68,15 @@ $statuses = [
       <?php if (!$mandate): ?><h3><?= $renewalHeading ?></h3><?php endif; ?>
       <?php if ($billingState['renewalPassPrice']): ?>
         <p>Paid Freelancer Pass coverage sets the rate and the number of payments you can approve.</p>
+      <?php elseif ($billingState['renewalPriceSource'] === 'referral'): ?>
+        <p>Paid coverage from your referring partner sets the rate and the number of payments you can approve.</p>
       <?php endif; ?>
       <form method="post" action="<?= $e($route) ?>" class="billing-actions">
         <?= kiwe_checkout_post_fields('renewal-consent', $purchaseId) ?>
         <input type="hidden" name="renewal_amount" value="<?= $e($billingState['renewalAmount']) ?>">
         <input type="hidden" name="renewal_start" value="<?= $e($billingState['renewalStart']) ?>">
         <input type="hidden" name="renewal_cycles" value="<?= $e($billingState['renewalCycles']) ?>">
+        <input type="hidden" name="renewal_price_source" value="<?= $e($billingState['renewalPriceSource']) ?>">
         <label><input type="checkbox" name="renewal_consent" value="yes" required>
           Approve <?= $money($billingState['renewalAmount']) ?> each <?= $annual ? 'year' : 'month' ?> from <?= $date($billingState['renewalStart']) ?> for up to <?= $billingState['renewalCycles'] ?> payments. You can cancel automatic renewal.</label>
         <p>Razorpay may use a refundable verification charge when you approve.</p>

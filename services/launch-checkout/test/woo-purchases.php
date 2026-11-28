@@ -271,8 +271,8 @@ $unrelatedState = $billing->status($buyer, $second)['mandate']['status'];
 
 $rateBuyer = 'launch:' . str_repeat('c', 32);
 $accounts->execute([$rateBuyer, 'renewal-buyer@example.invalid', 'fixture', time()]);
-$nativeRateOrder = static function (array $base, int $id, int $paidAt) use (&$orders, &$payments, $rateBuyer): array {
-    $native = [...$base, 'orderId' => $id, 'paidAt' => $paidAt, 'accountId' => $rateBuyer,
+$nativeRateOrder = static function (array $base, string $accountId, int $id, int $paidAt) use (&$orders, &$payments): array {
+    $native = [...$base, 'orderId' => $id, 'paidAt' => $paidAt, 'accountId' => $accountId,
         'providerOrderId' => 'order_RateFixture' . $id, 'paymentId' => 'pay_RateFixture' . $id];
     $orders['/orders/' . $native['providerOrderId']] = [...$orders['/orders/' . $base['providerOrderId']],
         'id' => $native['providerOrderId'], 'receipt' => (string) $id, 'notes' => ['woocommerce_order_id' => (string) $id]];
@@ -280,7 +280,7 @@ $nativeRateOrder = static function (array $base, int $id, int $paidAt) use (&$or
         'id' => $native['paymentId'], 'order_id' => $native['providerOrderId'], 'created_at' => $paidAt, 'status' => 'captured', 'amount_refunded' => 0];
     return $native;
 };
-$rateOrder = $nativeRateOrder($commerce, 506, kiwe_billing_month_end($now, -6));
+$rateOrder = $nativeRateOrder($commerce, $rateBuyer, 506, kiwe_billing_month_end($now, -6));
 $rateSite = $billing->importWooPurchase($rateOrder);
 $direct = $billing->status($rateBuyer, $rateSite);
 $rateStart = $direct['renewalStart'];
@@ -289,7 +289,7 @@ $billing->renew($rateBuyer, 'fixture', $directAmount, $rateStart, $direct['renew
 $oldMandate = $billing->status($rateBuyer, $rateSite)['mandate'];
 expectWoo($oldMandate['amount'] === $directAmount && $oldMandate['url'], 'The buyer can approve the direct monthly price.');
 
-$ratePass = $nativeRateOrder($pass, 507, $now);
+$ratePass = $nativeRateOrder($pass, $rateBuyer, 507, $now);
 $billing->reservePassOrder($rateBuyer, 507);
 $billing->importWooPurchase($ratePass);
 $eligible = $billing->status($rateBuyer, $rateSite);
@@ -347,4 +347,100 @@ $finalRate = $billing->status($rateBuyer, $rateSite);
 expectWoo(!$finalRate['mandate']['stoppingForPrice'] && $finalRate['renewalStart'] === $siteEndAfterLatePayment
     && $billing->status($buyer, $second)['mandate']['status'] === $unrelatedState,
     'A late paid cycle extends the site term and releases only its reconciled approval.');
+
+$partner = ['id' => 'launch:' . str_repeat('d', 32), 'email' => 'referral-partner@example.invalid', 'partner' => true];
+$referredBuyer = ['id' => 'launch:' . str_repeat('e', 32), 'email' => 'referred-buyer@example.invalid'];
+foreach ([$partner, $referredBuyer] as $account) {
+    $accounts->execute([$account['id'], $account['email'], 'fixture', $now]);
+}
+$sponsorPass = $nativeRateOrder($pass, $partner['id'], 508, kiwe_billing_month_end($now, -2));
+$billing->reservePassOrder($partner['id'], 508);
+$billing->importWooPurchase($sponsorPass);
+$billing->approveNativePartner($partner['id']);
+$domain = ['mode' => 'owned', 'name' => 'referred-renewal.example.invalid'];
+$link = $checkout->newReferral($partner, [
+    'email' => $referredBuyer['email'], 'whatsapp' => '9876500111', 'domain' => $domain['name'], 'consent' => 'yes',
+], true);
+parse_str(parse_url($link, PHP_URL_FRAGMENT), $parameters);
+expectWoo($checkout->acceptReferral($referredBuyer, kiwe_checkout_token($parameters['ref']), true),
+    'The renewal fixture must claim the exact invited domain on the verified buyer account.');
+$referral = $billing->websiteReferral($referredBuyer['id']);
+$referredTerm = kiwe_billing_month_end($now, -10);
+$referredOrder = $nativeRateOrder([...$commerce, 'domain' => $domain], $referredBuyer['id'], 509, $referredTerm);
+$billing->approveReferralWebsitePrice($referredBuyer['id'], 509, $commerce['planId'], $domain, $referral['id']);
+// Place the approved first-term purchase earlier so its renewal falls within the partner's paid Pass.
+$db->prepare('UPDATE launch_referral_website_quotes SET approved_at = ? WHERE native_id = 509')->execute([$referredTerm]);
+$upfront = $plans[$commerce['planId']]['referred']['upfrontMinor'];
+$orders['/orders/' . $referredOrder['providerOrderId']]['amount'] = $upfront;
+$orders['/orders/' . $referredOrder['providerOrderId']]['amount_paid'] = $upfront;
+$payments['/payments/' . $referredOrder['paymentId']]['amount'] = $upfront;
+$referredSite = $billing->importWooPurchase($referredOrder);
+$referralState = static fn (): array => $billing->status($referredBuyer['id'], $referredSite);
+$approve = static fn (array $terms, ?string $source): string => $billing->renew($referredBuyer['id'], 'referral-fixture',
+    $terms['renewalAmount'], $terms['renewalStart'], $terms['renewalCycles'], $referredSite, $source);
+$referredRate = $referralState();
+$sponsorEnd = $billing->freelancerPass($partner['id'])['paidThrough'];
+expectWoo($referredRate['renewalPriceSource'] === 'referral' && $referredRate['renewalAmount'] === 69900
+    && kiwe_billing_month_end($referredRate['renewalStart'], $referredRate['renewalCycles'] - 1) < $sponsorEnd
+    && kiwe_billing_month_end($referredRate['renewalStart'], $referredRate['renewalCycles']) >= $sponsorEnd,
+    'The referral rate is limited to the partner’s verified paid coverage.');
+expectWooDenied(fn () => $approve($referredRate, null), 409);
+$approve($referredRate, 'referral');
+$charge = static function (array $subscription, string $name, int $amount) use (&$subscriptions, &$invoices, $renewal, $send): array {
+    $start = $subscription['start_at'];
+    $end = kiwe_billing_month_end($start, 1);
+    $route = '/subscriptions/' . $subscription['id'];
+    $subscriptions[$route]['status'] = 'active';
+    $subscriptions[$route]['paid_count'] = 1;
+    $payment = [...$renewal, 'id' => 'pay_' . $name, 'invoice_id' => 'inv_' . $name, 'order_id' => 'order_' . $name, 'amount' => $amount];
+    $invoices['/invoices/' . $payment['invoice_id']] = ['id' => $payment['invoice_id'], 'payment_id' => $payment['id'],
+        'order_id' => $payment['order_id'], 'subscription_id' => $subscription['id'], 'currency' => 'INR', 'status' => 'paid',
+        'amount' => $amount, 'amount_paid' => $amount, 'billing_start' => $start, 'billing_end' => $end];
+    $send('subscription.charged', $name, ['subscription' => ['entity' => $subscriptions[$route]], 'payment' => ['entity' => $payment]]);
+    return ['payment' => $payment, 'end' => $end];
+};
+$sponsoredPayment = $charge(end($subscriptions), 'PartnerWebsiteCharge', $referredRate['renewalAmount']);
+$ownPass = $nativeRateOrder($pass, $referredBuyer['id'], 510, $now);
+$billing->reservePassOrder($referredBuyer['id'], 510);
+$billing->importWooPurchase($ownPass);
+$personal = $referralState();
+expectWoo($personal['renewalPriceSource'] === 'pass' && $personal['renewalAmount'] === $referredRate['renewalAmount']
+    && $personal['renewalStart'] === $sponsoredPayment['end'] && $personal['mandate']['stoppingForPrice'],
+    'A personal Pass takes precedence and queues a source change even at the same price.');
+expectWooDenied(fn () => $approve($personal, 'pass'), 409);
+expectWoo($billing->reconcileRenewalRates()['stopped'] === 1, 'The sponsor-priced mandate must end before a buyer can approve personal pricing.');
+expectWooDenied(fn () => $approve($personal, 'referral'), 409);
+$approve($personal, 'pass');
+$personalPayment = $charge(end($subscriptions), 'PersonalWebsiteCharge', $personal['renewalAmount']);
+$refundFor = static function (array $receipt, string $name) use ($send, $passRefund): void {
+    $send('refund.processed', $name, ['refund' => ['entity' => [...$passRefund,
+        'id' => 'rfnd_' . $name, 'payment_id' => $receipt['paymentId']]]]);
+};
+$refundFor($ownPass, 'ReferredBuyerPass');
+$secondReferralRate = $referralState();
+expectWoo($secondReferralRate['renewalPriceSource'] === 'referral' && $secondReferralRate['mandate']['stoppingForPrice'],
+    'A personal Pass refund restores verified partner pricing for future cycles.');
+expectWoo($billing->reconcileRenewalRates()['stopped'] === 1, 'The personal mandate must end before the sponsored price can be approved.');
+$approve($secondReferralRate, 'referral');
+$refundFor($sponsorPass, 'SponsorPass');
+$directReferralRate = $referralState();
+expectWoo($directReferralRate['renewalPriceSource'] === 'direct' && $directReferralRate['renewalAmount'] === $directAmount
+    && $directReferralRate['mandate']['stoppingForPrice'] && $directReferralRate['renewalStart'] === $personalPayment['end'],
+    'A partner Pass refund queues its client mandate and preserves both paid website receipts.');
+expectWoo($billing->reconcileRenewalRates()['stopped'] === 1, 'The provider must confirm cancellation before accepting the standard price.');
+$approve($directReferralRate, 'direct');
+$directPayment = $charge(end($subscriptions), 'DirectWebsiteCharge', $directReferralRate['renewalAmount']);
+
+$ledger = $billing->partners();
+$db->prepare('INSERT INTO launch_partner_services (purchase_id, ready_at) VALUES (?, ?)')->execute([$referredSite, $referredTerm + 1]);
+// Read the earnings calculation forward to when the real fixture invoices have completed.
+$earnings = new ReflectionMethod($ledger, 'earnings');
+$completed = $earnings->invoke($ledger, $partner['id'], $directPayment['end']);
+expectWoo($completed[$referral['id']] === ['earned' => 130000, 'eligible' => 130000],
+    'Only the first year and the sponsor-priced renewal credit the partner, including after Pass refunds.');
+$paymentRefund = [...$passRefund, 'id' => 'rfnd_SponsoredCharge', 'payment_id' => $sponsoredPayment['payment']['id'], 'amount' => 69900];
+$send('refund.processed', 'sponsored-charge-refund', ['refund' => ['entity' => $paymentRefund]]);
+$completed = $earnings->invoke($ledger, $partner['id'], $directPayment['end']);
+expectWoo($completed[$referral['id']] === ['earned' => 120000, 'eligible' => 120000],
+    'A refunded sponsored renewal reverses exactly its own credit.');
 echo json_encode(['projects' => [$projectA, $projectB], 'buyer' => $buyer], JSON_THROW_ON_ERROR), PHP_EOL;

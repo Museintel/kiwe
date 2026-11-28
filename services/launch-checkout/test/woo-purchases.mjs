@@ -29,7 +29,7 @@ try {
   assert.deepEqual(projects.map(project => project.id).sort(), receipt.projects.sort());
   assert.deepEqual(projects.map(project => project.planId).sort(), ['kiwe-ecommerce-v1', 'kiwe-portfolio-v1']);
   assert.equal(projects.find(project => project.planId === 'kiwe-portfolio-v1').setup.mode, 'services');
-  console.log('Billing proof passed for Start projects, annual Pass coverage, bounded website renewals and late-payment reconciliation.');
+  console.log('Billing proof passed for Start projects, Pass coverage, website renewal reconciliation and referral commission.');
 } finally {
   await start.close();
   await rm(fixture, { recursive: true, force: true });
