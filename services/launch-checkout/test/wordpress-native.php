@@ -221,11 +221,84 @@ try {
         $denied = $error->status === 409;
     }
     nativeProof($denied, 'Changes to the approved domain require another quote.');
+
+    $billing = $state['billing'];
+    $billing->approveNativePartner($buyer);
+    $domain = 'verified-referral.example.invalid';
+    $share = $checkout->newReferral($account + ['partner' => true], [
+        'email' => $otherAccount['email'], 'whatsapp' => '9876500111', 'domain' => $domain, 'consent' => 'yes',
+    ], true);
+    parse_str(parse_url($share, PHP_URL_FRAGMENT), $token);
+    $referralDigest = kiwe_checkout_token($token['ref']);
+    nativeProof(!$checkout->acceptReferral($otherAccount, $referralDigest) && $checkout->acceptReferral($otherAccount, $referralDigest, true),
+        'The native referral requires the verified recipient in the Launch account flow.');
+    $verifiedReferral = $billing->websiteReferral($other);
+    nativeProof($verifiedReferral['domain'] === $domain, 'Use the exact invited domain.');
+    nativeBuyerSession($state, $otherAccount);
+    WC()->cart->empty_cart();
+    $_POST = [];
+    WC()->cart->add_to_cart($product->get_id());
+    do_action('woocommerce_checkout_update_order_review', 'kiwe_launch_domain=another.example.invalid');
+    WC()->cart->calculate_totals();
+    nativeProof(wc_add_number_precision((float) WC()->cart->get_total('edit')) === (float) $amount,
+        'The referral cannot discount a different domain.');
+    do_action('woocommerce_checkout_update_order_review', 'kiwe_launch_domain=' . $domain);
+    WC()->cart->calculate_totals();
+    $cartItems = WC()->cart->get_cart();
+    $referredLine = reset($cartItems);
+    $itemData = apply_filters('woocommerce_get_item_data', [], $referredLine);
+    nativeProof($itemData[0]['key'] === 'Referral savings' && !WC()->cart->get_applied_coupons()
+        && wc_add_number_precision((float) WC()->cart->get_total('edit')) === (float) $eligible,
+        'The exact referred site gets one discount and no coupon code.');
+    $referralCheckout = ['billing_email' => $otherAccount['email'], 'payment_method' => 'razorpay'];
+    $_POST = ['kiwe_launch_domain' => $domain, 'kiwe_launch_domain_mode' => 'owned',
+        'kiwe_launch_review_minor' => $amount, 'kiwe_launch_review_fragment_minor' => $eligible];
+    $referralErrors = new WP_Error();
+    do_action('woocommerce_after_checkout_validation', $referralCheckout, $referralErrors);
+    nativeProof(!$referralErrors->has_errors(), 'Confirm the matching native referral checkout. ' . $referralErrors->get_error_message());
+    $orders[] = $referredOrder = nativeFixtureOrder($referredLine['data'], $otherAccount['email']);
+    do_action('woocommerce_checkout_order_processed', $referredOrder->get_id(), $referralCheckout, $referredOrder);
+    do_action('woocommerce_before_pay_action', $referredOrder);
+    nativeProof(!apply_filters('woocommerce_cancel_unpaid_order', true, $referredOrder), 'Keep the reserved virtual referral order available for retry.');
+    $duplicateRefused = false;
+    try {
+        $billing->approveReferralWebsitePrice($other, $referredOrder->get_id() + 100000, $plan['id'],
+            ['mode' => 'owned', 'name' => $domain], $verifiedReferral['id']);
+    } catch (KiweCheckoutError $error) {
+        $duplicateRefused = $error->status === 409;
+    }
+    nativeProof($duplicateRefused, 'A referral cannot reserve a second payable website order.');
+
+    $referralPurchase = nativeFixtureCapture($root, $referredOrder, $eligible);
+    $receipt = $billing->status($other, $referralPurchase);
+    nativeProof(!$billing->websiteReferral($other) && $receipt['projectId'] && $receipt['quote']['referralId'] === $verifiedReferral['id']
+        && !isset($receipt['quote']['pricingSource']) && $receipt['quote']['partnerCommissionMinor'] === 2500 && !$receipt['renewalAvailable'],
+        'The paid referral reaches Start once with the approved Portfolio commission rate.');
+    $ledger = $billing->partners();
+    $partnerDashboard = $ledger->dashboard($buyer, 1);
+    nativeProof($partnerDashboard['clients'][0]['domain'] === $domain && $partnerDashboard['balance']['earned'] === 0,
+        'A paid referral is visible to its partner and accrues only after verified site delivery.');
+    // Advance the isolated ledger to two completed delivery months.
+    $earlier = (new DateTimeImmutable('first day of this month', new DateTimeZone('Asia/Kolkata')))->setTime(0, 0)->modify('-2 months')->getTimestamp();
+    $db->prepare('UPDATE launch_payments SET confirmed_at = ?, first_term_end = ? WHERE id = ?')
+        ->execute([$earlier, kiwe_billing_month_end($earlier, 12), $referralPurchase]);
+    $db->prepare('INSERT INTO launch_partner_services (purchase_id, ready_at) VALUES (?, ?)')->execute([$referralPurchase, $earlier + 1]);
+    nativeProof($ledger->summary($buyer)['earned'] === 5000 && $ledger->summary($buyer)['available'] === 5000,
+        'Two eligible Portfolio months earn exactly ₹50 in the existing partner ledger.');
+    $referredRefund = json_encode(['account_id' => 'acc_KiweTestFixture', 'event' => 'refund.processed', 'created_at' => time(),
+        'payload' => ['refund' => ['entity' => ['id' => 'rfnd_NativeReferralFixture', 'payment_id' => $referredOrder->get_transaction_id(),
+            'status' => 'processed', 'currency' => 'INR', 'amount' => intdiv($eligible, 2)]]]], JSON_THROW_ON_ERROR);
+    $state['billing']->ingest($referredRefund, hash_hmac('sha256', $referredRefund, 'Kiwe checkout isolated webhook fixture secret'), 'native-referral-refund');
+    nativeProof($ledger->summary($buyer)['earned'] === 2500, 'A 50% client refund reverses the matching share of earned commission.');
+
+    nativeBuyerSession($state, $account);
     $amountRefunded = $passPlan['priceMinor'];
     $refund = json_encode(['account_id' => 'acc_KiweTestFixture', 'event' => 'refund.processed', 'created_at' => time(),
         'payload' => ['refund' => ['entity' => ['id' => 'rfnd_NativePassFixture', 'payment_id' => $passOrder->get_transaction_id(),
             'status' => 'processed', 'currency' => 'INR', 'amount' => $amountRefunded]]]], JSON_THROW_ON_ERROR);
     $state['billing']->ingest($refund, hash_hmac('sha256', $refund, 'Kiwe checkout isolated webhook fixture secret'), 'native-pass-refund');
+    nativeProof(!$billing->canIssueNativeReferrals($buyer) && $ledger->summary($buyer)['earned'] === 2500,
+        'Loss of Pass coverage closes new referral issuance and preserves previously earned commission.');
     $denied = false;
     try {
         do_action('woocommerce_before_pay_action', $discountOrder);
@@ -233,6 +306,7 @@ try {
         $denied = str_contains($error->getMessage(), 'coverage changed');
     }
     nativeProof($denied, 'An ended pass blocks reopening a discounted order for payment.');
+    $_POST = ['kiwe_launch_domain' => 'pass-discount.example.invalid'];
     WC()->cart->calculate_totals();
     nativeProof(wc_add_number_precision((float) WC()->cart->get_total('edit')) === (float) $amount,
         'A refunded pass must no longer discount the cart.');

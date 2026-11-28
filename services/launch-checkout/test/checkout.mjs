@@ -38,19 +38,19 @@ let browser;
 let server;
 let mcp;
 
-async function justMail(email, purpose) {
+async function justMail(email, purpose, route = '/checkout/') {
   const rows = (await readFile(path.join(data, 'mail.jsonl'), 'utf8')).trim().split(/\r?\n/).map(line => JSON.parse(line));
   const sent = rows.filter(row => row.email === email && row.purpose === purpose).at(-1);
   assert.ok(sent, 'The requested account email was captured');
-  return sent.body.split('\n').find(line => line.startsWith(origin + '/checkout/#verify='));
+  return sent.body.split('\n').find(line => line.startsWith(origin + route + '#verify='));
 }
 
-async function newBuyer(page, email) {
+async function newBuyer(page, email, route = '/checkout/') {
   const form = page.locator('form:has(input[name="action"][value="signup"])');
   await form.getByLabel('Your email').fill(email);
   await form.getByRole('button', { name: 'Send my verification link' }).click();
   await page.getByRole('status').getByText('Check your email', { exact: false }).waitFor();
-  const link = await justMail(email.toLowerCase(), 'signup');
+  const link = await justMail(email.toLowerCase(), 'signup', route);
   await page.goto(link);
   await page.getByRole('heading', { name: 'Create your password' }).waitFor();
   assert.equal(new URL(page.url()).hash, '', 'Email secrets are removed from the address bar');
@@ -249,6 +249,7 @@ try {
   assert.deepEqual([accountCookie.path, accountCookie.httpOnly, accountCookie.sameSite], ['/', true, 'Lax']);
   assert.equal(await accountRoute.locator('form:has(input[value="pay-first-year"])').count(), 0);
   await verifyPassAccount(accountRoute, DatabaseSync);
+  await verifyNativeReferral(accountRoute, DatabaseSync);
   await accountRoute.getByRole('button', { name: 'Sign out' }).click();
   await accountRoute.getByText('You’re signed out.', { exact: true }).waitFor();
   process.stdout.write('Verified checkout, Razorpay billing and retries, renewal consent, refunds and same-account Kiwe Start handoff passed.\n');
@@ -265,6 +266,47 @@ try {
   if (path.dirname(root) === path.resolve(tmpdir()) && path.basename(root).startsWith('kiwe-checkout-test-')) {
     await rm(root, { recursive: true, force: true, maxRetries: 3 });
   }
+}
+
+async function verifyNativeReferral(partner, DatabaseSync) {
+  const path = '/launch-account/';
+  const accountUrl = origin + path;
+  const db = new DatabaseSync(data + '/checkout.sqlite', { readOnly: true });
+  const partnerId = db.prepare('SELECT id FROM checkout_accounts WHERE email = ?').get('buyer@example.invalid').id;
+  db.close();
+  await partner.goto(accountUrl + '?tab=partner');
+  assert.equal(await partner.getByRole('button', { name: 'Create referral link' }).count(), 0);
+  assert.equal(await partner.getByRole('link', { name: 'Partner area' }).count(), 0);
+  assert.deepEqual(await operation('kiwe_launch_approve_referral_partner', { accountId: partnerId }), { accountId: partnerId, approved: true });
+  await partner.goto(accountUrl + '?tab=partner');
+  const form = partner.locator('form:has(input[name="action"][value="make-referral"])');
+  const email = 'native-referred@example.invalid';
+  await form.getByLabel('Client email').fill(email);
+  await form.getByLabel('Client WhatsApp number').fill('9876500111');
+  await form.getByLabel('Preferred domain').fill('launch-referred.example.invalid');
+  await form.getByRole('checkbox').check();
+  await form.getByRole('button', { name: 'Create referral link' }).click();
+  const share = await partner.getByLabel('Private referral link').inputValue();
+  assert.ok(share.startsWith(accountUrl + '#ref='));
+
+  const referred = await browser.newPage();
+  await referred.goto(share);
+  await referred.getByText('Use the email you shared with your partner.', { exact: false }).waitFor();
+  await newBuyer(referred, email, path);
+  await referred.goto(accountUrl + '?tab=partner');
+  assert.equal(await referred.getByRole('button', { name: 'Create referral link' }).count(), 0);
+  await referred.getByRole('heading', { name: 'Eligible first-year pricing' }).waitFor();
+  assert.match(await referred.locator('.checkout-summary').textContent(), /Kiwe Portfolio\s+₹5,148/);
+  const rows = new DatabaseSync(data + '/checkout.sqlite', { readOnly: true });
+  const assignment = rows.prepare('SELECT a.id, a.partner_id, a.domain, b.email FROM checkout_referrals a JOIN checkout_native_referrals n ON n.referral_id = a.id JOIN checkout_accounts b ON b.id = a.buyer_id WHERE a.client_email = ?').get(email);
+  rows.close();
+  assert.equal(assignment.email, email);
+  assert.equal(assignment.domain, 'launch-referred.example.invalid');
+  assert.equal(assignment.partner_id, partnerId);
+  await partner.reload();
+  await partner.getByText('Email verified', { exact: true }).waitFor();
+  await partner.getByText('Clients appear here after their first payment is confirmed.', { exact: true }).waitFor();
+  process.stdout.write('Native partner approval and verified recipient referral passed in the Launch account and MCP.\n');
 }
 
 async function verifyPassAccount(page, DatabaseSync) {

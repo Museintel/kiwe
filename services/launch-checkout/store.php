@@ -157,22 +157,23 @@ final class KiweCheckout
             [$digest, time()]);
     }
 
-    private function claimReferral(array $account, ?string $digest): void
+    private function claimReferral(array $account, ?string $digest, bool $native): void
     {
         if (!$digest || $this->one('SELECT id FROM checkout_referrals WHERE buyer_id = ?', [$account['id']])) return;
         $this->run('UPDATE checkout_referrals SET buyer_id = ? WHERE digest = ? AND client_email = ?
-            AND buyer_id IS NULL AND partner_id <> ? AND expires_at > ? AND revoked_at IS NULL',
-            [$account['id'], $digest, $account['email'], $account['id'], time()]);
+            AND buyer_id IS NULL AND partner_id <> ? AND expires_at > ? AND revoked_at IS NULL
+            AND EXISTS(SELECT 1 FROM checkout_native_referrals WHERE referral_id = checkout_referrals.id) = CAST(? AS INTEGER)',
+            [$account['id'], $digest, $account['email'], $account['id'], time(), (int) $native]);
     }
 
-    public function setPassword(string $digest, string $password, ?string $referral): array
+    public function setPassword(string $digest, string $password, ?string $referral, bool $native = false): array
     {
         if (!$this->linkInfo($digest)) throw new KiweCheckoutError('This link or code is invalid or expired.', 400);
         if (strlen($password) > 512 || preg_match_all('/./us', $password) < 12 || str_contains($password, "\0")) {
             throw new KiweCheckoutError('Use a password with at least 12 characters and at most 512 bytes.');
         }
         $hash = password_hash($password, PASSWORD_ARGON2ID);
-        return $this->transaction(function () use ($digest, $hash, $referral): array {
+        return $this->transaction(function () use ($digest, $hash, $referral, $native): array {
             $link = $this->linkInfo($digest);
             if (!$link) throw new KiweCheckoutError('This link or code is invalid or expired.', 400);
             $account = $this->one('SELECT * FROM checkout_accounts WHERE email = ?', [$link['email']]);
@@ -189,7 +190,7 @@ final class KiweCheckout
             }
             $this->run('DELETE FROM checkout_email_links WHERE email = ?', [$link['email']]);
             $account = $this->one('SELECT * FROM checkout_accounts WHERE id = ?', [$accountId]);
-            $this->claimReferral($account, $link['referral_digest'] ?? $referral);
+            $this->claimReferral($account, $link['referral_digest'] ?? $referral, $native);
             return $this->accountView($account);
         });
     }
@@ -206,7 +207,7 @@ final class KiweCheckout
         return $account ? $this->accountView($account) : null;
     }
 
-    public function signIn(string $email, string $password, ?string $referral, string $network): array
+    public function signIn(string $email, string $password, ?string $referral, string $network, bool $native = false): array
     {
         $email = kiwe_checkout_email($email);
         $this->limit('login-network', $network, 25, 900);
@@ -216,10 +217,10 @@ final class KiweCheckout
             || !password_verify($password, $account['password_hash'] ?? self::DUMMY_HASH) || !$account) {
             throw new KiweCheckoutError('Check your email and password, or use the reset link.', 401);
         }
-        return $this->transaction(function () use ($account, $referral): array {
+        return $this->transaction(function () use ($account, $referral, $native): array {
             $current = $this->account($account['id'], (int) $account['session_version']);
             if (!$current) throw new KiweCheckoutError('Your sign-in changed. Try again.', 401);
-            $this->claimReferral($current, $referral);
+            $this->claimReferral($current, $referral, $native);
             return $current;
         });
     }
@@ -234,15 +235,28 @@ final class KiweCheckout
 
     public function referralFor(string $buyer): ?array
     {
-        return $this->one('SELECT id, whatsapp, domain FROM checkout_referrals WHERE buyer_id = ? AND revoked_at IS NULL', [$buyer]);
+        return $this->one('SELECT id, whatsapp, domain FROM checkout_referrals WHERE buyer_id = ? AND revoked_at IS NULL
+            AND NOT EXISTS (SELECT 1 FROM checkout_native_referrals WHERE referral_id = checkout_referrals.id)', [$buyer]);
     }
 
-    public function acceptReferral(array $account, string $digest): bool
+    public function nativeReferralLink(string $digest): bool
     {
-        return $this->transaction(function () use ($account, $digest): bool {
-            $this->claimReferral($account, $digest);
-            return $this->one('SELECT id FROM checkout_referrals WHERE buyer_id = ? AND digest = ?',
-                [$account['id'], $digest]) !== null;
+        return $this->one('SELECT 1 FROM checkout_referrals r JOIN checkout_native_referrals n ON n.referral_id = r.id
+            WHERE r.digest = ? AND r.revoked_at IS NULL AND (r.expires_at > ? OR r.buyer_id IS NOT NULL)', [$digest, time()]) !== null;
+    }
+
+    public function nativePartnerApproved(string $accountId): bool
+    {
+        return $this->one('SELECT 1 FROM checkout_native_partner_approvals WHERE account_id = ?', [$accountId]) !== null;
+    }
+
+    public function acceptReferral(array $account, string $digest, bool $native = false): bool
+    {
+        return $this->transaction(function () use ($account, $digest, $native): bool {
+            $this->claimReferral($account, $digest, $native);
+            return $this->one('SELECT id FROM checkout_referrals WHERE buyer_id = ? AND digest = ? AND revoked_at IS NULL
+                AND EXISTS(SELECT 1 FROM checkout_native_referrals WHERE referral_id = checkout_referrals.id) = CAST(? AS INTEGER)',
+                [$account['id'], $digest, (int) $native]) !== null;
         });
     }
 
@@ -253,9 +267,11 @@ final class KiweCheckout
             FROM checkout_referrals WHERE partner_id = ? ORDER BY created_at DESC, id DESC LIMIT 20', [$account['id']])->fetchAll();
     }
 
-    public function newReferral(array $account, array $input): string
+    public function newReferral(array $account, array $input, bool $native = false): string
     {
-        if (!$account['partner']) throw new KiweCheckoutError('Join the Partner Program to create a link.', 403);
+        if (!$account['partner'] || ($native && !$this->nativePartnerApproved($account['id']))) {
+            throw new KiweCheckoutError('Your account needs Partner Program approval to create a link.', 403);
+        }
         $email = kiwe_checkout_email($input['email'] ?? '');
         if ($email === $account['email'] || ($input['consent'] ?? '') !== 'yes') {
             throw new KiweCheckoutError('Add your client’s email and confirm their permission.');
@@ -263,16 +279,18 @@ final class KiweCheckout
         $whatsapp = kiwe_checkout_phone($input['whatsapp'] ?? '', 'WhatsApp number', true);
         $domain = kiwe_checkout_domain($input['domain'] ?? '');
         $this->limit('referral', $account['id'], 20, 3600);
-        return $this->transaction(function () use ($account, $email, $whatsapp, $domain): string {
+        return $this->transaction(function () use ($account, $email, $whatsapp, $domain, $native): string {
             $now = time();
             $active = $this->one('SELECT id FROM checkout_referrals WHERE partner_id = ? AND client_email = ?
                 AND revoked_at IS NULL AND (buyer_id IS NOT NULL OR expires_at > ?)', [$account['id'], $email, $now]);
             if ($active) throw new KiweCheckoutError('You already have a referral for this client.', 409);
             $code = bin2hex(random_bytes(32));
+            $id = 'ref:' . bin2hex(random_bytes(16));
             $this->run('INSERT INTO checkout_referrals (id, partner_id, digest, client_email, whatsapp, domain, created_at, expires_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)', ['ref:' . bin2hex(random_bytes(16)), $account['id'], kiwe_checkout_token($code),
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)', [$id, $account['id'], kiwe_checkout_token($code),
                 $email, $whatsapp, $domain, $now, $now + 30 * 86400]);
-            return $this->origin . '/checkout/#ref=' . $code;
+            if ($native) $this->run('INSERT INTO checkout_native_referrals (referral_id) VALUES (?)', [$id]);
+            return $this->origin . ($native ? '/launch-account/' : '/checkout/') . '#ref=' . $code;
         });
     }
 

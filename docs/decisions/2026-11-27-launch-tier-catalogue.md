@@ -32,8 +32,9 @@ The shared Guest approval workspace authorizes wholesale, referral and product o
 - The annual Pass uses one native order per verified account and an independently verified annual renewal plan. Coverage has signed-in browser and MCP projections. A Pass has no domain or Start project. Provider charges, real mail delivery and hosted checkout remain to be qualified before public sale.
 - Active Pass coverage applies the catalogue's first-year website rate in the signed-in WooCommerce cart. The order freezes the exact buyer, website and approved price. Start receives the Pass pricing source with an empty referral attribution.
 - For native monthly renewals, Launch checks paid Pass coverage on the scheduled dates and bounds the eligible approval to that term. A rate change closes the old mandate and reconciles its paid cycles before the buyer approves the new rate. Hosted provider and scheduler verification remain pending.
+- The candidate lets operator-approved partners with active Passes issue a private referral. Verified client email and the exact domain control one discounted WooCommerce order. The captured order records its referral in Start and uses the existing partner ledger at the tier's fixed commission.
 
 ## Remaining launch batches
 
-1. Complete role-scoped Guest permissions, wholesale orders, referral attribution and the partner ledger UI and MCP access.
+1. Complete role-scoped Guest permissions, wholesale pricing and attribution, and monthly renewal pricing and commissions for referred websites.
 2. Qualify outgoing mail, the authored Bricks checkout, Razorpay payments and renewals for websites and the annual Pass, and Start and hosting on the representative site. Activate public purchases for the verified offers. Publish paid Operations after the wholesale workflow passes. POS and attendance remain separate roadmap work.

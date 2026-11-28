@@ -132,6 +132,9 @@ final class KiweBilling
         $selection = $this->websiteSelection($domain, $plan['domain']['includedExtension']);
         $domainJson = json_encode($selection, JSON_THROW_ON_ERROR);
         $this->transaction(function () use ($accountId, $orderId, $planId, $domainJson): void {
+            if ($this->row('SELECT 1 FROM launch_referral_website_quotes WHERE native_id = ?', [$orderId])) {
+                throw new KiweCheckoutError('This order already has an approved referral price.', 409);
+            }
             $pass = $this->freelancerPass($accountId);
             if (!($pass['active'] ?? false)) {
                 throw new KiweCheckoutError('Your Freelancer Pass coverage changed. Review the updated price before paying.', 409);
@@ -146,6 +149,72 @@ final class KiweBilling
             $this->query('INSERT INTO launch_pass_website_quotes VALUES (?, ?, ?, ?, ?, ?)',
                 [$orderId, $accountId, $pass['purchaseId'], $planId, $domainJson, time()]);
         });
+    }
+
+    public function approveNativePartner(string $accountId): void
+    {
+        $this->transaction(function () use ($accountId): void {
+            $pass = $this->freelancerPass($accountId);
+            if (!($pass['active'] ?? false)) throw new KiweCheckoutError('An active Freelancer Pass is required for referral approval.', 409);
+            $now = time();
+            if ($this->query('UPDATE checkout_accounts SET partner_enrolled_at = COALESCE(partner_enrolled_at, ?)
+                WHERE id = ? AND verified_at > 0', [$now, $accountId])->rowCount() !== 1) {
+                throw new KiweCheckoutError('Use a verified Kiwe Launch partner account.', 409);
+            }
+            $this->query('INSERT INTO checkout_native_partner_approvals VALUES (?, ?) ON CONFLICT(account_id) DO NOTHING', [$accountId, $now]);
+        });
+    }
+
+    public function canIssueNativeReferrals(string $accountId): bool
+    {
+        return $this->checkout->nativePartnerApproved($accountId) && ($this->freelancerPass($accountId)['active'] ?? false);
+    }
+
+    public function websiteReferral(string $buyerId): ?array
+    {
+        $referral = $this->row('SELECT r.id, r.domain, r.partner_id, q.native_id FROM checkout_referrals r
+            JOIN checkout_native_referrals n ON n.referral_id = r.id
+            JOIN checkout_native_partner_approvals a ON a.account_id = r.partner_id
+            LEFT JOIN launch_referral_website_quotes q ON q.referral_id = r.id
+            LEFT JOIN launch_woo_orders o ON o.native_id = q.native_id
+            WHERE r.buyer_id = ? AND r.partner_id <> ? AND r.revoked_at IS NULL AND o.native_id IS NULL', [$buyerId, $buyerId]);
+        if (!$referral || !($this->freelancerPass($referral['partner_id'])['active'] ?? false)) return null;
+        return ['id' => $referral['id'], 'domain' => $referral['domain'], 'orderId' => $referral['native_id']];
+    }
+
+    public function approveReferralWebsitePrice(string $accountId, int $orderId, string $planId, array $domain, string $referralId): void
+    {
+        $plan = $this->nativePlans[$planId] ?? [];
+        if (($plan['hostingIncluded'] ?? false) !== true) throw new KiweCheckoutError('Choose a website plan for this referral.', 409);
+        $selection = $this->websiteSelection($domain, $plan['domain']['includedExtension']);
+        $this->transaction(function () use ($accountId, $orderId, $planId, $selection, $referralId, $plan): void {
+            $referral = $this->websiteReferral($accountId);
+            if (!$referral || $referral['id'] !== $referralId || $referral['domain'] !== $selection['name']
+                || ($referral['orderId'] !== null && $referral['orderId'] !== $orderId)
+                || ($this->freelancerPass($accountId)['active'] ?? false)
+                || $this->row('SELECT 1 FROM launch_pass_website_quotes WHERE native_id = ?', [$orderId])) {
+                throw new KiweCheckoutError('Your referral price changed. Review the updated checkout.', 409);
+            }
+            $domainJson = json_encode($selection, JSON_THROW_ON_ERROR);
+            $saved = $this->row('SELECT account_id, referral_id, plan_id, domain_json, partner_commission_minor
+                FROM launch_referral_website_quotes WHERE native_id = ?', [$orderId]);
+            $commission = $plan['monthlyPartnerCommissionMinor'];
+            if ($saved) {
+                if ($saved !== ['account_id' => $accountId, 'referral_id' => $referralId, 'plan_id' => $planId,
+                    'domain_json' => $domainJson, 'partner_commission_minor' => $commission]) {
+                    throw new KiweCheckoutError('This order is tied to a different referral quote.', 409);
+                }
+                return;
+            }
+            $this->query('INSERT INTO launch_referral_website_quotes VALUES (?, ?, ?, ?, ?, ?, ?)',
+                [$orderId, $accountId, $referralId, $planId, $domainJson, $commission, time()]);
+        });
+    }
+
+    public function isReservedReferralOrder(int $orderId, string $accountId, string $referralId): bool
+    {
+        return $this->row('SELECT 1 FROM launch_referral_website_quotes WHERE native_id = ? AND account_id = ? AND referral_id = ?',
+            [$orderId, $accountId, $referralId]) !== null;
     }
 
     private function mandate(string $purchase): ?array
@@ -259,7 +328,8 @@ final class KiweBilling
                 $existing = $this->active($account['id']);
                 if ($existing) return $existing;
                 $current = $this->row('SELECT id, revision FROM checkout_drafts WHERE account_id = ?', [$account['id']]);
-                $referral = $this->row('SELECT id FROM checkout_referrals WHERE buyer_id = ? AND revoked_at IS NULL', [$account['id']]);
+                $referral = $this->row('SELECT id FROM checkout_referrals WHERE buyer_id = ? AND revoked_at IS NULL
+                    AND NOT EXISTS (SELECT 1 FROM checkout_native_referrals WHERE referral_id = checkout_referrals.id)', [$account['id']]);
                 if (($current['id'] ?? null) !== $draft['id'] || ($current['revision'] ?? null) !== $draft['revision']
                     || ($referral['id'] ?? null) !== $quote['referralId'] || $quote['expiresAt'] <= time()) {
                     throw new KiweCheckoutError('Your checkout changed. Review it and try again.', 409);
@@ -382,19 +452,27 @@ final class KiweBilling
             $terms['kind'] = 'freelancer-pass';
         } else {
             $terms['domain'] = $this->websiteSelection($domain, $plan['domain']['includedExtension']);
-            $approved = $this->row('SELECT * FROM launch_pass_website_quotes WHERE native_id = ?', [$orderId]);
+            $passApproval = $this->row('SELECT * FROM launch_pass_website_quotes WHERE native_id = ?', [$orderId]);
+            $referralApproval = $this->row('SELECT * FROM launch_referral_website_quotes WHERE native_id = ?', [$orderId]);
+            if ($passApproval && $referralApproval) throw new KiweCheckoutError('This order has conflicting price approvals.', 409);
+            $approved = $passApproval ?? $referralApproval;
             if ($approved) {
                 if ($approved['account_id'] !== $accountId || $approved['plan_id'] !== $planId
                     || $approved['domain_json'] !== json_encode($terms['domain'], JSON_THROW_ON_ERROR)
                     || $approved['approved_at'] > $paidAt) {
-                    throw new KiweCheckoutError('The order does not match the approved Freelancer Pass quote.', 409);
+                    throw new KiweCheckoutError('The order does not match the approved website quote.', 409);
                 }
                 $price = $plan['referred'];
-                $terms['pricingSource'] = 'pass';
+                if ($passApproval) {
+                    $terms['pricingSource'] = 'pass';
+                } else {
+                    $terms['referralId'] = $approved['referral_id'];
+                    $terms['partnerCommissionMinor'] = $approved['partner_commission_minor'];
+                }
             }
         }
         $terms = ['planId' => $planId, 'currency' => $plan['currency'], 'upfrontMinor' => $price['upfrontMinor'],
-            'renewalMinor' => $price['renewalMinor'], 'referralId' => null] + $terms;
+            'renewalMinor' => $price['renewalMinor'], 'referralId' => $terms['referralId'] ?? null] + $terms;
         $quote = json_encode($terms, JSON_THROW_ON_ERROR);
         $lookup = function () use ($orderId, $accountId, $providerOrder, $paymentId, $paidAt, $quote): ?string {
             $existing = $this->row('SELECT o.provider_order_id, p.* FROM launch_woo_orders o
@@ -701,7 +779,7 @@ final class KiweBilling
                 $cycles = $covered;
             }
         } elseif (str_starts_with($purchase['draft_id'], 'woo:')) {
-            $providerPlan = $this->renewalPlans['websitePlans'][$quote['planId']] ?? null;
+            $providerPlan = null;
         } else {
             $providerPlan = $this->renewalPlans[empty($quote['referralId']) ? 'direct' : 'referred'] ?? null;
         }

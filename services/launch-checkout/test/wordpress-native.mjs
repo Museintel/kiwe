@@ -25,7 +25,8 @@ try {
   await mkdir(path.join(root, 'data/sessions'), { recursive: true });
   await Promise.all([
     ...['boot.php', 'registration.php', 'schema.sql', 'store.php', 'providers.php', 'billing.php',
-      'billing-providers.php', 'billing-schema.sql', 'web.php'].map(name => cp(path.join(service, name), path.join(root, name))),
+      'billing-providers.php', 'billing-schema.sql', 'web.php', 'partners.php', 'partner-schema.sql']
+      .map(name => cp(path.join(service, name), path.join(root, name))),
     ...['settings-fixture.php', 'billing-fixture.php'].map((name, index) =>
       cp(path.join(service, 'test', name), path.join(root, index ? name : 'settings.php'))),
     writeFile(path.join(root, 'data/rate-key'), randomBytes(32), { mode: 0o600 }),
@@ -43,8 +44,10 @@ try {
   const projects = start.projects.listProjects(proof.buyer);
   assert.equal(projects.length, 2);
   assert.ok(projects.every(project => project.planId === 'kiwe-portfolio-v1'));
-  assert.equal(start.projects.listProjects(proof.other).length, 0);
-  console.log('Native WooCommerce delivered a direct and a Pass-priced Portfolio project, blocked ineligible discounts, and kept Pass billing separate.');
+  const referred = start.projects.listProjects(proof.other);
+  assert.equal(referred.length, 1);
+  assert.equal(referred[0].planId, 'kiwe-portfolio-v1');
+  console.log('Native WooCommerce proved direct, Pass and referred orders, account and domain checks, and tier-specific commissions.');
 } finally {
   await start.close();
   await rm(root, { recursive: true, force: true });

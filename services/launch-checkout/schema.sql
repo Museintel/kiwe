@@ -30,6 +30,15 @@ CREATE TABLE IF NOT EXISTS checkout_referrals (
 ) STRICT;
 CREATE INDEX IF NOT EXISTS checkout_partner_referrals ON checkout_referrals (partner_id, created_at);
 
+CREATE TABLE IF NOT EXISTS checkout_native_partner_approvals (
+    account_id TEXT PRIMARY KEY REFERENCES checkout_accounts(id),
+    approved_at INTEGER NOT NULL
+) STRICT;
+
+CREATE TABLE IF NOT EXISTS checkout_native_referrals (
+    referral_id TEXT PRIMARY KEY REFERENCES checkout_referrals(id)
+) STRICT;
+
 CREATE TABLE IF NOT EXISTS checkout_drafts (
     account_id TEXT PRIMARY KEY REFERENCES checkout_accounts(id),
     id TEXT NOT NULL UNIQUE,

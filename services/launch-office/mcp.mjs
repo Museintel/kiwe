@@ -79,6 +79,11 @@ if (checkoutRoot) {
   }, ({ accountId }) => operation('quote', accountId));
   const launchAccountId = z.string().regex(/^launch:[a-f0-9]{32}$/);
   const launchPurchaseId = z.string().regex(/^kiwe_[a-f0-9]{32}$/);
+  server.registerTool('kiwe_launch_approve_referral_partner', {
+    description: 'Record operator-approved referral access for a verified Launch account with a paid active Freelancer Pass.',
+    inputSchema: { accountId: launchAccountId },
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true },
+  }, ({ accountId }) => operation('approve-referral-partner', accountId));
   server.registerTool('kiwe_launch_billing_status', {
     description: 'Read billing and Start status for an owned purchase. Omit purchaseId for the original checkout flow.',
     inputSchema: { accountId: launchAccountId, purchaseId: launchPurchaseId.optional() },

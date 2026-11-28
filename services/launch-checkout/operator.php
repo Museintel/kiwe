@@ -16,6 +16,7 @@ try {
     $result = match ($argv[1] ?? '') {
         'domain' => ['domain' => kiwe_checkout_domain($value), ...$checkout->domainAvailability($value)],
         'enrol-partner' => ['account' => $checkout->enrolPartner($value)],
+        'approve-referral-partner' => kiwe_checkout_operator_approve_partner($billing, $value),
         'quote' => kiwe_checkout_operator_quote($checkout, $value),
         'billing-status' => ['billing' => kiwe_checkout_operator_billing($billing, $value, $argv[3] ?? null)],
         'freelancer-pass' => ['pass' => ($billing ?? throw new KiweCheckoutError('Launch billing is unavailable.', 503))->freelancerPass($value)],
@@ -44,6 +45,14 @@ try {
 } catch (Throwable) {
     fwrite(STDERR, "Kiwe Launch checkout is unavailable.\n");
     exit(1);
+}
+
+function kiwe_checkout_operator_approve_partner(?KiweBilling $billing, string $accountId): array
+{
+    if (!$billing) throw new KiweCheckoutError('Launch billing is unavailable.', 503);
+    if (!preg_match('/^launch:[a-f0-9]{32}$/D', $accountId)) throw new KiweCheckoutError('Enter a Launch account ID.');
+    $billing->approveNativePartner($accountId);
+    return ['accountId' => $accountId, 'approved' => true];
 }
 
 function kiwe_checkout_operator_domain(array $state, string $action, string $purchase, string $domain, string $contact): array

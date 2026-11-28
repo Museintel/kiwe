@@ -18,12 +18,15 @@ final class Kiwe_Launch_Woo_Checkout
 
     private ?array $state = null;
     private ?array $intent = null;
-    private array $passSavings = [];
+    private array $websiteSavings = [];
+    private ?string $referredDomain = null;
 
     public function register(): void
     {
         add_action('woocommerce_before_calculate_totals', [$this, 'applyWebsitePrice'], 40);
         add_filter('woocommerce_get_item_data', [$this, 'showWebsiteSavings'], 10, 2);
+        add_action('woocommerce_checkout_update_order_review', [$this, 'rememberWebsiteDomain']);
+        add_action('woocommerce_review_order_before_submit', [$this, 'showReviewedWebsiteTotal']);
         add_action('woocommerce_before_checkout_billing_form', [$this, 'fields']);
         add_action('woocommerce_after_checkout_validation', [$this, 'validate'], 20, 2);
         add_action('woocommerce_checkout_order_processed', [$this, 'bind'], 10, 3);
@@ -92,16 +95,56 @@ final class Kiwe_Launch_Woo_Checkout
         return null;
     }
 
-    private function websitePrice(array $plan, ?array $buyer): array
+    private function websitePrice(array $plan, ?array $buyer, ?string $domain = null): array
     {
-        $pass = $buyer && $plan['hostingIncluded'] ? $this->service()['billing']->freelancerPass($buyer['id']) : null;
-        $active = $pass['active'] ?? false;
-        return ['minor' => $plan[$active ? 'referred' : 'direct']['upfrontMinor'], 'source' => $active ? 'pass' : 'direct'];
+        if (!$buyer || !$plan['hostingIncluded']) return ['minor' => $plan['direct']['upfrontMinor'], 'source' => 'direct'];
+        $billing = $this->service()['billing'];
+        if ($billing->freelancerPass($buyer['id'])['active'] ?? false) {
+            return ['minor' => $plan['referred']['upfrontMinor'], 'source' => 'pass'];
+        }
+        $referral = $billing->websiteReferral($buyer['id']);
+        if ($referral && ($domain === null || $domain === $referral['domain'])) {
+            return ['minor' => $plan['referred']['upfrontMinor'], 'source' => 'referral', 'referral' => $referral];
+        }
+        return ['minor' => $plan['direct']['upfrontMinor'], 'source' => 'direct'];
+    }
+
+    private function priceDomain(mixed $value): string
+    {
+        try {
+            return kiwe_checkout_domain($value);
+        } catch (KiweCheckoutError) {
+            return '';
+        }
+    }
+
+    public function rememberWebsiteDomain(string $form): void
+    {
+        $sku = $this->cartSku();
+        if (!$sku || $sku === self::PASS || strlen($form) > 18000) return;
+        parse_str($form, $fields);
+        if (isset($fields['kiwe_launch_domain'])) {
+            try {
+                $this->service();
+                WC()->session->set('kiwe_launch_review_domain', $this->priceDomain($fields['kiwe_launch_domain']));
+            } catch (Throwable) {
+                // The order validation reports an unavailable service before a payment starts.
+            }
+        }
+    }
+
+    public function showReviewedWebsiteTotal(): void
+    {
+        $sku = $this->cartSku();
+        if (!$sku || $sku === self::PASS) return;
+        $total = (int) wc_add_number_precision((float) WC()->cart->get_total('edit'));
+        echo '<input type="hidden" name="kiwe_launch_review_fragment_minor" value="' . esc_attr((string) $total) . '">';
     }
 
     public function applyWebsitePrice(WC_Cart $cart): void
     {
-        $this->passSavings = [];
+        $this->websiteSavings = [];
+        $this->referredDomain = null;
         if ($cart->get_cart_contents_count() !== 1 || get_woocommerce_currency() !== 'INR' || wc_get_price_decimals() !== 2) return;
         $items = $cart->get_cart();
         $key = array_key_first($items);
@@ -111,13 +154,18 @@ final class Kiwe_Launch_Woo_Checkout
         try {
             $plan = $this->nativePlan($sku);
             if (!$plan || wc_add_number_precision((float) $product->get_regular_price('edit')) !== (float) $plan['direct']['upfrontMinor']) return;
-            $price = $this->websitePrice($plan, $this->buyer());
+            $domain = isset($_POST['kiwe_launch_domain'])
+                ? $this->priceDomain(wp_unslash($_POST['kiwe_launch_domain']))
+                : WC()->session?->get('kiwe_launch_review_domain');
+            $price = $this->websitePrice($plan, $this->buyer(), $domain);
+            $this->referredDomain = $price['referral']['domain'] ?? null;
             $product = clone $product;
             $product->set_price((string) ($price['minor'] / 100));
             $items[$key]['data'] = $product;
             $cart->set_cart_contents($items);
-            if ($price['source'] === 'pass') {
-                $this->passSavings[$product->get_id()] = $plan['direct']['upfrontMinor'] - $price['minor'];
+            if ($price['source'] !== 'direct') {
+                $this->websiteSavings[$product->get_id()] = ['source' => $price['source'],
+                    'minor' => $plan['direct']['upfrontMinor'] - $price['minor']];
             }
         } catch (Throwable) {
             // Checkout rechecks the price before it can hand off to Razorpay.
@@ -126,10 +174,11 @@ final class Kiwe_Launch_Woo_Checkout
 
     public function showWebsiteSavings(array $data, array $item): array
     {
-        $savings = $this->passSavings[$item['product_id'] ?? 0] ?? null;
+        $savings = $this->websiteSavings[$item['product_id'] ?? 0] ?? null;
         if ($savings) {
-            $display = wc_price($savings / 100);
-            $data[] = ['key' => 'Freelancer Pass savings', 'value' => wp_strip_all_tags($display), 'display' => $display];
+            $display = wc_price($savings['minor'] / 100);
+            $data[] = ['key' => $savings['source'] === 'pass' ? 'Freelancer Pass savings' : 'Referral savings',
+                'value' => wp_strip_all_tags($display), 'display' => $display];
         }
         return $data;
     }
@@ -157,10 +206,12 @@ final class Kiwe_Launch_Woo_Checkout
         echo '<p>Use the email you verified in <a href="' . $accountLink . '">your Kiwe Launch account</a>.</p>';
         $total = (int) wc_add_number_precision((float) WC()->cart->get_total('edit'));
         echo '<input type="hidden" name="kiwe_launch_review_minor" value="' . esc_attr((string) $total) . '">';
+        $domain = $checkout->get_value('kiwe_launch_domain') ?: (WC()->session?->get('kiwe_launch_review_domain') ?? $this->referredDomain);
         woocommerce_form_field('kiwe_launch_domain', [
             'type' => 'text', 'label' => 'Domain name', 'required' => true, 'placeholder' => 'example.in',
+            'class' => ['update_totals_on_change'],
             'custom_attributes' => ['maxlength' => 253, 'autocapitalize' => 'none', 'spellcheck' => 'false'],
-        ], $checkout->get_value('kiwe_launch_domain'));
+        ], $domain);
         woocommerce_form_field('kiwe_launch_domain_mode', [
             'type' => 'select', 'label' => 'Domain setup', 'required' => true,
             'options' => ['' => 'Choose an option', 'owned' => 'I own this domain', 'register' => 'Register an eligible .in domain'],
@@ -195,7 +246,8 @@ final class Kiwe_Launch_Woo_Checkout
             || get_woocommerce_currency() !== 'INR' || wc_get_price_decimals() !== 2) {
             throw new KiweCheckoutError('Use Razorpay to buy one Kiwe Launch plan at its published first-year price.');
         }
-        $price = $this->websitePrice($plan, $account);
+        $domain = $plan['hostingIncluded'] ? kiwe_checkout_domain(wp_unslash($_POST['kiwe_launch_domain'] ?? '')) : null;
+        $price = $this->websitePrice($plan, $account, $domain);
         if (wc_add_number_precision((float) WC()->cart->get_total('edit')) !== (float) $price['minor']
             || (float) WC()->cart->get_discount_total() > 0) {
             throw new KiweCheckoutError('Review the updated Kiwe Launch price and remove any other discounts before paying.');
@@ -205,22 +257,16 @@ final class Kiwe_Launch_Woo_Checkout
             'amountMinor' => $price['minor'], 'email' => $account['email']];
         if ($sku === self::PASS) {
             $resumeId = $state['billing']->passOrder($account['id']);
-            if ($resumeId !== null) {
-                $resume = wc_get_order($resumeId);
-                if (!$resume || $resume->get_customer_id() !== get_current_user_id()
-                    || !$resume->has_status(['pending', 'failed']) || !$this->matchesOrder($resume, $intent)) {
-                    throw new KiweCheckoutError('Review your Freelancer Pass in your Kiwe Launch account.');
-                }
-                WC()->session->set('order_awaiting_payment', $resumeId);
-            }
+            if ($resumeId !== null) $this->resumeOrder($resumeId, $intent);
             $this->intent = $intent;
             return;
         }
-        if (filter_var($_POST['kiwe_launch_review_minor'] ?? '', FILTER_VALIDATE_INT) !== $price['minor']) {
+        $reviewed = $_POST['kiwe_launch_review_fragment_minor'] ?? $_POST['kiwe_launch_review_minor'] ?? '';
+        if (filter_var($reviewed, FILTER_VALIDATE_INT) !== $price['minor']) {
             throw new KiweCheckoutError('Your website price changed. Reload checkout and review the total before paying.');
         }
         if ($price['source'] === 'pass') $intent['pricingSource'] = 'pass';
-        $domain = kiwe_checkout_domain(wp_unslash($_POST['kiwe_launch_domain'] ?? ''));
+        if ($price['source'] === 'referral') $intent['referralId'] = $price['referral']['id'];
         $mode = $_POST['kiwe_launch_domain_mode'] ?? null;
         if (!in_array($mode, ['owned', 'register'], true)) throw new KiweCheckoutError('Choose how to connect your domain.');
         $selection = ['mode' => $mode, 'name' => $domain];
@@ -234,6 +280,17 @@ final class Kiwe_Launch_Woo_Checkout
             $selection['category'] = 'standard';
         }
         $this->intent = $intent + ['domain' => $selection];
+        if (($price['referral']['orderId'] ?? null) !== null) $this->resumeOrder($price['referral']['orderId'], $this->intent);
+    }
+
+    private function resumeOrder(int $id, array $intent): void
+    {
+        $order = wc_get_order($id);
+        if (!$order || $order->get_customer_id() !== get_current_user_id()
+            || !$order->has_status(['pending', 'failed']) || !$this->matchesOrder($order, $intent)) {
+            throw new KiweCheckoutError('Review your existing payment from your Kiwe Launch account.');
+        }
+        WC()->session->set('order_awaiting_payment', $id);
     }
 
     public function bind(int $id, array $data, WC_Order $order): void
@@ -255,6 +312,10 @@ final class Kiwe_Launch_Woo_Checkout
         if (($this->intent['pricingSource'] ?? '') === 'pass') {
             $this->service()['billing']->approvePassWebsitePrice(
                 $this->intent['accountId'], $id, $this->intent['planId'], $this->intent['domain']
+            );
+        } elseif (isset($this->intent['referralId'])) {
+            $this->service()['billing']->approveReferralWebsitePrice(
+                $this->intent['accountId'], $id, $this->intent['planId'], $this->intent['domain'], $this->intent['referralId']
             );
         }
         if ($saved) return;
@@ -280,7 +341,7 @@ final class Kiwe_Launch_Woo_Checkout
         $item = $items[0] ?? null;
         $product = $item?->get_product();
         return count($items) === 1 && $item->get_quantity() === 1 && $product && $product->is_virtual()
-            && ($intent['sku'] !== self::PASS || !$product->managing_stock())
+            && (($intent['sku'] !== self::PASS && !isset($intent['referralId'])) || !$product->managing_stock())
             && $product->get_sku() === $intent['sku'] && $order->get_currency() === 'INR'
             && $order->get_payment_method() === 'razorpay'
             && round((float) $order->get_total() * 100) === (float) $intent['amountMinor']
@@ -305,6 +366,14 @@ final class Kiwe_Launch_Woo_Checkout
         }
         if (($intent['pricingSource'] ?? '') === 'pass' && !($this->service()['billing']->freelancerPass($buyer['id'])['active'] ?? false)) {
             throw new Exception('Your Freelancer Pass coverage changed. Return to checkout to review the updated price.');
+        }
+        if (isset($intent['referralId'])) {
+            $billing = $this->service()['billing'];
+            $referral = $billing->websiteReferral($buyer['id']);
+            if (!$referral || $referral['id'] !== $intent['referralId'] || $referral['orderId'] !== $order->get_id()
+                || $referral['domain'] !== $intent['domain']['name'] || ($billing->freelancerPass($buyer['id'])['active'] ?? false)) {
+                throw new Exception('Your referral price changed. Return to checkout to review the updated price.');
+            }
         }
     }
 
@@ -332,8 +401,11 @@ final class Kiwe_Launch_Woo_Checkout
         if (!$cancel || !$order->get_meta(self::INTENT, true, 'edit')) return $cancel;
         try {
             $intent = $this->readIntent($order);
-            if (($intent['sku'] ?? '') === self::PASS && $this->matchesOrder($order, $intent)
-                && $this->service()['billing']->passOrder($intent['accountId']) === $order->get_id()) return false;
+            if ($intent && $this->matchesOrder($order, $intent)) {
+                $billing = $this->service()['billing'];
+                if ($intent['sku'] === self::PASS && $billing->passOrder($intent['accountId']) === $order->get_id()) return false;
+                if (isset($intent['referralId']) && $billing->isReservedReferralOrder($order->get_id(), $intent['accountId'], $intent['referralId'])) return false;
+            }
         } catch (Throwable) {
             // Preserve WooCommerce's normal cancellation policy if the billing service is unavailable.
         }

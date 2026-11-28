@@ -1,5 +1,7 @@
 ## Unreleased Kiwe Launch catalogue
 
+- Connect approved partner referrals to the verified buyer and domain, native WooCommerce order, Start receipt and tier commission ledger.
+
 - Bound discounted website renewals to paid Pass coverage and reconcile affected Razorpay approvals before accepting a new rate.
 
 - Apply private first-year website pricing for active Freelancer Pass buyers and preserve the approved quote through WooCommerce, Razorpay and Start.

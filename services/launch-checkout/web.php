@@ -56,11 +56,12 @@ function kiwe_checkout_action(
             return 'Email verified. Set your password to continue.';
         case 'referral-link':
             $digest = kiwe_checkout_token($_POST['code'] ?? '');
+            if ($native && !$checkout->nativeReferralLink($digest)) throw new KiweCheckoutError('This referral link is unavailable.', 409);
             if ($account) {
-                if (!$checkout->acceptReferral($account, $digest)) {
+                if (!$checkout->acceptReferral($account, $digest, $native)) {
                     throw new KiweCheckoutError('This referral is unavailable for your email. You can still use checkout.', 409);
                 }
-                return 'Your partner price is ready.';
+                return $native ? 'Referral linked to your verified account. Checkout shows the price for the referred website.' : 'Your partner price is ready.';
             }
             $_SESSION['referral'] = $digest;
             return 'Use the email you shared with your partner. We’ll apply your referral after verification.';
@@ -72,13 +73,13 @@ function kiwe_checkout_action(
             if (!is_string($password) || $password !== ($_POST['repeat_password'] ?? null)) {
                 throw new KiweCheckoutError('Enter the same password in both fields.');
             }
-            kiwe_checkout_establish_session($checkout->setPassword($_SESSION['verification'], $password, $referral));
+            kiwe_checkout_establish_session($checkout->setPassword($_SESSION['verification'], $password, $referral, $native));
             return 'Your verified Kiwe Launch account is ready.';
         case 'sign-in':
             if ($account) return 'You’re already signed in.';
             $password = $_POST['password'] ?? '';
             if (!is_string($password)) throw new KiweCheckoutError('Check your email and password.');
-            kiwe_checkout_establish_session($checkout->signIn(kiwe_checkout_email($_POST['email'] ?? ''), $password, $referral, $address));
+            kiwe_checkout_establish_session($checkout->signIn(kiwe_checkout_email($_POST['email'] ?? ''), $password, $referral, $address, $native));
             return 'You’re signed in.';
         case 'sign-out':
             session_regenerate_id(true);
@@ -107,8 +108,11 @@ function kiwe_checkout_action(
             unset($_SESSION['draft_input']);
             return 'Your checkout details and price are saved.';
         case 'make-referral':
+            if ($native && !$billing?->canIssueNativeReferrals($account['id'])) {
+                throw new KiweCheckoutError('An approved partner account and active Freelancer Pass are required to create a referral.', 403);
+            }
             $_SESSION['tab'] = 'partner';
-            $_SESSION['share'] = $checkout->newReferral($account, $_POST);
+            $_SESSION['share'] = $checkout->newReferral($account, $_POST, $native);
             return 'Copy this private referral link to share with your client.';
         case 'revoke-referral':
             $_SESSION['tab'] = 'partner';
@@ -214,9 +218,9 @@ function kiwe_checkout_serve(array $state, string $root, bool $native = false): 
             if ($native && in_array($action, ['save-draft', 'pay-first-year'], true)) {
                 throw new KiweCheckoutError('Choose your website plan in the Kiwe Launch store.', 409);
             }
-            if ($native && in_array($action, ['join-partner', 'referral-link', 'make-referral', 'revoke-referral',
-                'request-withdrawal', 'cancel-withdrawal'], true)) {
-                throw new KiweCheckoutError('Partner enrolment is currently unavailable here.', 409);
+            if ($native && ($action === 'join-partner' || (in_array($action, ['make-referral', 'revoke-referral',
+                'request-withdrawal', 'cancel-withdrawal'], true) && (!$account || !$checkout->nativePartnerApproved($account['id']))))) {
+                throw new KiweCheckoutError('Your Kiwe Launch account needs referral partner approval.', 403);
             }
             if (isset($_POST['purchase'])) {
                 $requested = $_POST['purchase'];
@@ -264,10 +268,13 @@ function kiwe_checkout_serve(array $state, string $root, bool $native = false): 
     $formInput = $_SESSION['draft_input'] ?? [];
     unset($_SESSION['flash'], $_SESSION['share'], $_SESSION['draft_input']);
     $link = $account ? null : $checkout->linkInfo($_SESSION['verification'] ?? null);
-    $partnerTab = !$native && !$purchaseId && ($_SESSION['tab'] ?? '') === 'partner';
+    $nativePartner = $native && $account && $checkout->nativePartnerApproved($account['id']);
+    $partnerTab = (!$native || $nativePartner) && !$purchaseId && ($_SESSION['tab'] ?? '') === 'partner';
+    $canIssuePartnerReferrals = $partnerTab && (!$native || $billing?->canIssueNativeReferrals($account['id']));
     $referral = $account && !$partnerTab ? $checkout->referralFor($account['id']) : null;
     $draft = $account && !$partnerTab ? $checkout->draft($account['id']) : null;
     $billingState = $selectedBilling ?? ($account && !$partnerTab ? $billing?->status($account['id']) : null);
+    $nativeReferral = $native && $account && !$partnerTab && !$purchaseId ? $billing?->websiteReferral($account['id']) : null;
     $pass = $account && !$partnerTab ? $billing?->freelancerPass($account['id']) : null;
     $passPending = $account && !$partnerTab && !$pass && $billing?->passOrder($account['id']) !== null;
     $passSelected = ($billingState['quote']['kind'] ?? '') === 'freelancer-pass';

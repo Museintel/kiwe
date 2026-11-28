@@ -42,6 +42,16 @@ CREATE TABLE IF NOT EXISTS launch_pass_website_quotes (
     approved_at INTEGER NOT NULL
 ) STRICT;
 
+CREATE TABLE IF NOT EXISTS launch_referral_website_quotes (
+    native_id INTEGER PRIMARY KEY CHECK(native_id > 0),
+    account_id TEXT NOT NULL REFERENCES checkout_accounts(id),
+    referral_id TEXT NOT NULL UNIQUE REFERENCES checkout_native_referrals(referral_id),
+    plan_id TEXT NOT NULL,
+    domain_json TEXT NOT NULL,
+    partner_commission_minor INTEGER NOT NULL CHECK(partner_commission_minor > 0),
+    approved_at INTEGER NOT NULL
+) STRICT;
+
 CREATE TABLE IF NOT EXISTS launch_domain_orders (
     purchase_id TEXT PRIMARY KEY REFERENCES launch_payments(id),
     domain TEXT NOT NULL UNIQUE,

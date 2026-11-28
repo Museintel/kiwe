@@ -54,6 +54,7 @@ $partnerPrice = $billingState ? $billingState['quote']['referralId'] : $referral
                 <p>Copy the link before leaving this page. It’s valid for 30 days.</p>
               </div>
             <?php endif; ?>
+            <?php if ($canIssuePartnerReferrals): ?>
             <form action="<?= $e($route) ?>" method="post" class="checkout-form">
               <?= kiwe_checkout_post_fields('make-referral') ?>
               <label>Client email<input name="email" type="email" required maxlength="254"></label>
@@ -64,6 +65,9 @@ $partnerPrice = $billingState ? $billingState['quote']['referralId'] : $referral
               <label class="checkout-check"><input name="consent" value="yes" type="checkbox" required><span>My client agreed that I can share these details for the referral.</span></label>
               <button class="button">Create referral link</button>
             </form>
+            <?php else: ?>
+              <p>Activate your Freelancer Pass to create a new referral.</p>
+            <?php endif; ?>
             <?php if ($partnerReferrals): ?>
               <h3 class="checkout-subhead">Your referral links</h3>
               <ul class="checkout-referrals">
@@ -112,7 +116,7 @@ $partnerPrice = $billingState ? $billingState['quote']['referralId'] : $referral
           <?php endif; ?>
         <?php elseif ($account): ?>
           <div class="checkout-card-head"><h2>Your setup</h2>
-            <?php if (!$native): ?><a class="text-link" href="<?= $e($route) ?>?tab=partner"><?= $account['partner'] ? 'Partner area' : 'Become a partner' ?></a><?php endif; ?>
+            <?php if (!$native || $nativePartner): ?><a class="text-link" href="<?= $e($route) ?>?tab=partner"><?= $account['partner'] ? 'Partner area' : 'Become a partner' ?></a><?php endif; ?>
           </div>
           <p>Verified email <strong><?= $e($account['email']) ?></strong></p>
           <?php if ($pass): ?>
@@ -131,6 +135,10 @@ $partnerPrice = $billingState ? $billingState['quote']['referralId'] : $referral
             <?php if ($purchaseId): ?><p><a href="<?= $e($route) ?>?tab=client"><?= $native ? 'Back to your account' : 'Back to checkout' ?></a></p><?php endif; ?>
           <?php endif; ?>
           <?php if ($referral && !$purchaseId && !$native): ?><p class="checkout-note">Your partner price is applied.</p><?php endif; ?>
+          <?php if ($nativeReferral): ?>
+            <p class="checkout-note">Referral linked to <strong><?= $e($nativeReferral['domain']) ?></strong>.</p>
+            <p><a class="text-link" href="/#plan">Compare website plans</a></p>
+          <?php endif; ?>
           <?php if ($passSelected): ?>
             <?php if ($pass['active']): ?>
               <p>Freelancer Pass access through <?= $e((new DateTimeImmutable('@' . $pass['paidThrough']))->setTimezone(new DateTimeZone('Asia/Kolkata'))->format('j M Y')) ?>.</p>
@@ -219,6 +227,15 @@ $partnerPrice = $billingState ? $billingState['quote']['referralId'] : $referral
           <h2>Freelancer Pass</h2>
           <p><?= $money($price['renewalMinor']) ?> per year.</p>
           <?php require $root . '/billing-view.php'; ?>
+        <?php elseif ($nativeReferral && !$billingState): ?>
+          <h2>Eligible first-year pricing</h2>
+          <ul>
+            <?php foreach ($state['nativeWoo']['plans'] as $referralPlan): ?>
+              <?php if ($referralPlan['hostingIncluded']): ?>
+                <li><?= $e($referralPlan['name']) ?> <strong><?= $money($referralPlan['referred']['upfrontMinor']) ?></strong></li>
+              <?php endif; ?>
+            <?php endforeach; ?>
+          </ul>
         <?php elseif ($native && !$billingState && !$partnerTab): ?>
           <h2>Website purchases</h2>
           <p>After payment is verified, select the website in your account to open Kiwe Start or manage its renewal.</p>
@@ -236,6 +253,8 @@ $partnerPrice = $billingState ? $billingState['quote']['referralId'] : $referral
           <h2><?= $money($price['upfrontMinor']) ?></h2>
           <?php if ($passPrice): ?>
             <p>For your first 12 months with the Freelancer Pass. Taxes included.</p>
+          <?php elseif ($billingState && $native && $partnerPrice): ?>
+            <p>For your first 12 months at the verified referral price. Taxes included.</p>
           <?php elseif ($billingState && $billingState['renewalPassPrice']): ?>
             <p>For your first 12 months. Taxes included.</p>
           <?php else: ?>

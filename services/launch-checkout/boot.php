@@ -76,7 +76,9 @@ function kiwe_checkout_native_plans(string $root): array
             || ($plan['renewalIntervalMonths'] ?? null) !== 1 || !is_int($renewal) || $renewal < 1 || $renewal > 10000000
             || ($plan['direct']['upfrontMinor'] ?? null) !== $renewal * 12
             || !is_int($eligible) || $eligible < 1 || $eligible >= $renewal
-            || ($plan['referred']['upfrontMinor'] ?? null) !== $eligible * 12) {
+            || ($plan['referred']['upfrontMinor'] ?? null) !== $eligible * 12
+            || !is_int($plan['monthlyPartnerCommissionMinor'] ?? null) || $plan['monthlyPartnerCommissionMinor'] < 1
+            || $plan['monthlyPartnerCommissionMinor'] >= $eligible) {
             throw new RuntimeException('The website catalogue has invalid billing terms.');
         }
         $plans[$id] = $plan;
