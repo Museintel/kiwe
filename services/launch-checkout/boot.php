@@ -65,12 +65,15 @@ function kiwe_checkout_native_plans(string $root): array
         $id = $plan['id'] ?? '';
         $sku = $plan['sku'] ?? '';
         $renewal = $plan['direct']['renewalMinor'] ?? null;
+        $eligible = $plan['referred']['renewalMinor'] ?? null;
         if (!is_string($id) || !preg_match('/^kiwe-[a-z]+-v[1-9][0-9]*$/D', $id) || isset($plans[$id])
             || !is_string($sku) || !preg_match('/^KIWE-[A-Z]+-FIRST-12-MONTHS$/D', $sku)
             || ($plan['currency'] ?? '') !== 'INR' || ($plan['hostingIncluded'] ?? false) !== true
             || ($plan['domain']['includedExtension'] ?? '') !== 'in' || ($plan['firstTermMonths'] ?? null) !== 12
             || ($plan['renewalIntervalMonths'] ?? null) !== 1 || !is_int($renewal) || $renewal < 1 || $renewal > 10000000
-            || ($plan['direct']['upfrontMinor'] ?? null) !== $renewal * 12) {
+            || ($plan['direct']['upfrontMinor'] ?? null) !== $renewal * 12
+            || !is_int($eligible) || $eligible < 1 || $eligible >= $renewal
+            || ($plan['referred']['upfrontMinor'] ?? null) !== $eligible * 12) {
             throw new RuntimeException('The website catalogue has invalid billing terms.');
         }
         $plans[$id] = $plan;

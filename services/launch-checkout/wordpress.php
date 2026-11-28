@@ -18,9 +18,12 @@ final class Kiwe_Launch_Woo_Checkout
 
     private ?array $state = null;
     private ?array $intent = null;
+    private array $passSavings = [];
 
     public function register(): void
     {
+        add_action('woocommerce_before_calculate_totals', [$this, 'applyWebsitePrice'], 40);
+        add_filter('woocommerce_get_item_data', [$this, 'showWebsiteSavings'], 10, 2);
         add_action('woocommerce_before_checkout_billing_form', [$this, 'fields']);
         add_action('woocommerce_after_checkout_validation', [$this, 'validate'], 20, 2);
         add_action('woocommerce_checkout_order_processed', [$this, 'bind'], 10, 3);
@@ -81,6 +84,56 @@ final class Kiwe_Launch_Woo_Checkout
         return null;
     }
 
+    private function nativePlan(string $sku): ?array
+    {
+        foreach ($this->service()['nativeWoo']['plans'] as $plan) {
+            if ($plan['sku'] === $sku) return $plan;
+        }
+        return null;
+    }
+
+    private function websitePrice(array $plan, ?array $buyer): array
+    {
+        $pass = $buyer && $plan['hostingIncluded'] ? $this->service()['billing']->freelancerPass($buyer['id']) : null;
+        $active = $pass['active'] ?? false;
+        return ['minor' => $plan[$active ? 'referred' : 'direct']['upfrontMinor'], 'source' => $active ? 'pass' : 'direct'];
+    }
+
+    public function applyWebsitePrice(WC_Cart $cart): void
+    {
+        $this->passSavings = [];
+        if ($cart->get_cart_contents_count() !== 1 || get_woocommerce_currency() !== 'INR' || wc_get_price_decimals() !== 2) return;
+        $items = $cart->get_cart();
+        $key = array_key_first($items);
+        $product = $items[$key]['data'] ?? null;
+        $sku = $product?->get_sku() ?? '';
+        if (!$this->launchSku($sku) || $sku === self::PASS || !$product->is_virtual()) return;
+        try {
+            $plan = $this->nativePlan($sku);
+            if (!$plan || wc_add_number_precision((float) $product->get_regular_price('edit')) !== (float) $plan['direct']['upfrontMinor']) return;
+            $price = $this->websitePrice($plan, $this->buyer());
+            $product = clone $product;
+            $product->set_price((string) ($price['minor'] / 100));
+            $items[$key]['data'] = $product;
+            $cart->set_cart_contents($items);
+            if ($price['source'] === 'pass') {
+                $this->passSavings[$product->get_id()] = $plan['direct']['upfrontMinor'] - $price['minor'];
+            }
+        } catch (Throwable) {
+            // Checkout rechecks the price before it can hand off to Razorpay.
+        }
+    }
+
+    public function showWebsiteSavings(array $data, array $item): array
+    {
+        $savings = $this->passSavings[$item['product_id'] ?? 0] ?? null;
+        if ($savings) {
+            $display = wc_price($savings / 100);
+            $data[] = ['key' => 'Freelancer Pass savings', 'value' => wp_strip_all_tags($display), 'display' => $display];
+        }
+        return $data;
+    }
+
     private function launchOrder(WC_Order $order): bool
     {
         if ($order->get_meta(self::INTENT, true, 'edit')) return true;
@@ -102,6 +155,8 @@ final class Kiwe_Launch_Woo_Checkout
         }
         echo '<fieldset class="kiwe-launch-site-details"><legend>Your website domain</legend>';
         echo '<p>Use the email you verified in <a href="' . $accountLink . '">your Kiwe Launch account</a>.</p>';
+        $total = (int) wc_add_number_precision((float) WC()->cart->get_total('edit'));
+        echo '<input type="hidden" name="kiwe_launch_review_minor" value="' . esc_attr((string) $total) . '">';
         woocommerce_form_field('kiwe_launch_domain', [
             'type' => 'text', 'label' => 'Domain name', 'required' => true, 'placeholder' => 'example.in',
             'custom_attributes' => ['maxlength' => 253, 'autocapitalize' => 'none', 'spellcheck' => 'false'],
@@ -135,18 +190,19 @@ final class Kiwe_Launch_Woo_Checkout
         if ($account['email'] !== kiwe_checkout_email($data['billing_email'] ?? null)) {
             throw new KiweCheckoutError('Use the verified email from your Kiwe Launch account.');
         }
-        $plan = null;
-        foreach ($state['nativeWoo']['plans'] as $candidate) {
-            if ($candidate['sku'] === $sku) $plan = $candidate;
-        }
+        $plan = $this->nativePlan($sku);
         if (!$plan || ($data['payment_method'] ?? '') !== 'razorpay' || WC()->cart->get_cart_contents_count() !== 1
-            || get_woocommerce_currency() !== 'INR' || wc_get_price_decimals() !== 2
-            || wc_add_number_precision((float) WC()->cart->get_total('edit')) !== (float) $plan['direct']['upfrontMinor']) {
+            || get_woocommerce_currency() !== 'INR' || wc_get_price_decimals() !== 2) {
             throw new KiweCheckoutError('Use Razorpay to buy one Kiwe Launch plan at its published first-year price.');
+        }
+        $price = $this->websitePrice($plan, $account);
+        if (wc_add_number_precision((float) WC()->cart->get_total('edit')) !== (float) $price['minor']
+            || (float) WC()->cart->get_discount_total() > 0) {
+            throw new KiweCheckoutError('Review the updated Kiwe Launch price and remove any other discounts before paying.');
         }
 
         $intent = ['accountId' => $account['id'], 'planId' => $plan['id'], 'sku' => $sku,
-            'amountMinor' => $plan['direct']['upfrontMinor'], 'email' => $account['email']];
+            'amountMinor' => $price['minor'], 'email' => $account['email']];
         if ($sku === self::PASS) {
             $resumeId = $state['billing']->passOrder($account['id']);
             if ($resumeId !== null) {
@@ -160,6 +216,10 @@ final class Kiwe_Launch_Woo_Checkout
             $this->intent = $intent;
             return;
         }
+        if (filter_var($_POST['kiwe_launch_review_minor'] ?? '', FILTER_VALIDATE_INT) !== $price['minor']) {
+            throw new KiweCheckoutError('Your website price changed. Reload checkout and review the total before paying.');
+        }
+        if ($price['source'] === 'pass') $intent['pricingSource'] = 'pass';
         $domain = kiwe_checkout_domain(wp_unslash($_POST['kiwe_launch_domain'] ?? ''));
         $mode = $_POST['kiwe_launch_domain_mode'] ?? null;
         if (!in_array($mode, ['owned', 'register'], true)) throw new KiweCheckoutError('Choose how to connect your domain.');
@@ -192,6 +252,11 @@ final class Kiwe_Launch_Woo_Checkout
         if ($this->intent['sku'] === self::PASS) {
             $this->service()['billing']->reservePassOrder($this->intent['accountId'], $id);
         }
+        if (($this->intent['pricingSource'] ?? '') === 'pass') {
+            $this->service()['billing']->approvePassWebsitePrice(
+                $this->intent['accountId'], $id, $this->intent['planId'], $this->intent['domain']
+            );
+        }
         if ($saved) return;
         $order->update_meta_data(self::INTENT, [
             'payload' => $payload,
@@ -219,6 +284,7 @@ final class Kiwe_Launch_Woo_Checkout
             && $product->get_sku() === $intent['sku'] && $order->get_currency() === 'INR'
             && $order->get_payment_method() === 'razorpay'
             && round((float) $order->get_total() * 100) === (float) $intent['amountMinor']
+            && (float) $order->get_discount_total() === 0.0
             && strtolower($order->get_billing_email()) === $intent['email'];
     }
 
@@ -236,6 +302,9 @@ final class Kiwe_Launch_Woo_Checkout
             || ($intent['sku'] === self::PASS && $this->service()['billing']->passOrder($buyer['id']) !== $order->get_id())
             || (isset($_POST['payment_method']) && $_POST['payment_method'] !== 'razorpay')) {
             throw new Exception('Open this order from the verified Kiwe Launch buyer account.');
+        }
+        if (($intent['pricingSource'] ?? '') === 'pass' && !($this->service()['billing']->freelancerPass($buyer['id'])['active'] ?? false)) {
+            throw new Exception('Your Freelancer Pass coverage changed. Return to checkout to review the updated price.');
         }
     }
 

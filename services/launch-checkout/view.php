@@ -2,6 +2,8 @@
 $e = 'kiwe_checkout_escape';
 $money = static fn (int $minor): string => '₹' . number_format($minor / 100, $minor % 100 ? 2 : 0);
 $mode = $formInput['mode'] ?? 'register';
+$passPrice = ($price['pricingSource'] ?? '') === 'pass';
+$partnerPrice = $billingState ? $billingState['quote']['referralId'] : $referral;
 ?>
 <!doctype html>
 <html lang="en-IN">
@@ -230,9 +232,13 @@ $mode = $formInput['mode'] ?? 'register';
             <p>Your client owns their account and Appsite. You can see the status of the links you create.</p>
           <?php endif; ?>
         <?php else: ?>
-          <p class="eyebrow"><?= ($billingState ? $billingState['quote']['referralId'] : $referral) ? 'Verified partner price' : 'Kiwe Client' ?></p>
+          <p class="eyebrow"><?= $passPrice ? 'Freelancer Pass price' : ($partnerPrice ? 'Verified partner price' : 'Kiwe Client') ?></p>
           <h2><?= $money($price['upfrontMinor']) ?></h2>
-          <p>For your first 12 months, then <strong><?= $money($price['renewalMinor']) ?>/month</strong>. Taxes included.</p>
+          <?php if ($passPrice): ?>
+            <p>For your first 12 months with the Freelancer Pass. Taxes included.</p>
+          <?php else: ?>
+            <p>For your first 12 months, then <strong><?= $money($price['renewalMinor']) ?>/month</strong>. Taxes included.</p>
+          <?php endif; ?>
           <p>Managed hosting and renewals for one eligible standard .in domain while your plan stays active.</p>
           <?php if ($billingState): ?>
             <?php require $root . '/billing-view.php'; ?>

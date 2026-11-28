@@ -31,6 +31,15 @@ CREATE TABLE IF NOT EXISTS launch_pass_orders (
     native_id INTEGER NOT NULL UNIQUE CHECK(native_id > 0)
 ) STRICT;
 
+CREATE TABLE IF NOT EXISTS launch_pass_website_quotes (
+    native_id INTEGER PRIMARY KEY CHECK(native_id > 0),
+    account_id TEXT NOT NULL REFERENCES checkout_accounts(id),
+    pass_purchase_id TEXT NOT NULL REFERENCES launch_payments(id),
+    plan_id TEXT NOT NULL,
+    domain_json TEXT NOT NULL,
+    approved_at INTEGER NOT NULL
+) STRICT;
+
 CREATE TABLE IF NOT EXISTS launch_domain_orders (
     purchase_id TEXT PRIMARY KEY REFERENCES launch_payments(id),
     domain TEXT NOT NULL UNIQUE,

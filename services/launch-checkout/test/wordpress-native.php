@@ -58,7 +58,7 @@ function nativeFixtureCapture(string $root, WC_Order $order, int $amount): strin
         'notes' => ['woocommerce_order_id' => (string) $id], 'currency' => 'INR', 'status' => 'paid',
         'amount' => $amount, 'amount_paid' => $amount, 'amount_due' => 0];
     $provider['payments'][$providerPayment] = ['id' => $providerPayment, 'order_id' => $providerOrder,
-        'status' => 'captured', 'currency' => 'INR', 'created_at' => time() - 1, 'amount' => $amount, 'amount_refunded' => 0];
+        'status' => 'captured', 'currency' => 'INR', 'created_at' => time(), 'amount' => $amount, 'amount_refunded' => 0];
     file_put_contents($file, json_encode($provider, JSON_THROW_ON_ERROR));
     $order->payment_complete($providerPayment);
     nativeProof(as_has_scheduled_action('kiwe_launch_reconcile_website_order', [$id, 0], 'kiwe-launch'),
@@ -101,7 +101,7 @@ try {
     nativeProof((float) WC()->cart->get_total('edit') === (float) ($amount / 100), 'Native cart price must match the catalogue.');
 
     $data = ['billing_email' => $account['email'], 'payment_method' => 'razorpay'];
-    $_POST = ['kiwe_launch_domain' => 'buyer.example.invalid', 'kiwe_launch_domain_mode' => 'owned'];
+    $_POST = ['kiwe_launch_domain' => 'buyer.example.invalid', 'kiwe_launch_domain_mode' => 'owned', 'kiwe_launch_review_minor' => $amount];
     $guest = new WP_Error();
     do_action('woocommerce_after_checkout_validation', $data, $guest);
     nativeProof(str_contains($guest->get_error_message(), 'Sign in'), 'A Woo guest without a verified Launch session must be denied.');
@@ -172,6 +172,75 @@ try {
     $pass = $state['billing']->freelancerPass($buyer);
     nativeProof($pass['active'] && $pass['purchaseId'] === $passId && !$state['billing']->status($buyer, $passId)['projectId'],
         'The annual pass activates for the buyer with no Start project.');
+    $db->prepare('INSERT INTO checkout_referrals (id, partner_id, digest, client_email, whatsapp, domain, created_at, expires_at, buyer_id)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)')->execute(['ref:fixture', $other, str_repeat('7', 64), $account['email'],
+        '+919000000000', 'pass-discount.example.invalid', time(), time() + 86400, $buyer]);
+
+    $eligible = $plan['referred']['upfrontMinor'];
+    WC()->cart->empty_cart();
+    WC()->cart->add_to_cart($product->get_id());
+    WC()->cart->calculate_totals();
+    $cartItems = WC()->cart->get_cart();
+    $line = reset($cartItems);
+    $lineData = apply_filters('woocommerce_get_item_data', [], $line);
+    nativeProof(count($lineData) === 1 && $lineData[0]['key'] === 'Freelancer Pass savings' && !WC()->cart->get_applied_coupons()
+        && wc_add_number_precision((float) WC()->cart->get_total('edit')) === (float) $eligible,
+        'Pass pricing must be visible in WooCommerce with no coupon code.');
+    nativeProof((float) wc_get_product($product->get_id())->get_price() === (float) ($amount / 100),
+        'The native product price must stay at the public catalogue rate.');
+    ob_start();
+    do_action('woocommerce_before_checkout_billing_form', WC()->checkout());
+    $rendered = ob_get_clean();
+    nativeProof(str_contains($rendered, 'name="kiwe_launch_review_minor" value="' . $eligible . '"'),
+        'The native checkout form must post its displayed eligible total.');
+
+    nativeBuyerSession($state, $otherAccount);
+    WC()->cart->calculate_totals();
+    nativeProof(wc_add_number_precision((float) WC()->cart->get_total('edit')) === (float) $amount,
+        'A different verified account must not inherit the discounted cart.');
+    nativeBuyerSession($state, $account);
+    WC()->cart->calculate_totals();
+    $_POST = ['kiwe_launch_domain' => 'pass-discount.example.invalid', 'kiwe_launch_domain_mode' => 'owned', 'kiwe_launch_review_minor' => $amount];
+    $stale = new WP_Error();
+    do_action('woocommerce_after_checkout_validation', $data, $stale);
+    nativeProof(str_contains($stale->get_error_message(), 'price changed'), 'A stale displayed price must require checkout review.');
+    $_POST['kiwe_launch_review_minor'] = $eligible;
+    $approved = new WP_Error();
+    do_action('woocommerce_after_checkout_validation', $data, $approved);
+    nativeProof(!$approved->has_errors(), 'Permit the selected website at the verified pass price.');
+    $cartItems = WC()->cart->get_cart();
+    $discounted = reset($cartItems)['data'];
+    $orders[] = $discountOrder = nativeFixtureOrder($discounted, $account['email']);
+    do_action('woocommerce_checkout_order_processed', $discountOrder->get_id(), $data, $discountOrder);
+    do_action('woocommerce_before_pay_action', $discountOrder);
+    $denied = false;
+    try {
+        $state['billing']->approvePassWebsitePrice($buyer, $discountOrder->get_id(), $plan['id'],
+            ['mode' => 'owned', 'name' => 'another.example.invalid']);
+    } catch (KiweCheckoutError $error) {
+        $denied = $error->status === 409;
+    }
+    nativeProof($denied, 'Changes to the approved domain require another quote.');
+    $amountRefunded = $passPlan['priceMinor'];
+    $refund = json_encode(['account_id' => 'acc_KiweTestFixture', 'event' => 'refund.processed', 'created_at' => time(),
+        'payload' => ['refund' => ['entity' => ['id' => 'rfnd_NativePassFixture', 'payment_id' => $passOrder->get_transaction_id(),
+            'status' => 'processed', 'currency' => 'INR', 'amount' => $amountRefunded]]]], JSON_THROW_ON_ERROR);
+    $state['billing']->ingest($refund, hash_hmac('sha256', $refund, 'Kiwe checkout isolated webhook fixture secret'), 'native-pass-refund');
+    $denied = false;
+    try {
+        do_action('woocommerce_before_pay_action', $discountOrder);
+    } catch (Exception $error) {
+        $denied = str_contains($error->getMessage(), 'coverage changed');
+    }
+    nativeProof($denied, 'An ended pass blocks reopening a discounted order for payment.');
+    WC()->cart->calculate_totals();
+    nativeProof(wc_add_number_precision((float) WC()->cart->get_total('edit')) === (float) $amount,
+        'A refunded pass must no longer discount the cart.');
+    $discountId = nativeFixtureCapture($root, $discountOrder, $eligible);
+    $discount = $state['billing']->status($buyer, $discountId);
+    nativeProof($discount['projectId'] && $discount['quote']['pricingSource'] === 'pass' && $discount['quote']['referralId'] === null
+        && !$discount['renewalAvailable'] && $discount['quote']['upfrontMinor'] === $eligible,
+        'An already approved capture reaches the correct Start project at its frozen price.');
 } finally {
     $cleanup = true;
     foreach ($orders as $order) {

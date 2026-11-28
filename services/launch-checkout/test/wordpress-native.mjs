@@ -41,10 +41,10 @@ try {
   assert.equal(proof.passed, true);
   assert.equal(proof.cleanup, true);
   const projects = start.projects.listProjects(proof.buyer);
-  assert.equal(projects.length, 1);
-  assert.equal(projects[0].planId, 'kiwe-portfolio-v1');
+  assert.equal(projects.length, 2);
+  assert.ok(projects.every(project => project.planId === 'kiwe-portfolio-v1'));
   assert.equal(start.projects.listProjects(proof.other).length, 0);
-  console.log('Native WooCommerce delivered one Portfolio project and one separate account pass, and denied a duplicate pass order.');
+  console.log('Native WooCommerce delivered a direct and a Pass-priced Portfolio project, blocked ineligible discounts, and kept Pass billing separate.');
 } finally {
   await start.close();
   await rm(root, { recursive: true, force: true });

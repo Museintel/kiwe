@@ -119,6 +119,31 @@ final class KiweBilling
             'paidThrough' => $paidThrough ?: null];
     }
 
+    public function approvePassWebsitePrice(string $accountId, int $orderId, string $planId, array $domain): void
+    {
+        $plan = $this->nativePlans[$planId] ?? [];
+        if (($plan['hostingIncluded'] ?? false) !== true) {
+            throw new KiweCheckoutError('Choose a website plan to use your Freelancer Pass.', 409);
+        }
+        $selection = $this->websiteSelection($domain, $plan['domain']['includedExtension']);
+        $domainJson = json_encode($selection, JSON_THROW_ON_ERROR);
+        $this->transaction(function () use ($accountId, $orderId, $planId, $domainJson): void {
+            $pass = $this->freelancerPass($accountId);
+            if (!($pass['active'] ?? false)) {
+                throw new KiweCheckoutError('Your Freelancer Pass coverage changed. Review the updated price before paying.', 409);
+            }
+            $saved = $this->row('SELECT account_id, pass_purchase_id, plan_id, domain_json FROM launch_pass_website_quotes WHERE native_id = ?', [$orderId]);
+            if ($saved) {
+                if ($saved !== ['account_id' => $accountId, 'pass_purchase_id' => $pass['purchaseId'], 'plan_id' => $planId, 'domain_json' => $domainJson]) {
+                    throw new KiweCheckoutError('This order is tied to a different Freelancer Pass quote.', 409);
+                }
+                return;
+            }
+            $this->query('INSERT INTO launch_pass_website_quotes VALUES (?, ?, ?, ?, ?, ?)',
+                [$orderId, $accountId, $pass['purchaseId'], $planId, $domainJson, time()]);
+        });
+    }
+
     private function mandate(string $purchase): ?array
     {
         return $this->row('SELECT * FROM launch_renewal_mandates WHERE purchase_id = ? AND retired_at IS NULL', [$purchase]);
@@ -338,8 +363,8 @@ final class KiweBilling
             throw new KiweCheckoutError('The checkout needs a verified Kiwe Launch account.', 404);
         }
         $price = $plan['direct'];
-        $terms = ['planId' => $planId, 'currency' => $plan['currency'], 'upfrontMinor' => $price['upfrontMinor'],
-            'renewalMinor' => $price['renewalMinor'], 'referralId' => null];
+        $terms = [];
+        $approved = null;
         if (!$plan['hostingIncluded']) {
             if ($domain !== null || $this->passOrder($accountId) !== $orderId) {
                 throw new KiweCheckoutError('This Freelancer Pass must match the buyer’s reserved WooCommerce order.', 409);
@@ -347,7 +372,19 @@ final class KiweBilling
             $terms['kind'] = 'freelancer-pass';
         } else {
             $terms['domain'] = $this->websiteSelection($domain, $plan['domain']['includedExtension']);
+            $approved = $this->row('SELECT * FROM launch_pass_website_quotes WHERE native_id = ?', [$orderId]);
+            if ($approved) {
+                if ($approved['account_id'] !== $accountId || $approved['plan_id'] !== $planId
+                    || $approved['domain_json'] !== json_encode($terms['domain'], JSON_THROW_ON_ERROR)
+                    || $approved['approved_at'] > $paidAt) {
+                    throw new KiweCheckoutError('The order does not match the approved Freelancer Pass quote.', 409);
+                }
+                $price = $plan['referred'];
+                $terms['pricingSource'] = 'pass';
+            }
         }
+        $terms = ['planId' => $planId, 'currency' => $plan['currency'], 'upfrontMinor' => $price['upfrontMinor'],
+            'renewalMinor' => $price['renewalMinor'], 'referralId' => null] + $terms;
         $quote = json_encode($terms, JSON_THROW_ON_ERROR);
         $lookup = function () use ($orderId, $accountId, $providerOrder, $paymentId, $paidAt, $quote): ?string {
             $existing = $this->row('SELECT o.provider_order_id, p.* FROM launch_woo_orders o
@@ -370,6 +407,7 @@ final class KiweBilling
             || ($order['amount_paid'] ?? null) !== $amount || ($order['amount_due'] ?? null) !== 0
             || ($payment['id'] ?? '') !== $paymentId || ($payment['order_id'] ?? '') !== $providerOrder
             || !is_int($payment['created_at'] ?? null) || $payment['created_at'] < 1 || $payment['created_at'] > $paidAt
+            || ($approved && $payment['created_at'] < $approved['approved_at'])
             || !$this->validPayment($payment, $amount, $plan['currency']) || ($payment['amount_refunded'] ?? 0) >= $amount) {
             throw new KiweCheckoutError('Razorpay has not confirmed the exact paid WooCommerce order.', 409);
         }
@@ -475,6 +513,7 @@ final class KiweBilling
             'clientOrder' => [
                 'currency' => $quote['currency'], 'paidMinor' => $quote['upfrontMinor'], 'renewalMinor' => $quote['renewalMinor'],
                 'referralId' => $quote['referralId'], 'domain' => $quote['domain'],
+                ...array_intersect_key($quote, ['pricingSource' => true]),
             ],
         ];
         $result = ($this->start)('purchases', $receipt);
@@ -624,6 +663,7 @@ final class KiweBilling
     private function renewalPlanId(array $purchase, array $quote): ?string
     {
         if ($this->isPass($quote)) return kiwe_billing_id($this->renewalPlans['freelancerPass'] ?? null, 'plan');
+        if (($quote['pricingSource'] ?? '') === 'pass') return null;
         $plan = str_starts_with($purchase['draft_id'], 'woo:')
             ? ($this->renewalPlans['websitePlans'][$quote['planId']] ?? null)
             : ($this->renewalPlans[empty($quote['referralId']) ? 'direct' : 'referred'] ?? null);

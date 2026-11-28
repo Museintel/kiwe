@@ -1,5 +1,7 @@
 ## Unreleased Kiwe Launch catalogue
 
+- Apply private first-year website pricing for active Freelancer Pass buyers and preserve the approved quote through WooCommerce, Razorpay and Start.
+
 - Record the Freelancer Pass as one verified account purchase with annual renewal consent, paid-period eligibility, refunds and private MCP status.
 
 - Bind verified Launch accounts and site quotes to classic WooCommerce orders. Submit confirmed native payments to the existing Start delivery worker with a recoverable order-specific job.
